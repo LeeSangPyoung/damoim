@@ -1,0 +1,450 @@
+.profile-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.profile-modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 28px;
+  position: relative;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.profile-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.profile-modal-close:hover {
+  background-color: #f3f4f6;
+  color: #333;
+}
+
+/* 헤더 */
+.profile-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.profile-modal-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 28px;
+  font-weight: bold;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+}
+
+.profile-modal-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-modal-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pm-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-modal-info h2 {
+  margin: 0 0 4px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.pm-friend-inline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  background: #ecfdf5;
+  color: #059669;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #a7f3d0;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+.profile-modal-userid {
+  margin: 0;
+  color: #999;
+  font-size: 14px;
+}
+
+/* 친구 섹션 */
+.pm-friend-section {
+  margin-bottom: 20px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.pm-friend-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* 친구 상태 - 연결됨 */
+.pm-friend-connected {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  padding: 14px 18px;
+  border: 1px solid #a7f3d0;
+}
+
+.pm-friend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #059669;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.pm-friend-badge-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: #059669;
+  color: white;
+  border-radius: 50%;
+}
+
+.pm-friend-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 20px;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pm-friend-remove:hover {
+  color: #ef4444;
+  border-color: #fca5a5;
+  background: #fff5f5;
+}
+
+/* 요청 보냄 - 대기 중 */
+.pm-friend-pending {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  padding: 14px 18px;
+  border: 1px solid #fde68a;
+}
+
+.pm-friend-sent {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #b45309;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pm-friend-sent-dot {
+  width: 8px;
+  height: 8px;
+  background: #f59e0b;
+  border-radius: 50%;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.pm-friend-cancel {
+  padding: 6px 14px;
+  background: white;
+  border: 1px solid #d6d3d1;
+  border-radius: 20px;
+  color: #78716c;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pm-friend-cancel:hover {
+  color: #dc2626;
+  border-color: #fca5a5;
+  background: #fff5f5;
+}
+
+/* 친구 요청 받음 */
+.pm-friend-incoming {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  padding: 16px 18px;
+  border: 1px solid #93c5fd;
+  text-align: center;
+}
+
+.pm-friend-incoming-text {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d4ed8;
+}
+
+.pm-friend-accept {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.pm-friend-accept:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+}
+
+/* 친구 신청 버튼 */
+.pm-friend-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+}
+
+.pm-friend-add:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.35);
+}
+
+.pm-friend-add:disabled,
+.pm-friend-accept:disabled,
+.pm-friend-remove:disabled,
+.pm-friend-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* 섹션 */
+.profile-modal-section {
+  margin-bottom: 20px;
+}
+
+.profile-modal-section h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* 자기소개 카드 */
+.profile-modal-bio-card {
+  padding: 14px 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+  border: 1px solid #f0f0f0;
+}
+
+.profile-modal-bio {
+  margin: 0;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.profile-modal-bio-empty {
+  margin: 0;
+  color: #bbb;
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* 학력 */
+.profile-modal-schools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-modal-school-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+  border: 1px solid #f0f0f0;
+}
+
+.profile-modal-school-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 2px 4px rgba(249, 115, 22, 0.2));
+}
+
+.profile-modal-school-info {
+  flex: 1;
+}
+
+.profile-modal-school-info h4 {
+  margin: 0 0 3px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.profile-modal-school-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #888;
+}
+
+/* 학년/반 태그 목록 */
+.profile-modal-school-classes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.profile-modal-school-class-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  background: #fff7ed;
+  color: #ea580c;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #fed7aa;
+}
+
+/* 액션 버튼 */
+.profile-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.profile-modal-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.profile-modal-btn-primary {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: white;
+}
+
+.profile-modal-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+}
+
+.profile-modal-btn-secondary {
+  background: white;
+  color: #f97316;
+  border: 1.5px solid #f97316;
+}
+
+.profile-modal-btn-secondary:hover {
+  background: #fff7ed;
+  transform: translateY(-1px);
+}

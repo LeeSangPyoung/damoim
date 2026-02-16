@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-react-app damoim-ui-prototype --template typescript)",
+      "Bash(brew install:*)",
+      "Bash(/usr/libexec/java_home:*)",
+      "Bash(source:*)",
+      "Bash(java:*)",
+      "Bash(sdk current:*)",
+      "Bash(mvn clean install:*)",
+      "Bash(mvn clean compile:*)",
+      "Bash(npm start)",
+      "Bash(./mvnw spring-boot:run:*)",
+      "Bash(curl:*)",
+      "Bash(kill:*)",
+      "Bash(python3:*)",
+      "Bash(lsof:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

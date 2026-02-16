@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: ourclass-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ourclass
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  jackson:
+    time-zone: Asia/Seoul
+    serialization:
+      write-dates-as-timestamps: false
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB
+      max-request-size: 25MB
+
+  web:
+    resources:
+      static-locations: file:uploads/
+
+server:
+  port: 8080
+
+jwt:
+  secret: ourclass-jwt-secret-key-for-development-please-change-in-production-environment
+  expiration: 86400000 # 24시간 (밀리초)
+
+neis:
+  api:
+    key: 74e868ec90634030ae1aecf9d0a3ea44
+
+datagokr:
+  api:
+    key: ${DATAGOKR_API_KEY:}  # data.go.kr 인증키 (대학교 데이터용)
+
+logging:
+  level:
+    com.ourclass: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
