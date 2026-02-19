@@ -15,7 +15,10 @@
       "Bash(kill:*)",
       "Bash(python3:*)",
       "Bash(lsof:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(killall:*)",
+      "Bash(PGPASSWORD=postgres psql:*)",
+      "Bash(psql:*)"
     ]
   }
 }
