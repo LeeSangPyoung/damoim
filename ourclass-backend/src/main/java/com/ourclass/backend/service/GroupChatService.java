@@ -147,6 +147,7 @@ public class GroupChatService {
         }
 
         return messages.stream()
+                .filter(msg -> !msg.getCompletelyDeleted() && !msg.getDeletedByUserIds().contains(userId))
                 .map(msg -> toMessageResponse(msg, room))
                 .collect(Collectors.toList());
     }
@@ -206,6 +207,32 @@ public class GroupChatService {
         GroupChatMember member = memberRepository.findByRoomAndUser(room, target)
                 .orElseThrow(() -> new RuntimeException("해당 사용자는 멤버가 아닙니다."));
         memberRepository.delete(member);
+    }
+
+    @Transactional
+    public void deleteMessage(Long messageId, String userId) {
+        GroupChatMessage message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("메시지를 찾을 수 없습니다."));
+
+        GroupChatRoom room = message.getRoom();
+
+        // 메시지 발신자인지 확인
+        if (!message.getSender().getUserId().equals(userId)) {
+            throw new RuntimeException("자신이 보낸 메시지만 삭제할 수 있습니다.");
+        }
+
+        // 읽지 않은 사람이 있는지 확인
+        int unreadCount = (int) memberRepository.countUnreadMembers(room, messageId);
+
+        if (unreadCount > 0) {
+            // 아직 안 읽은 사람이 있으면 완전히 삭제
+            message.setCompletelyDeleted(true);
+            messageRepository.save(message);
+        } else {
+            // 모두 읽었으면 내 채팅방에서만 삭제
+            message.getDeletedByUserIds().add(userId);
+            messageRepository.save(message);
+        }
     }
 
     private GroupChatRoomResponse toRoomResponse(GroupChatRoom room, String currentUserId) {

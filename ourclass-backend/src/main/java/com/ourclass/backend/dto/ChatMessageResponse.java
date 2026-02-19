@@ -15,4 +15,6 @@ public class ChatMessageResponse {
     private String content;
     private Boolean isRead;
     private LocalDateTime sentAt;
+    private Boolean completelyDeleted;
+    private Boolean deletedBySender;
 }

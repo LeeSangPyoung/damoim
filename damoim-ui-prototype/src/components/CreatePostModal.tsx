@@ -195,9 +195,7 @@ export default function CreatePostModal({ onClose, onPosted, schoolName, graduat
     }
   };
 
-  // 우리 반일 때 반 선택용 데이터
-  const uniqueGrades = Array.from(new Set(gradeClasses.map(gc => gc.grade))).filter(Boolean);
-  const classesForSelectedGrade = gradeClasses.filter(gc => gc.grade === selectedGrade && gc.classNumber);
+  // 우리 반일 때 반 선택용 데이터 (프로필에 등록된 학년/반 조합)
 
   return (
     <>
@@ -260,43 +258,25 @@ export default function CreatePostModal({ onClose, onPosted, schoolName, graduat
               ))}
             </div>
 
-            {/* 우리 반일 때만 반 선택 */}
-            {visibility === 'CLASS' && uniqueGrades.length > 0 && (
-              <>
-                <div className="cp-sub-select">
-                  <span className="cp-sub-label">학년</span>
-                  <div className="cp-sub-chips">
-                    {uniqueGrades.map(g => (
+            {/* 우리 반일 때 - 등록된 학년/반 조합 칩 */}
+            {visibility === 'CLASS' && gradeClasses.filter(gc => gc.classNumber).length > 0 && (
+              <div className="cp-sub-select">
+                <div className="cp-sub-chips">
+                  {gradeClasses.filter(gc => gc.classNumber).map((gc, i) => {
+                    const isActive = selectedGrade === gc.grade && selectedClassNumber === gc.classNumber;
+                    return (
                       <button
-                        key={g}
+                        key={i}
                         type="button"
-                        className={`cp-sub-chip ${selectedGrade === g ? 'active' : ''}`}
-                        onClick={() => setSelectedGrade(g)}
+                        className={`cp-sub-chip ${isActive ? 'active' : ''}`}
+                        onClick={() => { setSelectedGrade(gc.grade); setSelectedClassNumber(gc.classNumber!); }}
                       >
-                        {g}학년
+                        {gc.grade}학년 {gc.classNumber}반
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-
-                {classesForSelectedGrade.length > 0 && (
-                  <div className="cp-sub-select">
-                    <span className="cp-sub-label">반</span>
-                    <div className="cp-sub-chips">
-                      {classesForSelectedGrade.map((gc, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          className={`cp-sub-chip ${selectedClassNumber === gc.classNumber ? 'active' : ''}`}
-                          onClick={() => setSelectedClassNumber(gc.classNumber!)}
-                        >
-                          {gc.classNumber}반
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
+              </div>
             )}
           </div>
 

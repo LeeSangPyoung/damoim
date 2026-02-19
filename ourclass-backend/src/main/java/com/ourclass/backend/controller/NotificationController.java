@@ -13,7 +13,7 @@ import java.util.List;
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173"})
 public class NotificationController {
 
     private final NotificationService notificationService;

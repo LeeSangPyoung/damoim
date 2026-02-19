@@ -101,7 +101,7 @@ public class ChatService {
                 chatRoomId
         );
 
-        return toMessageResponse(message);
+        return toMessageResponse(message, senderUserId);
     }
 
     // 채팅방 메시지 목록
@@ -116,8 +116,31 @@ public class ChatService {
         chatMessageRepository.markAsRead(room, user);
 
         return chatMessageRepository.findByChatRoomOrderBySentAtAsc(room).stream()
-                .map(this::toMessageResponse)
+                .filter(msg -> !Boolean.TRUE.equals(msg.getCompletelyDeleted()))  // 완전 삭제 메시지 제외
+                .map(msg -> toMessageResponse(msg, userId))
                 .collect(Collectors.toList());
+    }
+
+    // 메시지 삭제 (카카오톡 스타일)
+    @Transactional
+    public void deleteMessage(Long messageId, String userId) {
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("메시지를 찾을 수 없습니다."));
+
+        // 발신자 본인만 삭제 가능
+        if (!message.getSender().getUserId().equals(userId)) {
+            throw new RuntimeException("자신이 보낸 메시지만 삭제할 수 있습니다.");
+        }
+
+        if (!Boolean.TRUE.equals(message.getIsRead())) {
+            // 상대방이 아직 읽지 않음 → 완전히 삭제 처리 (양쪽에서 안 보임)
+            message.setCompletelyDeleted(true);
+        } else {
+            // 상대방이 이미 읽음 → 발신자 화면에서만 삭제
+            message.setDeletedBySender(true);
+        }
+
+        chatMessageRepository.save(message);
     }
 
     // 채팅방 나가기 (1:1)
@@ -138,15 +161,19 @@ public class ChatService {
         chatRoomRepository.delete(room);
     }
 
-    private ChatMessageResponse toMessageResponse(ChatMessage msg) {
+    private ChatMessageResponse toMessageResponse(ChatMessage msg, String currentUserId) {
+        boolean isSender = msg.getSender().getUserId().equals(currentUserId);
+        boolean deletedBySender = Boolean.TRUE.equals(msg.getDeletedBySender());
         return ChatMessageResponse.builder()
                 .id(msg.getId())
                 .chatRoomId(msg.getChatRoom().getId())
                 .senderUserId(msg.getSender().getUserId())
                 .senderName(msg.getSender().getName())
                 .content(msg.getContent())
-                .isRead(msg.getIsRead())
+                .isRead(Boolean.TRUE.equals(msg.getIsRead()))
                 .sentAt(msg.getSentAt())
+                .completelyDeleted(Boolean.TRUE.equals(msg.getCompletelyDeleted()))
+                .deletedBySender(isSender && deletedBySender)
                 .build();
     }
 }

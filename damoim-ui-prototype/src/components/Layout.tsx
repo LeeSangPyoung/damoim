@@ -26,7 +26,7 @@ export default function Layout({ children }: LayoutProps) {
   const boardSchoolName = searchParams.get('school') || '';
   const boardGraduationYear = searchParams.get('year') || '';
   const boardSchoolCode = searchParams.get('code') || '';
-  const [user, setUser] = useState<{ userId: string; name: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ userId: string; name: string; email: string; role?: string } | null>(null);
 
   const [classmates, setClassmates] = useState<ClassmateInfo[]>([]);
   const [totalClassmates, setTotalClassmates] = useState<number>(0);
@@ -56,8 +56,8 @@ export default function Layout({ children }: LayoutProps) {
   // 보낸 친구 요청
   const [sentRequests, setSentRequests] = useState<FriendResponse[]>([]);
 
-  // 내 친구 섹션 탭
-  const [friendTab, setFriendTab] = useState<'friends' | 'requests'>('friends');
+  // 내 친구 섹션 필터 (멀티 선택 가능)
+  const [selectedFriendFilters, setSelectedFriendFilters] = useState<Set<string>>(new Set(['all']));
 
   // 알림 시스템
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
@@ -464,6 +464,9 @@ export default function Layout({ children }: LayoutProps) {
             <a href="#" onClick={() => navigate('/search')} className="dash-nav-link">동창찾기</a>
             <a href="#" onClick={() => navigate('/messages')} className="dash-nav-link">쪽지</a>
             <a href="#" onClick={() => navigate('/chat')} className="dash-nav-link">채팅</a>
+            {user?.role === 'ADMIN' && (
+              <a href="#" onClick={() => navigate('/admin')} className="dash-nav-link admin-link">🛡️ 관리자</a>
+            )}
           </nav>
           <div className="dash-header-right">
             {/* 알림 벨 */}
@@ -649,62 +652,72 @@ export default function Layout({ children }: LayoutProps) {
             <div className="dash-card dash-card-grow">
               <div className="dash-friend-tabs">
                 <button
-                  className={`dash-friend-tab ${friendTab === 'friends' ? 'active' : ''}`}
-                  onClick={() => setFriendTab('friends')}
+                  className={`dash-friend-tab ${selectedFriendFilters.has('all') ? 'active' : ''}`}
+                  onClick={() => setSelectedFriendFilters(new Set(['all']))}
                 >
-                  내 친구
-                  <span className="dash-friend-tab-count">{myFriends.length}</span>
+                  전체
+                  <span className="dash-friend-tab-count">{myFriends.length + pendingRequests.length + sentRequests.length}</span>
                 </button>
                 <button
-                  className={`dash-friend-tab ${friendTab === 'requests' ? 'active' : ''}`}
-                  onClick={() => setFriendTab('requests')}
+                  className={`dash-friend-tab ${selectedFriendFilters.has('received') ? 'active' : ''}`}
+                  onClick={() => {
+                    const newFilters = new Set(selectedFriendFilters);
+                    newFilters.delete('all');
+                    if (newFilters.has('received')) {
+                      newFilters.delete('received');
+                    } else {
+                      newFilters.add('received');
+                    }
+                    if (newFilters.size === 0) newFilters.add('all');
+                    setSelectedFriendFilters(newFilters);
+                  }}
                 >
-                  요청 관리
-                  {(pendingRequests.length + sentRequests.length) > 0 && (
-                    <span className="dash-friend-tab-count dash-friend-tab-count-alert">
-                      {pendingRequests.length + sentRequests.length}
-                    </span>
+                  요청 받음
+                  {pendingRequests.length > 0 && (
+                    <span className="dash-friend-tab-count dash-friend-tab-count-alert">{pendingRequests.length}</span>
                   )}
+                </button>
+                <button
+                  className={`dash-friend-tab ${selectedFriendFilters.has('sent') ? 'active' : ''}`}
+                  onClick={() => {
+                    const newFilters = new Set(selectedFriendFilters);
+                    newFilters.delete('all');
+                    if (newFilters.has('sent')) {
+                      newFilters.delete('sent');
+                    } else {
+                      newFilters.add('sent');
+                    }
+                    if (newFilters.size === 0) newFilters.add('all');
+                    setSelectedFriendFilters(newFilters);
+                  }}
+                >
+                  요청 보냄
+                  {sentRequests.length > 0 && (
+                    <span className="dash-friend-tab-count">{sentRequests.length}</span>
+                  )}
+                </button>
+                <button
+                  className={`dash-friend-tab ${selectedFriendFilters.has('friends') ? 'active' : ''}`}
+                  onClick={() => {
+                    const newFilters = new Set(selectedFriendFilters);
+                    newFilters.delete('all');
+                    if (newFilters.has('friends')) {
+                      newFilters.delete('friends');
+                    } else {
+                      newFilters.add('friends');
+                    }
+                    if (newFilters.size === 0) newFilters.add('all');
+                    setSelectedFriendFilters(newFilters);
+                  }}
+                >
+                  친구 중
+                  <span className="dash-friend-tab-count">{myFriends.length}</span>
                 </button>
               </div>
 
-              {friendTab === 'friends' && (
-                <>
-                  {myFriends.length === 0 ? (
-                    <div className="dash-friend-empty">아직 친구가 없습니다.</div>
-                  ) : (
-                    <div className="dash-friend-list">
-                      {myFriends.map(friend => {
-                        const isOnline = classmates.some(c => c.userId === friend.userId);
-                        return (
-                        <div key={friend.friendshipId} className="dash-friend-item">
-                          <div className="dash-user-avatar-wrap">
-                            <div className="dash-user-avatar-sm">{friend.name[0]}</div>
-                            {isOnline && <span className="dash-online-dot"></span>}
-                          </div>
-                          <div className="dash-friend-item-info" onClick={() => handleOpenProfile(friend.userId)} style={{ cursor: 'pointer' }}>
-                            <div className="dash-user-name">{friend.name}</div>
-                            <div className="dash-user-school">@{friend.userId}</div>
-                          </div>
-                          <div className="dash-action-btns">
-                            <button className="dash-action-btn" onClick={() => handleStartChat(friend.userId)} title="채팅">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                            </button>
-                            <button className="dash-action-btn" onClick={() => setMessageTarget({ userId: friend.userId, name: friend.name })} title="쪽지">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                            </button>
-                          </div>
-                        </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {friendTab === 'requests' && (
-                <div className="dash-friend-requests-tab">
-                  {pendingRequests.length > 0 && (
+              <div className="dash-friend-requests-tab">
+                {/* 받은 요청 */}
+                {(selectedFriendFilters.has('all') || selectedFriendFilters.has('received')) && pendingRequests.length > 0 && (
                     <div className="dash-friend-req-section">
                       <div className="dash-friend-req-section-title">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
@@ -736,7 +749,8 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                   )}
 
-                  {sentRequests.length > 0 && (
+                {/* 보낸 요청 */}
+                {(selectedFriendFilters.has('all') || selectedFriendFilters.has('sent')) && sentRequests.length > 0 && (
                     <div className="dash-friend-req-section">
                       <div className="dash-friend-req-section-title">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
@@ -762,11 +776,54 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                   )}
 
-                  {pendingRequests.length === 0 && sentRequests.length === 0 && (
-                    <div className="dash-friend-empty">친구 요청이 없습니다.</div>
-                  )}
-                </div>
-              )}
+                {/* 친구 목록 */}
+                {(selectedFriendFilters.has('all') || selectedFriendFilters.has('friends')) && (
+                  <>
+                    {myFriends.length === 0 ? (
+                      (selectedFriendFilters.has('friends') && !selectedFriendFilters.has('all')) ? (
+                        <div className="dash-friend-empty">아직 친구가 없습니다.</div>
+                      ) : null
+                    ) : (
+                      <div className="dash-friend-req-section">
+                        <div className="dash-friend-req-section-title">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                          친구 중 <span className="dash-friend-req-count">{myFriends.length}</span>
+                        </div>
+                        <div className="dash-friend-list">
+                          {myFriends.map(friend => {
+                            const isOnline = classmates.some(c => c.userId === friend.userId);
+                            return (
+                            <div key={friend.friendshipId} className="dash-friend-item">
+                              <div className="dash-user-avatar-wrap">
+                                <div className="dash-user-avatar-sm">{friend.name[0]}</div>
+                                {isOnline && <span className="dash-online-dot"></span>}
+                              </div>
+                              <div className="dash-friend-item-info" onClick={() => handleOpenProfile(friend.userId)} style={{ cursor: 'pointer' }}>
+                                <div className="dash-user-name">{friend.name}</div>
+                                <div className="dash-user-school">@{friend.userId}</div>
+                              </div>
+                              <div className="dash-action-btns">
+                                <button className="dash-action-btn" onClick={() => handleStartChat(friend.userId)} title="채팅">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                </button>
+                                <button className="dash-action-btn" onClick={() => setMessageTarget({ userId: friend.userId, name: friend.name })} title="쪽지">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                </button>
+                              </div>
+                            </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* 전체 비어있을 때 */}
+                {selectedFriendFilters.has('all') && pendingRequests.length === 0 && sentRequests.length === 0 && myFriends.length === 0 && (
+                  <div className="dash-friend-empty">친구 요청 및 친구가 없습니다.</div>
+                )}
+              </div>
             </div>
           </aside>
         </div>

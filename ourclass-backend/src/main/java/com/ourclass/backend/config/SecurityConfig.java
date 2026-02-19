@@ -35,6 +35,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/group-chat/**").permitAll()  // 임시로 그룹채팅 API 허용
                         .requestMatchers("/api/notifications/**").permitAll()  // 임시로 알림 API 허용
                         .requestMatchers("/api/schools/**").permitAll()  // 학교 검색 API 허용
+                        .requestMatchers("/api/admin/**").permitAll()  // 관리자 API 허용
                         .requestMatchers("/ws/**").permitAll()  // WebSocket 허용
                         .requestMatchers("/uploads/**").permitAll()  // 업로드된 이미지 접근 허용
                         .anyRequest().authenticated()
@@ -46,7 +47,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:5173"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://192.168.45.23:3001"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

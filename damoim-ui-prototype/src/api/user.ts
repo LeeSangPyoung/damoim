@@ -17,6 +17,7 @@ export interface ProfileResponse {
   email: string;
   profileImageUrl?: string;
   bio?: string;
+  role?: string;
   schools: SchoolInfo[];
 }
 

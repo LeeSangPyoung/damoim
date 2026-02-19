@@ -1,6 +1,7 @@
 package com.ourclass.backend.repository;
 
 import com.ourclass.backend.entity.User;
+import com.ourclass.backend.entity.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,4 +35,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // @멘션된 사용자 조회: userId 목록으로 검색
     List<User> findByUserIdIn(List<String> userIds);
+
+    // 관리자 기능: 사용자 검색
+    List<User> findByUserIdContainingOrNameContainingOrEmailContaining(
+            String userId, String name, String email);
+
+    // 관리자 기능: 상태별 사용자 수
+    long countByStatus(UserStatus status);
+
+    // 오늘 접속한 사용자 수 (lastLoginTime >= 오늘 자정)
+    @Query("SELECT COUNT(u) FROM User u WHERE u.lastLoginTime >= :startOfDay")
+    long countTodayLogins(@Param("startOfDay") java.time.LocalDateTime startOfDay);
+
+    // 현재 접속 중인 사용자 수 (lastActivityTime >= 5분 전)
+    @Query("SELECT COUNT(u) FROM User u WHERE u.lastActivityTime >= :since")
+    long countOnlineUsers(@Param("since") java.time.LocalDateTime since);
 }

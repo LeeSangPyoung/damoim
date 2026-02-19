@@ -1,0 +1,515 @@
+/* 싸이월드 미니홈피 스타일 프로필 */
+
+.profile-container {
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  background: linear-gradient(180deg, #ffe4e1 0%, #fff0f5 50%, #fffaf0 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 헤더 */
+.profile-header {
+  background: rgba(255, 255, 255, 0.98);
+  border-bottom: 3px solid #ffb6c1;
+  box-shadow: 0 2px 8px rgba(255, 182, 193, 0.3);
+}
+
+.profile-header-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.profile-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.profile-brand:hover {
+  transform: scale(1.05);
+}
+
+.profile-brand-icon {
+  font-size: 24px;
+}
+
+.profile-brand h1 {
+  font-size: 24px;
+  font-weight: 900;
+  margin: 0;
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.profile-back-btn {
+  background: white;
+  border: 2px solid #ffb6c1;
+  padding: 0.5rem 1.5rem;
+  border-radius: 20px;
+  color: #c71585;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.profile-back-btn:hover {
+  background: #ffb6c1;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* 메인 영역 */
+.profile-main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.profile-minihompy {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* 왼쪽 사이드바 - 프로필 카드 */
+.profile-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.profile-card {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow:
+    0 8px 24px rgba(255, 182, 193, 0.2),
+    0 0 0 3px #ffb6c1;
+  text-align: center;
+}
+
+.profile-photo-frame {
+  width: 150px;
+  height: 150px;
+  margin: 0 auto 1.5rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 5px solid #ffb6c1;
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+  background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%);
+}
+
+.profile-photo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60px;
+}
+
+.profile-info {
+  margin-bottom: 1.5rem;
+}
+
+.profile-name {
+  font-size: 24px;
+  font-weight: 900;
+  color: #c71585;
+  margin: 0 0 0.5rem 0;
+}
+
+.profile-id {
+  color: #db7093;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.profile-edit-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+}
+
+.profile-edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(255, 105, 180, 0.4);
+}
+
+/* 학교 정보 */
+.profile-schools {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow:
+    0 4px 12px rgba(255, 182, 193, 0.15),
+    0 0 0 2px #ffb6c1;
+}
+
+.profile-schools h3 {
+  margin: 0 0 1rem 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #c71585;
+}
+
+.school-item {
+  padding: 1rem;
+  background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%);
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  border-left: 4px solid #ff69b4;
+}
+
+.school-item:last-child {
+  margin-bottom: 0;
+}
+
+.school-type {
+  font-size: 12px;
+  color: #ff69b4;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.school-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #c71585;
+  margin-bottom: 0.25rem;
+}
+
+.school-detail {
+  font-size: 13px;
+  color: #db7093;
+  font-weight: 600;
+}
+
+/* 오른쪽 콘텐츠 */
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.profile-bio-section,
+.profile-guestbook-section {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow:
+    0 8px 24px rgba(255, 182, 193, 0.2),
+    0 0 0 3px #ffb6c1;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px dashed #ffb6c1;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #c71585;
+}
+
+.guestbook-count {
+  color: #ff69b4;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.bio-content {
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #fff0f5 0%, #fffaf0 100%);
+  border-radius: 12px;
+  color: #8b4789;
+  line-height: 1.8;
+  font-size: 15px;
+  border: 2px solid #ffe4e1;
+  white-space: pre-wrap;
+}
+
+/* 방명록 입력 영역 */
+.guestbook-input-area {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  background: linear-gradient(135deg, #fff0f5 0%, #fffaf0 100%);
+  border-radius: 12px;
+  border: 2px solid #ffe4e1;
+}
+
+.guestbook-input-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.guestbook-input-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.guestbook-input-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #c71585;
+}
+
+.guestbook-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #ffb6c1;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.guestbook-textarea:focus {
+  border-color: #ff69b4;
+}
+
+.guestbook-textarea:disabled {
+  opacity: 0.6;
+}
+
+.guestbook-input-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.guestbook-submit-btn {
+  padding: 0.5rem 1.5rem;
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.guestbook-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+}
+
+.guestbook-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 방명록 목록 */
+.guestbook-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.guestbook-entry {
+  padding: 1.25rem;
+  background: linear-gradient(135deg, #fff8fa 0%, #fffaf0 100%);
+  border-radius: 12px;
+  border: 2px solid #ffe4e1;
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.guestbook-entry:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 182, 193, 0.2);
+}
+
+.guestbook-entry-number {
+  position: absolute;
+  top: 0.75rem;
+  right: 1rem;
+  font-size: 12px;
+  color: #ffb6c1;
+  font-weight: 700;
+}
+
+.guestbook-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.guestbook-entry-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.guestbook-entry-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.guestbook-entry-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.guestbook-entry-writer {
+  font-size: 14px;
+  font-weight: 700;
+  color: #c71585;
+  cursor: pointer;
+}
+
+.guestbook-entry-writer:hover {
+  text-decoration: underline;
+}
+
+.guestbook-entry-date {
+  font-size: 12px;
+  color: #db7093;
+}
+
+.guestbook-entry-delete {
+  background: none;
+  border: 1px solid #ffb6c1;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  color: #db7093;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.guestbook-entry-delete:hover {
+  background: #fff0f5;
+  border-color: #ff69b4;
+  color: #c71585;
+}
+
+.guestbook-entry-content {
+  padding: 0.75rem 1rem;
+  background: white;
+  border-radius: 8px;
+  color: #8b4789;
+  line-height: 1.7;
+  font-size: 14px;
+  white-space: pre-wrap;
+  border-left: 3px solid #ffb6c1;
+}
+
+.guestbook-empty {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #db7093;
+  line-height: 1.8;
+  background: linear-gradient(135deg, #fff0f5 0%, #fffaf0 100%);
+  border-radius: 12px;
+  border: 2px dashed #ffb6c1;
+}
+
+/* 푸터 */
+.profile-footer {
+  background: #c71585;
+  color: white;
+  padding: 2rem;
+  text-align: center;
+  margin-top: auto;
+}
+
+.profile-footer p {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* 로딩 & 에러 */
+.profile-loading,
+.profile-error {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #c71585;
+}
+
+/* 반응형 */
+@media (max-width: 1024px) {
+  .profile-minihompy {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-main {
+    padding: 1rem;
+  }
+
+  .profile-brand h1 {
+    font-size: 20px;
+  }
+
+  .profile-photo-frame {
+    width: 120px;
+    height: 120px;
+  }
+}

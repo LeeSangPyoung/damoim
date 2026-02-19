@@ -42,6 +42,16 @@ public class User {
     @Column(length = 1000)
     private String bio;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private UserRole role = UserRole.USER;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private UserStatus status = UserStatus.ACTIVE;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserSchool> schools = new ArrayList<>();
@@ -53,6 +63,16 @@ public class User {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    // 접속 시간 추적
+    @Column
+    private LocalDateTime lastLoginTime;
+
+    @Column
+    private LocalDateTime lastLogoutTime;
+
+    @Column
+    private LocalDateTime lastActivityTime;
 
     // 학교 추가 헬퍼 메서드
     public void addSchool(UserSchool userSchool) {

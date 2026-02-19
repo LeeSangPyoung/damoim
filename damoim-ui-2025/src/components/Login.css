@@ -1,0 +1,263 @@
+/* ========================================
+   LOGIN PAGE - Notion Clean Style
+   Minimal · White Space · Underline Inputs
+   ======================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --notion-black: #37352f;
+  --notion-gray: #6b6b6b;
+  --notion-light-gray: #9ca3af;
+  --notion-border: #e3e2e0;
+  --notion-hover: #f7f6f3;
+  --notion-blue: #2eaadc;
+}
+
+/* === PAGE === */
+.login-notion-clean {
+  min-height: 100vh;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', sans-serif;
+  padding: 40px 20px;
+}
+
+/* === WRAPPER === */
+.notion-wrapper {
+  width: 100%;
+  max-width: 360px;
+  animation: fade-in 0.3s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === BRAND === */
+.notion-brand {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.brand-logo {
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.brand-logo svg {
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.05));
+}
+
+.brand-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--notion-black);
+  letter-spacing: -0.5px;
+}
+
+/* === FORM BOX === */
+.notion-form-box {
+  margin-bottom: 24px;
+}
+
+.form-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--notion-black);
+  margin-bottom: 24px;
+}
+
+/* === FORM === */
+.notion-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--notion-gray);
+}
+
+.notion-input {
+  width: 100%;
+  padding: 8px 0;
+  border: none;
+  border-bottom: 1px solid var(--notion-border);
+  font-size: 15px;
+  color: var(--notion-black);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+  background: transparent;
+}
+
+.notion-input:hover {
+  border-color: var(--notion-light-gray);
+}
+
+.notion-input:focus {
+  border-color: var(--notion-black);
+}
+
+.notion-input::placeholder {
+  color: var(--notion-light-gray);
+}
+
+/* Submit Button */
+.notion-submit {
+  width: 100%;
+  padding: 10px 16px;
+  margin-top: 8px;
+  background: var(--notion-black);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+
+.notion-submit:hover:not(:disabled) {
+  background: #000000;
+}
+
+.notion-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* === DIVIDER === */
+.notion-divider {
+  display: flex;
+  align-items: center;
+  margin: 24px 0;
+  color: var(--notion-light-gray);
+  font-size: 13px;
+}
+
+.notion-divider::before,
+.notion-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--notion-border);
+}
+
+.notion-divider span {
+  padding: 0 12px;
+}
+
+/* Google Button */
+.notion-google-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid var(--notion-border);
+  border-radius: 4px;
+  color: var(--notion-gray);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+
+.notion-google-btn:hover {
+  background: var(--notion-hover);
+}
+
+.google-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* === FOOTER === */
+.notion-footer {
+  text-align: center;
+}
+
+.footer-text {
+  font-size: 14px;
+  color: var(--notion-gray);
+  margin-bottom: 16px;
+}
+
+.footer-link {
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--notion-blue);
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.footer-link:hover {
+  color: #2b8ebf;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-link-small {
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--notion-light-gray);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.footer-link-small:hover {
+  color: var(--notion-gray);
+  text-decoration: underline;
+}
+
+.link-dot {
+  color: var(--notion-light-gray);
+  font-size: 12px;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 480px) {
+  .login-notion-clean {
+    padding: 32px 20px;
+  }
+  
+  .brand-emoji {
+    font-size: 36px;
+  }
+  
+  .brand-name {
+    font-size: 22px;
+  }
+}

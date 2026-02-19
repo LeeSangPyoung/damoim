@@ -22,6 +22,7 @@ import MessageNotificationModal from './components/MessageNotificationModal';
 import Layout from './components/Layout';
 import ProfileEdit from './components/ProfileEdit';
 import ClassmateList from './components/ClassmateList';
+import Admin from './pages/Admin';
 import { getAuthData } from './utils/auth';
 import { messageAPI, MessageResponse } from './api/message';
 
@@ -225,6 +226,7 @@ function App() {
         <Route path="/chat" element={<Layout><Chat /></Layout>} />
         <Route path="/classmates" element={<Layout><ClassmateList /></Layout>} />
         <Route path="/profile/edit" element={<Layout><ProfileEdit /></Layout>} />
+        <Route path="/admin" element={<Layout><Admin /></Layout>} />
       </Routes>
     </BrowserRouter>
   );

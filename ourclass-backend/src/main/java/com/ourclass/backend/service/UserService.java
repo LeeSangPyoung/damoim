@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -106,14 +107,41 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public ClassmateSearchResponse searchClassmates(String userId, String schoolCode, String graduationYear) {
+        log.info("searchClassmates 호출 - userId: {}, schoolCode: {}, graduationYear: {}", userId, schoolCode, graduationYear);
+
         // schoolCode 기반으로 같은 학교/졸업년도의 학생들 찾기
         List<UserSchool> schools = userSchoolRepository
                 .findBySchoolCodeAndGraduationYear(schoolCode, graduationYear);
 
-        List<ClassmateSearchResponse.ClassmateInfo> classmates = schools.stream()
+        log.info("학교 검색 결과: {} 건", schools.size());
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime fiveMinutesAgo = now.minusMinutes(5);
+
+        List<User> allUsers = schools.stream()
                 .map(UserSchool::getUser)
                 .distinct()
+                .collect(Collectors.toList());
+        log.info("중복 제거 후 총 사용자 수: {}", allUsers.size());
+
+        List<User> filteredUsers = allUsers.stream()
                 .filter(user -> !user.getUserId().equals(userId)) // 본인 제외
+                .collect(Collectors.toList());
+        log.info("본인 제외 후: {}", filteredUsers.size());
+
+        List<User> onlineUsers = filteredUsers.stream()
+                .filter(user -> {
+                    boolean online = isUserOnline(user, fiveMinutesAgo);
+                    if (!online) {
+                        log.debug("오프라인 사용자: {} - loginTime: {}, logoutTime: {}, activityTime: {}",
+                                user.getUserId(), user.getLastLoginTime(), user.getLastLogoutTime(), user.getLastActivityTime());
+                    }
+                    return online;
+                })
+                .collect(Collectors.toList());
+        log.info("접속 중인 사용자 수: {}", onlineUsers.size());
+
+        List<ClassmateSearchResponse.ClassmateInfo> classmates = onlineUsers.stream()
                 .map(user -> {
                     // 해당 학교 정보만 추출
                     UserSchool matchedSchool = user.getSchools().stream()
@@ -191,5 +219,30 @@ public class UserService {
                 .classmates(results)
                 .totalCount(results.size())
                 .build();
+    }
+
+    /**
+     * 사용자가 현재 접속 중인지 확인
+     * 조건: (로그인 시간 > 로그아웃 시간) AND (활동 시간이 5분 이내)
+     */
+    private boolean isUserOnline(User user, LocalDateTime fiveMinutesAgo) {
+        // 로그인 시간이 없으면 접속 중이 아님
+        if (user.getLastLoginTime() == null) {
+            return false;
+        }
+
+        // 로그아웃 시간이 있고 로그인 시간보다 이후면 로그아웃한 상태
+        if (user.getLastLogoutTime() != null &&
+            user.getLastLogoutTime().isAfter(user.getLastLoginTime())) {
+            return false;
+        }
+
+        // 활동 시간이 5분 이내인지 확인
+        if (user.getLastActivityTime() != null &&
+            user.getLastActivityTime().isAfter(fiveMinutesAgo)) {
+            return true;
+        }
+
+        return false;
     }
 }

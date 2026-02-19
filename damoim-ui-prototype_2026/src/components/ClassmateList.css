@@ -1,0 +1,271 @@
+/* === ClassmateList === */
+.cl-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.cl-header {
+  margin-bottom: 24px;
+}
+
+.cl-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-bottom: 12px;
+  transition: color 0.2s;
+}
+
+.cl-back:hover {
+  color: #374151;
+}
+
+.cl-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.cl-title-row h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+}
+
+.cl-type-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid;
+}
+
+.cl-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Loading */
+.cl-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80px 20px;
+  color: #9ca3af;
+  gap: 16px;
+}
+
+.cl-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #f3f4f6;
+  border-top-color: #4a4a4a;
+  border-radius: 50%;
+  animation: clSpin 0.8s linear infinite;
+}
+
+@keyframes clSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Empty */
+.cl-empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: #9ca3af;
+}
+
+.cl-empty p {
+  font-size: 15px;
+  margin-top: 16px;
+}
+
+/* Grid */
+.cl-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Card */
+.cl-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 14px;
+  transition: all 0.2s;
+}
+
+.cl-card:hover {
+  border-color: #e5e7eb;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* Avatar */
+.cl-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.cl-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Info */
+.cl-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cl-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cl-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Friend badges */
+.cl-friend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  border: 1px solid;
+  cursor: default;
+}
+
+.cl-badge-friend {
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #a7f3d0;
+  cursor: pointer;
+}
+
+.cl-badge-friend:hover {
+  background: #fef2f2;
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
+.cl-badge-sent {
+  background: #fefce8;
+  color: #ca8a04;
+  border-color: #fde68a;
+}
+
+.cl-badge-received {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #93c5fd;
+  cursor: pointer;
+}
+
+.cl-badge-received:hover {
+  background: #dbeafe;
+}
+
+.cl-school-detail {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.cl-bio {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Action buttons */
+.cl-action-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1.5px solid #d1d5db;
+  background: #fff;
+  color: #4a4a4a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.cl-action-btn:hover {
+  background: #fff7ed;
+  border-color: #f59e0b;
+  color: #f59e0b;
+  transform: scale(1.05);
+}
+
+.cl-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.cl-friend-add-btn {
+  background: #f59e0b;
+  color: white;
+  border-color: #f59e0b;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+}
+
+.cl-friend-add-btn:hover {
+  background: #ea580c;
+  border-color: #ea580c;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .cl-title-row h2 {
+    font-size: 20px;
+  }
+
+  .cl-card {
+    padding: 12px 14px;
+  }
+
+  .cl-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+}

@@ -1,0 +1,174 @@
+.dashboard-clean {
+  min-height: 100vh;
+  background: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #37352f;
+}
+
+/* 헤더 */
+.clean-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 40px;
+  border-bottom: 1px solid #e3e2e0;
+}
+
+.clean-brand {
+  font-size: 15px;
+  font-weight: 600;
+  color: #37352f;
+}
+
+.clean-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.clean-nav button {
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #6b6b6b;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.clean-nav button:hover {
+  background: #f7f6f3;
+  color: #37352f;
+}
+
+/* 메인 */
+.clean-main {
+  padding: 40px;
+  max-width: 900px;
+}
+
+.clean-title h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #37352f;
+  margin-bottom: 32px;
+}
+
+/* 리스트 */
+.clean-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clean-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: #f7f6f3;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clean-item:hover {
+  background: #ebebea;
+}
+
+.item-info {
+  flex: 1;
+}
+
+.item-info h3 {
+  font-size: 17px;
+  font-weight: 600;
+  color: #37352f;
+  margin-bottom: 4px;
+}
+
+.item-info p {
+  font-size: 14px;
+  color: #6b6b6b;
+}
+
+.item-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.stat {
+  font-size: 14px;
+  color: #6b6b6b;
+  background: #ffffff;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+.stat.new {
+  background: #37352f;
+  color: #ffffff;
+}
+
+.item-arrow {
+  font-size: 18px;
+  color: #9ca3af;
+}
+
+/* 빈 상태 */
+.clean-empty {
+  text-align: center;
+  padding: 80px 40px;
+}
+
+.clean-empty p {
+  font-size: 16px;
+  color: #6b6b6b;
+  margin-bottom: 20px;
+}
+
+.clean-empty button {
+  padding: 12px 24px;
+  background: #37352f;
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.clean-empty button:hover {
+  background: #000000;
+}
+
+/* 로딩 */
+.clean-loading {
+  padding: 40px;
+  text-align: center;
+  color: #6b6b6b;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .clean-header {
+    padding: 16px 24px;
+  }
+  
+  .clean-main {
+    padding: 24px;
+  }
+  
+  .clean-title h1 {
+    font-size: 24px;
+  }
+  
+  .clean-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .item-arrow {
+    display: none;
+  }
+}

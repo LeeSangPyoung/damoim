@@ -34,6 +34,7 @@ spring:
 
 server:
   port: 8080
+  address: 0.0.0.0
 
 jwt:
   secret: ourclass-jwt-secret-key-for-development-please-change-in-production-environment

@@ -15,7 +15,7 @@ import java.util.Map;
 @RequestMapping("/api/schools")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173"})
 public class SchoolController {
 
     private final SchoolService schoolService;

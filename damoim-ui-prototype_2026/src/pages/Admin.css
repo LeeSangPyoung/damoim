@@ -1,0 +1,383 @@
+.adm-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 0 40px;
+}
+
+/* 헤더 */
+.adm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0 16px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 20px;
+}
+
+.adm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.adm-badge {
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.adm-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 2px;
+}
+
+.adm-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.adm-who {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.adm-who strong {
+  color: #7c3aed;
+}
+
+/* 탭 */
+.adm-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 20px;
+}
+
+.adm-tab {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.adm-tab:hover { color: #7c3aed; }
+
+.adm-tab.active {
+  color: #7c3aed;
+  border-bottom-color: #7c3aed;
+  font-weight: 600;
+}
+
+/* 컨텐츠 */
+.adm-content {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+}
+
+.adm-loading,
+.adm-empty {
+  text-align: center;
+  padding: 60px 0;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* 통계 */
+.adm-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.adm-stat-card {
+  border-radius: 12px;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.adm-stat-num {
+  font-size: 36px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  line-height: 1;
+}
+
+.adm-stat-label {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.adm-stat-teal   { background: #f0fdfa; color: #0f766e; }
+.adm-stat-cyan   { background: #ecfeff; color: #0e7490; }
+.adm-stat-blue   { background: #eff6ff; color: #1d4ed8; }
+.adm-stat-green  { background: #f0fdf4; color: #15803d; }
+.adm-stat-red    { background: #fef2f2; color: #dc2626; }
+.adm-stat-orange { background: #fff7ed; color: #c2410c; }
+.adm-stat-purple { background: #f5f3ff; color: #7c3aed; }
+
+.adm-stat-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #0f766e;
+  margin: 0 auto 8px;
+}
+
+.adm-dot-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+/* 검색 */
+.adm-search-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.adm-search-input {
+  flex: 1;
+  padding: 9px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.adm-search-input:focus { border-color: #7c3aed; }
+
+.adm-search-btn {
+  padding: 9px 18px;
+  background: #7c3aed;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.adm-search-btn:hover { background: #6d28d9; }
+
+.adm-reset-btn {
+  padding: 9px 14px;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.adm-reset-btn:hover { background: #e5e7eb; }
+
+/* 테이블 */
+.adm-table-wrap { overflow-x: auto; }
+
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.adm-table thead tr { border-bottom: 2px solid #e5e7eb; }
+
+.adm-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.adm-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.1s;
+}
+
+.adm-table tbody tr:hover { background: #fafafa; }
+
+.adm-table td {
+  padding: 12px;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.adm-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adm-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #3b82f6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.adm-user-name {
+  font-weight: 600;
+  color: #111827;
+  font-size: 13px;
+}
+
+.adm-user-id {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.adm-email { color: #6b7280; }
+
+.adm-date {
+  color: #9ca3af;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* 배지 */
+.adm-role-badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.adm-role-badge.admin { background: #f5f3ff; color: #7c3aed; }
+.adm-role-badge.user  { background: #f3f4f6; color: #374151; }
+
+.adm-status-badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.adm-status-badge.active    { background: #f0fdf4; color: #15803d; }
+.adm-status-badge.suspended { background: #fef2f2; color: #dc2626; }
+
+/* 액션 버튼 */
+.adm-action-btns {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.adm-btn {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+
+.adm-btn:hover { opacity: 0.8; }
+
+.adm-btn-danger  { background: #fee2e2; color: #dc2626; }
+.adm-btn-success { background: #dcfce7; color: #16a34a; }
+.adm-btn-purple  { background: #ede9fe; color: #7c3aed; }
+.adm-btn-gray    { background: #f3f4f6; color: #6b7280; }
+
+.adm-count {
+  margin-top: 12px;
+  text-align: right;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* 모달 */
+.adm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.adm-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 32px 28px;
+  text-align: center;
+  min-width: 260px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.adm-modal-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.adm-modal-icon.success { background: #dcfce7; color: #16a34a; }
+.adm-modal-icon.error   { background: #fee2e2; color: #dc2626; }
+
+.adm-modal p {
+  font-size: 14px;
+  color: #374151;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.adm-modal-btn {
+  padding: 9px 28px;
+  background: #7c3aed;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.adm-modal-btn:hover { background: #6d28d9; }
+
+@media (max-width: 900px) {
+  .adm-stats-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .adm-stats-grid { grid-template-columns: repeat(2, 1fr); }
+}

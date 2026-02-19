@@ -1,0 +1,142 @@
+/* ========================================
+   CONFIRMATION MODAL - 2025 MONOCHROME
+   Uses global design-system.css tokens
+   ======================================== */
+
+.confirmation-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal-backdrop);
+  animation: cmFadeIn 0.15s ease-out;
+}
+
+@keyframes cmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.confirmation-modal-box {
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8) var(--space-6) var(--space-6);
+  box-shadow: var(--shadow-xl);
+  text-align: center;
+  max-width: 300px;
+  width: 90%;
+  animation: cmSlideUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes cmSlideUp {
+  from { transform: scale(0.9) translateY(10px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* === ICON === */
+.confirmation-modal-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto var(--space-4);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirmation-modal-icon.success {
+  background: var(--color-black);
+  box-shadow: var(--shadow-md);
+}
+
+.confirmation-modal-icon.confirm {
+  background: var(--color-gray-800);
+  box-shadow: var(--shadow-md);
+}
+
+.confirmation-modal-icon.error {
+  background: var(--color-gray-600);
+  box-shadow: var(--shadow-md);
+}
+
+/* === MESSAGE === */
+.confirmation-modal-message {
+  font-size: var(--text-md);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-5);
+  line-height: var(--leading-normal);
+}
+
+/* === BUTTONS === */
+.confirmation-modal-btns {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.confirmation-modal-btns.two-btn .confirmation-modal-btn {
+  flex: 1;
+}
+
+.confirmation-modal-btn {
+  width: 100%;
+  padding: var(--space-3) var(--space-5);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.confirmation-modal-btn.primary {
+  background: var(--color-black);
+  color: var(--color-white);
+}
+
+.confirmation-modal-btn.primary:hover {
+  background: var(--color-gray-800);
+  box-shadow: var(--shadow-md);
+}
+
+.confirmation-modal-btn.danger {
+  background: var(--color-gray-800);
+  color: var(--color-white);
+}
+
+.confirmation-modal-btn.danger:hover {
+  background: var(--color-gray-700);
+  box-shadow: var(--shadow-md);
+}
+
+.confirmation-modal-btn.error {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+}
+
+.confirmation-modal-btn.error:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-medium);
+}
+
+.confirmation-modal-btn.cancel {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.confirmation-modal-btn.cancel:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+.confirmation-modal-btn:active {
+  transform: translateY(0);
+}

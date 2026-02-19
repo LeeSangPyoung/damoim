@@ -1,0 +1,12 @@
+/* Import Design System */
+@import './styles/design-system.css';
+
+/* 전체 스크롤바 숨김 (스크롤은 가능) */
+*::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

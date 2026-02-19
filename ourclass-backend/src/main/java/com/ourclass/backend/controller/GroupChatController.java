@@ -18,7 +18,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/group-chat")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173"})
 public class GroupChatController {
 
     @Autowired
@@ -116,6 +116,19 @@ public class GroupChatController {
         try {
             groupChatService.kickMember(roomId, userId, targetUserId);
             return ResponseEntity.ok(Map.of("message", "강퇴되었습니다."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // 메시지 삭제 (카카오톡 스타일)
+    @DeleteMapping("/messages/{messageId}")
+    public ResponseEntity<?> deleteMessage(
+            @PathVariable Long messageId,
+            @RequestParam String userId) {
+        try {
+            groupChatService.deleteMessage(messageId, userId);
+            return ResponseEntity.ok(Map.of("message", "메시지가 삭제되었습니다."));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

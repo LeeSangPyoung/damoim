@@ -1,0 +1,297 @@
+/* ========================================
+   COMPOSE MESSAGE MODAL - 2025 MONOCHROME
+   Uses global design-system.css tokens
+   ======================================== */
+
+.compose-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal-backdrop);
+  padding: var(--space-5);
+}
+
+.compose-modal {
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.compose-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.compose-modal-header h2 {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+}
+
+.close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: var(--text-xl);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.close-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.compose-modal-form {
+  padding: var(--space-6);
+}
+
+.form-group {
+  margin-bottom: var(--space-5);
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.required {
+  color: var(--color-error);
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  transition: all var(--transition-fast);
+  box-sizing: border-box;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-light);
+}
+
+.form-input:disabled,
+.form-textarea:disabled {
+  background-color: var(--bg-secondary);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.recipient-hint {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* === RECIPIENT SEARCH DROPDOWN === */
+.recipient-search-wrap {
+  position: relative;
+}
+
+.recipient-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: var(--z-dropdown);
+  margin-top: var(--space-1);
+}
+
+.recipient-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.recipient-dropdown-item:hover {
+  background: var(--bg-secondary);
+}
+
+.recipient-dropdown-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--color-gray-800);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.recipient-dropdown-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.recipient-dropdown-avatar span {
+  color: var(--color-white);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+}
+
+.recipient-dropdown-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.recipient-dropdown-name {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.recipient-dropdown-id {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.recipient-dropdown-empty {
+  padding: var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.recipient-selected {
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.recipient-selected-name {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.char-count {
+  margin-top: var(--space-2);
+  text-align: right;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.error-message {
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  color: var(--color-error);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
+}
+
+.success-message {
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.compose-modal-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-light);
+}
+
+.cancel-btn,
+.send-btn {
+  padding: var(--space-3) var(--space-6);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cancel-btn {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+.send-btn {
+  background: var(--color-black);
+  color: var(--color-white);
+}
+
+.send-btn:hover:not(:disabled) {
+  background: var(--color-gray-800);
+  box-shadow: var(--shadow-md);
+}
+
+.cancel-btn:disabled,
+.send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}

@@ -1,0 +1,141 @@
+/* ========================================
+   MESSAGE NOTIFICATION MODAL - 2025 MONOCHROME
+   Uses global design-system.css tokens
+   ======================================== */
+
+.message-notification-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-notification);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.message-notification-box {
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  padding: 0;
+  box-shadow: var(--shadow-xl);
+  max-width: 420px;
+  width: 90%;
+  animation: slideDown 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.message-notification-header {
+  background: var(--color-gray-800);
+  color: var(--color-white);
+  padding: var(--space-3) var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.message-notification-icon {
+  font-size: var(--text-3xl);
+}
+
+.message-notification-header h3 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--font-semibold);
+}
+
+.message-notification-body {
+  padding: var(--space-6);
+}
+
+.message-sender {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.message-sender strong {
+  color: var(--text-primary);
+}
+
+.message-content {
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.message-notification-actions {
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  display: flex;
+  gap: var(--space-3);
+}
+
+.close-notification-btn,
+.goto-messages-btn {
+  flex: 1;
+  padding: var(--space-3) var(--space-5);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.close-notification-btn {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.close-notification-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-medium);
+}
+
+.goto-messages-btn {
+  background: var(--color-black);
+  color: var(--color-white);
+}
+
+.goto-messages-btn:hover {
+  background: var(--color-gray-800);
+  box-shadow: var(--shadow-md);
+}
+
+.goto-messages-btn:active {
+  transform: translateY(0);
+}

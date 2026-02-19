@@ -39,4 +39,14 @@ public class ChatMessage {
     @CreationTimestamp
     @Column(name = "sent_at", nullable = false, updatable = false)
     private LocalDateTime sentAt;
+
+    // 완전 삭제 여부 (상대방이 아직 읽지 않았을 때 삭제 → 양쪽 모두에서 삭제)
+    @Column(name = "completely_deleted")
+    @Builder.Default
+    private Boolean completelyDeleted = false;
+
+    // 발신자가 자신의 채팅창에서 삭제 (상대방이 이미 읽은 후 삭제)
+    @Column(name = "deleted_by_sender")
+    @Builder.Default
+    private Boolean deletedBySender = false;
 }

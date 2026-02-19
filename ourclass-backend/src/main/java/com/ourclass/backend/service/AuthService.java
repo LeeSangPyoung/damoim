@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -31,12 +33,18 @@ public class AuthService {
         }
 
         // 사용자 생성
-        User user = User.builder()
+        User.UserBuilder userBuilder = User.builder()
                 .userId(request.getUserId())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
-                .email(request.getEmail())
-                .build();
+                .email(request.getEmail());
+
+        // admin 아이디로 가입하면 자동으로 ADMIN 권한 부여
+        if ("admin".equals(request.getUserId())) {
+            userBuilder.role(com.ourclass.backend.entity.UserRole.ADMIN);
+        }
+
+        User user = userBuilder.build();
 
         // 학교 정보 추가
         for (SignupRequest.SchoolInfo schoolInfo : request.getSchools()) {
@@ -62,9 +70,11 @@ public class AuthService {
                 .userId(savedUser.getUserId())
                 .name(savedUser.getName())
                 .email(savedUser.getEmail())
+                .role(savedUser.getRole().name())
                 .build();
     }
 
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         // 사용자 조회
         User user = userRepository.findByUserId(request.getUserId())
@@ -74,6 +84,12 @@ public class AuthService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("아이디 또는 비밀번호가 올바르지 않습니다");
         }
+
+        // 로그인 시간 및 활동 시간 업데이트
+        LocalDateTime now = LocalDateTime.now();
+        user.setLastLoginTime(now);
+        user.setLastActivityTime(now);
+        userRepository.save(user);
 
         log.info("사용자 로그인: {}", user.getUserId());
 
@@ -85,6 +101,7 @@ public class AuthService {
                 .userId(user.getUserId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .role(user.getRole().name())
                 .build();
     }
 
@@ -123,6 +140,25 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
         log.info("비밀번호 재설정: {}", user.getUserId());
+    }
+
+    @Transactional
+    public void logout(String userId) {
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+
+        user.setLastLogoutTime(LocalDateTime.now());
+        userRepository.save(user);
+        log.info("사용자 로그아웃: {}", user.getUserId());
+    }
+
+    @Transactional
+    public void updateActivity(String userId) {
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+
+        user.setLastActivityTime(LocalDateTime.now());
+        userRepository.save(user);
     }
 
     private String maskUserId(String userId) {

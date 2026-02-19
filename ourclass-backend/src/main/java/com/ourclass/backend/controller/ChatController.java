@@ -19,7 +19,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chat")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173"})
 public class ChatController {
 
     @Autowired
@@ -76,6 +76,19 @@ public class ChatController {
             // WebSocket으로도 브로드캐스트
             messagingTemplate.convertAndSend("/topic/chat/" + roomId, message);
             return ResponseEntity.ok(message);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // 메시지 삭제 (카카오톡 스타일)
+    @DeleteMapping("/messages/{messageId}")
+    public ResponseEntity<?> deleteMessage(
+            @PathVariable Long messageId,
+            @RequestParam String userId) {
+        try {
+            chatService.deleteMessage(messageId, userId);
+            return ResponseEntity.ok(Map.of("message", "메시지가 삭제되었습니다."));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
