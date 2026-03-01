@@ -60,4 +60,9 @@ export const chatAPI = {
   deleteMessage: async (messageId: number, userId: string): Promise<void> => {
     await apiClient.delete(`/chat/messages/${messageId}`, { params: { userId } });
   },
+
+  // 모든 채팅방 메시지 일괄 읽음 처리
+  markAllAsRead: async (userId: string): Promise<void> => {
+    await apiClient.put('/chat/mark-all-read', null, { params: { userId } });
+  },
 };

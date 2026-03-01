@@ -34,6 +34,11 @@ public class GroupChatMessage {
     @Column(nullable = false, length = 2000)
     private String content;
 
+    // CHAT: 일반 메시지, SYSTEM: 시스템 메시지 (입장/퇴장/강퇴/초대)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private String messageType = "CHAT";
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime sentAt;

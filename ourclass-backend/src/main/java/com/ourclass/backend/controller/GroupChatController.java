@@ -3,6 +3,7 @@ package com.ourclass.backend.controller;
 import com.ourclass.backend.dto.ChatMessageRequest;
 import com.ourclass.backend.dto.GroupChatMessageResponse;
 import com.ourclass.backend.dto.GroupChatRoomResponse;
+import com.ourclass.backend.entity.GroupChatMessage;
 import com.ourclass.backend.service.GroupChatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -87,7 +88,9 @@ public class GroupChatController {
             @RequestParam String userId,
             @RequestParam String newMemberId) {
         try {
-            groupChatService.inviteMember(roomId, userId, newMemberId);
+            GroupChatMessage sysMsg = groupChatService.inviteMember(roomId, userId, newMemberId);
+            GroupChatMessageResponse sysResponse = groupChatService.getSystemMessageResponse(sysMsg);
+            messagingTemplate.convertAndSend("/topic/group-chat/" + roomId, sysResponse);
             return ResponseEntity.ok(Map.of("message", "초대되었습니다."));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -100,7 +103,9 @@ public class GroupChatController {
             @PathVariable Long roomId,
             @RequestParam String userId) {
         try {
-            groupChatService.leaveRoom(roomId, userId);
+            GroupChatMessage sysMsg = groupChatService.leaveRoom(roomId, userId);
+            GroupChatMessageResponse sysResponse = groupChatService.getSystemMessageResponse(sysMsg);
+            messagingTemplate.convertAndSend("/topic/group-chat/" + roomId, sysResponse);
             return ResponseEntity.ok(Map.of("message", "퇴장했습니다."));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -115,6 +120,12 @@ public class GroupChatController {
             @RequestParam String targetUserId) {
         try {
             groupChatService.kickMember(roomId, userId, targetUserId);
+            // 강퇴 시스템 메시지는 kickMember 내부에서 생성됨, 브로드캐스트
+            GroupChatMessage sysMsg = groupChatService.getLastSystemMessage(roomId);
+            if (sysMsg != null) {
+                GroupChatMessageResponse sysResponse = groupChatService.getSystemMessageResponse(sysMsg);
+                messagingTemplate.convertAndSend("/topic/group-chat/" + roomId, sysResponse);
+            }
             return ResponseEntity.ok(Map.of("message", "강퇴되었습니다."));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

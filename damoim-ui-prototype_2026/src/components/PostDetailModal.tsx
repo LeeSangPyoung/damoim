@@ -4,6 +4,13 @@ import { getAuthData } from '../utils/auth';
 import ConfirmationModal from './ConfirmationModal';
 import './PostDetailModal.css';
 
+const API_BASE_URL = 'http://localhost:8080';
+const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `${API_BASE_URL}${url}`;
+};
+
 interface PostDetailModalProps {
   post: PostResponse;
   onClose: () => void;
@@ -38,6 +45,12 @@ export default function PostDetailModal({ post: initialPost, onClose, onUpdate, 
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [editPostContent, setEditPostContent] = useState('');
   const [savingPost, setSavingPost] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+
+  // 수정 모드 이미지 관리
+  const [editExistingImageUrls, setEditExistingImageUrls] = useState<string[]>([]);
+  const [editNewImageFiles, setEditNewImageFiles] = useState<File[]>([]);
+  const [editNewImagePreviews, setEditNewImagePreviews] = useState<string[]>([]);
 
   // 댓글 수정 모드
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
@@ -98,12 +111,62 @@ export default function PostDetailModal({ post: initialPost, onClose, onUpdate, 
   // ===== 게시글 수정 =====
   const handleStartEditPost = () => {
     setEditPostContent(post.content);
+    setEditExistingImageUrls(post.imageUrls ? [...post.imageUrls] : []);
+    setEditNewImageFiles([]);
+    setEditNewImagePreviews([]);
     setIsEditingPost(true);
   };
 
   const handleCancelEditPost = () => {
     setIsEditingPost(false);
     setEditPostContent('');
+    editNewImagePreviews.forEach(url => URL.revokeObjectURL(url));
+    setEditExistingImageUrls([]);
+    setEditNewImageFiles([]);
+    setEditNewImagePreviews([]);
+  };
+
+  const handleEditRemoveExistingImage = (index: number) => {
+    setEditExistingImageUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleEditRemoveNewImage = (index: number) => {
+    URL.revokeObjectURL(editNewImagePreviews[index]);
+    setEditNewImageFiles(prev => prev.filter((_, i) => i !== index));
+    setEditNewImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleEditImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const selectedFiles = Array.from(files);
+    const totalCount = editExistingImageUrls.length + editNewImageFiles.length + selectedFiles.length;
+
+    if (totalCount > 5) {
+      setModal({ type: 'error', message: '최대 5개의 이미지만 첨부할 수 있습니다.', onConfirm: () => setModal(null) });
+      return;
+    }
+
+    const validFiles: File[] = [];
+    const newPreviews: string[] = [];
+
+    selectedFiles.forEach(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        setModal({ type: 'error', message: `${file.name}의 크기가 5MB를 초과합니다.`, onConfirm: () => setModal(null) });
+        return;
+      }
+      if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(file.type)) {
+        setModal({ type: 'error', message: `${file.name}은(는) 지원하지 않는 파일 형식입니다.`, onConfirm: () => setModal(null) });
+        return;
+      }
+      validFiles.push(file);
+      newPreviews.push(URL.createObjectURL(file));
+    });
+
+    setEditNewImageFiles(prev => [...prev, ...validFiles]);
+    setEditNewImagePreviews(prev => [...prev, ...newPreviews]);
+    e.target.value = '';
   };
 
   const handleSaveEditPost = async () => {
@@ -111,12 +174,34 @@ export default function PostDetailModal({ post: initialPost, onClose, onUpdate, 
 
     try {
       setSavingPost(true);
+
+      // 새 이미지 업로드
+      const uploadedUrls: string[] = [];
+      if (editNewImageFiles.length > 0) {
+        setUploadingImages(true);
+        for (const file of editNewImageFiles) {
+          const url = await postAPI.uploadImage(file);
+          uploadedUrls.push(url);
+        }
+        setUploadingImages(false);
+      }
+
+      // 기존 유지 이미지 + 새로 업로드한 이미지 합치기
+      const finalImageUrls = [...editExistingImageUrls, ...uploadedUrls];
+
       const updatedPost = await postAPI.updatePost(post.id, user.userId, {
         content: editPostContent,
-        imageUrls: post.imageUrls,
+        imageUrls: finalImageUrls.length > 0 ? finalImageUrls : undefined,
       });
+
+      // 미리보기 URL 정리
+      editNewImagePreviews.forEach(url => URL.revokeObjectURL(url));
+
       setPost(updatedPost);
       setIsEditingPost(false);
+      setEditExistingImageUrls([]);
+      setEditNewImageFiles([]);
+      setEditNewImagePreviews([]);
       onUpdate();
       setModal({ type: 'success', message: '게시글이 수정되었습니다.', onConfirm: () => setModal(null) });
     } catch (error) {
@@ -124,6 +209,7 @@ export default function PostDetailModal({ post: initialPost, onClose, onUpdate, 
       setModal({ type: 'error', message: '게시글 수정에 실패했습니다.', onConfirm: () => setModal(null) });
     } finally {
       setSavingPost(false);
+      setUploadingImages(false);
     }
   };
 
@@ -490,18 +576,88 @@ export default function PostDetailModal({ post: initialPost, onClose, onUpdate, 
                 value={editPostContent}
                 onChange={(e) => setEditPostContent(e.target.value)}
                 rows={5}
-                disabled={savingPost}
+                disabled={savingPost || uploadingImages}
                 className="post-detail-edit-textarea"
               />
+
+              {/* 수정 모드 이미지 관리 */}
+              <div className="post-detail-edit-images">
+                {/* 기존 이미지 */}
+                {editExistingImageUrls.length > 0 && (
+                  <div className="post-detail-edit-image-list">
+                    {editExistingImageUrls.map((url, index) => (
+                      <div key={`existing-${index}`} className="post-detail-edit-image-item">
+                        <img src={getImageUrl(url)} alt={`기존 이미지 ${index + 1}`} />
+                        <button
+                          className="post-detail-edit-image-remove"
+                          onClick={() => handleEditRemoveExistingImage(index)}
+                          disabled={savingPost || uploadingImages}
+                          title="이미지 삭제"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                            <path d="M18 6 6 18" /><path d="M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 새로 추가한 이미지 */}
+                {editNewImagePreviews.length > 0 && (
+                  <div className="post-detail-edit-image-list">
+                    {editNewImagePreviews.map((preview, index) => (
+                      <div key={`new-${index}`} className="post-detail-edit-image-item post-detail-edit-image-new">
+                        <img src={preview} alt={`새 이미지 ${index + 1}`} />
+                        <span className="post-detail-edit-image-new-badge">NEW</span>
+                        <button
+                          className="post-detail-edit-image-remove"
+                          onClick={() => handleEditRemoveNewImage(index)}
+                          disabled={savingPost || uploadingImages}
+                          title="이미지 삭제"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                            <path d="M18 6 6 18" /><path d="M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 이미지 추가 버튼 */}
+                {(editExistingImageUrls.length + editNewImageFiles.length) < 5 && (
+                  <label className="post-detail-edit-image-add" title="이미지 추가">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleEditImageSelect}
+                      disabled={savingPost || uploadingImages}
+                      style={{ display: 'none' }}
+                    />
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="3" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <path d="m21 15-5-5L5 21" />
+                    </svg>
+                    <span>이미지 추가</span>
+                    <span className="post-detail-edit-image-count">
+                      ({editExistingImageUrls.length + editNewImageFiles.length}/5)
+                    </span>
+                  </label>
+                )}
+              </div>
+
               <div className="post-detail-edit-actions">
                 <button
                   className="post-detail-edit-save-btn"
                   onClick={handleSaveEditPost}
-                  disabled={savingPost || !editPostContent.trim()}
+                  disabled={savingPost || uploadingImages || !editPostContent.trim()}
                 >
-                  {savingPost ? '저장 중...' : '저장'}
+                  {uploadingImages ? '이미지 업로드 중...' : savingPost ? '저장 중...' : '저장'}
                 </button>
-                <button className="post-detail-edit-cancel-btn" onClick={handleCancelEditPost}>
+                <button className="post-detail-edit-cancel-btn" onClick={handleCancelEditPost} disabled={savingPost || uploadingImages}>
                   취소
                 </button>
               </div>
@@ -510,11 +666,11 @@ export default function PostDetailModal({ post: initialPost, onClose, onUpdate, 
             <div className="post-detail-content">{post.content}</div>
           )}
 
-          {/* Images */}
-          {post.imageUrls && post.imageUrls.length > 0 && (
+          {/* Images (일반 모드에서만 표시) */}
+          {!isEditingPost && post.imageUrls && post.imageUrls.length > 0 && (
             <div className="post-detail-images">
               <div className="post-detail-image-main">
-                <img src={post.imageUrls[currentImageIndex]} alt={`Image ${currentImageIndex + 1}`} />
+                <img src={getImageUrl(post.imageUrls[currentImageIndex])} alt={`Image ${currentImageIndex + 1}`} />
                 {post.imageUrls.length > 1 && (
                   <>
                     <button
@@ -540,7 +696,7 @@ export default function PostDetailModal({ post: initialPost, onClose, onUpdate, 
                       className={`post-detail-image-thumbnail ${index === currentImageIndex ? 'active' : ''}`}
                       onClick={() => setCurrentImageIndex(index)}
                     >
-                      <img src={url} alt={`Thumbnail ${index + 1}`} />
+                      <img src={getImageUrl(url)} alt={`Thumbnail ${index + 1}`} />
                     </div>
                   ))}
                 </div>

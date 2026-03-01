@@ -143,6 +143,18 @@ public class ChatService {
         chatMessageRepository.save(message);
     }
 
+    // 모든 채팅방 메시지 일괄 읽음 처리
+    @Transactional
+    public void markAllAsRead(String userId) {
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+
+        List<ChatRoom> myRooms = chatRoomRepository.findByUser(user);
+        if (!myRooms.isEmpty()) {
+            chatMessageRepository.markAllAsRead(myRooms, user);
+        }
+    }
+
     // 채팅방 나가기 (1:1)
     @Transactional
     public void leaveRoom(Long roomId, String userId) {

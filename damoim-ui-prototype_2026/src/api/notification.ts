@@ -4,7 +4,7 @@ export interface NotificationResponse {
   id: number;
   senderUserId: string;
   senderName: string;
-  type: 'MESSAGE' | 'FRIEND_REQUEST' | 'FRIEND_ACCEPTED' | 'COMMENT' | 'LIKE' | 'CHAT' | 'GROUP_CHAT';
+  type: 'MESSAGE' | 'FRIEND_REQUEST' | 'FRIEND_ACCEPTED' | 'COMMENT' | 'LIKE' | 'CHAT' | 'GROUP_CHAT' | 'REUNION_INVITE' | 'MEETING_CREATED' | 'MEETING_CONFIRMED' | 'MEETING_CANCELLED' | 'FEE_CREATED' | 'FEE_UPDATED' | 'REUNION_JOIN_REQUEST' | 'REUNION_JOIN_APPROVED' | 'REUNION_JOIN_REJECTED' | 'REUNION_POST';
   content: string;
   referenceId?: number;
   read: boolean;

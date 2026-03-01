@@ -114,6 +114,14 @@ public class MessageService {
         messageRepository.save(message);
     }
 
+    @Transactional
+    public void markAllAsRead(String userId) {
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        messageRepository.markAllAsRead(user, LocalDateTime.now());
+    }
+
     @Transactional(readOnly = true)
     public long getUnreadCount(String userId) {
         User user = userRepository.findByUserId(userId)

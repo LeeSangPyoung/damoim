@@ -11,6 +11,10 @@ import { authAPI } from '../api/auth';
 import ProfileModal from './ProfileModal';
 import ComposeMessageModal from './ComposeMessageModal';
 import ConfirmationModal from './ConfirmationModal';
+import FriendRequestPopup from './FriendRequestPopup';
+import MessageNotificationModal from './MessageNotificationModal';
+import LoginToast, { LoginToastData } from './LoginToast';
+import { messageAPI, MessageResponse } from '../api/message';
 import './Dashboard.css';
 
 interface LayoutProps {
@@ -69,12 +73,30 @@ export default function Layout({ children }: LayoutProps) {
   const notifDropdownRef = useRef<HTMLDivElement>(null);
   const stompClientRef = useRef<Client | null>(null);
 
+  // 친구 요청 팝업
+  const [friendRequestPopup, setFriendRequestPopup] = useState<NotificationResponse | null>(null);
+
+  // 쪽지 알림 팝업
+  const [messagePopup, setMessagePopup] = useState<MessageResponse | null>(null);
+
+  // 네비게이션 N 뱃지
+  const [unreadMsgCount, setUnreadMsgCount] = useState<number>(0);
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
+
   // 사용자 드롭다운
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
   // 친구 학교 정보
   const [friendSchools, setFriendSchools] = useState<Record<string, string>>({});
+
+  // 현재 경로 ref (WebSocket 콜백에서 최신 경로 참조용)
+  const locationRef = useRef(location.pathname);
+  locationRef.current = location.pathname;
+
+  // 로그인 알림 토스트 큐
+  const [loginToasts, setLoginToasts] = useState<(LoginToastData & { key: number })[]>([]);
+  const loginToastKeyRef = useRef(0);
 
   useEffect(() => {
     const { user: userData } = getAuthData();
@@ -88,6 +110,7 @@ export default function Layout({ children }: LayoutProps) {
     loadSentRequests(userData.userId);
     loadNotifications(userData.userId);
     loadUnreadNotifCount(userData.userId);
+    loadNavBadges(userData.userId);
   }, [navigate]);
 
   // 접속 중인 동창: 항상 전체 학교 동창 로드 (게시판 탭과 무관)
@@ -130,10 +153,17 @@ export default function Layout({ children }: LayoutProps) {
 
     const intervalId = setInterval(() => {
       loadData(user.userId);
+      loadNavBadges(user.userId);
     }, 10 * 1000); // 10초
 
     return () => clearInterval(intervalId);
   }, [user?.userId]);
+
+  // 페이지 이동 시 뱃지 갱신
+  useEffect(() => {
+    if (!user) return;
+    loadNavBadges(user.userId);
+  }, [location.pathname, user?.userId]);
 
   // 창 닫을 때 로그아웃 시도
   useEffect(() => {
@@ -160,18 +190,69 @@ export default function Layout({ children }: LayoutProps) {
     const client = new Client({
       webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
       onConnect: () => {
-        client.subscribe(`/topic/notifications/${user.userId}`, (message) => {
+        client.subscribe(`/topic/notifications/${user.userId}`, async (message) => {
           const newNotif: NotificationResponse = JSON.parse(message.body);
-          setNotifications(prev => [newNotif, ...prev.slice(0, 49)]);
-          setUnreadNotifCount(prev => prev + 1);
+          const currentPath = locationRef.current;
 
-          // 친구 요청/수락 알림 시 사이드바 새로고침
+          // 해당 페이지에 있으면 자동 읽음 처리 (벨 카운트 증가 안 함)
+          const isOnRelevantPage =
+            ((newNotif.type === 'CHAT' || newNotif.type === 'GROUP_CHAT') && currentPath === '/chat') ||
+            (newNotif.type === 'MESSAGE' && currentPath === '/messages');
+
+          setNotifications(prev => [newNotif, ...prev.slice(0, 49)]);
+
+          if (isOnRelevantPage) {
+            // 자동 읽음 처리
+            try { await notificationAPI.markAsRead(newNotif.id, user!.userId); } catch {}
+          } else {
+            setUnreadNotifCount(prev => prev + 1);
+          }
+
+          // 알림 타입별 처리
           if (newNotif.type === 'FRIEND_REQUEST') {
+            setFriendRequestPopup(newNotif);
             loadPendingRequests();
           } else if (newNotif.type === 'FRIEND_ACCEPTED') {
             loadMyFriends();
             loadSentRequests();
+          } else if (newNotif.type === 'MESSAGE') {
+            if (currentPath !== '/messages') {
+              // 쪽지 알림 → 최신 쪽지 가져와서 팝업 표시
+              try {
+                const messages = await messageAPI.getReceivedMessages(user!.userId);
+                const unread = messages.filter(m => !m.read);
+                if (unread.length > 0) {
+                  setMessagePopup(unread[0]);
+                }
+              } catch (err) {
+                console.error('쪽지 조회 실패:', err);
+              }
+            }
+            loadNavBadges();
+          } else if (newNotif.type === 'CHAT' || newNotif.type === 'GROUP_CHAT') {
+            loadNavBadges();
+          } else if (
+            newNotif.type === 'REUNION_INVITE' ||
+            newNotif.type === 'MEETING_CREATED' ||
+            newNotif.type === 'MEETING_CONFIRMED' ||
+            newNotif.type === 'MEETING_CANCELLED' ||
+            newNotif.type === 'FEE_CREATED' ||
+            newNotif.type === 'FEE_UPDATED' ||
+            newNotif.type === 'REUNION_JOIN_REQUEST' ||
+            newNotif.type === 'REUNION_JOIN_APPROVED' ||
+            newNotif.type === 'REUNION_JOIN_REJECTED' ||
+            newNotif.type === 'REUNION_POST'
+          ) {
+            // 베스트프랜드 관련 알림
+            window.dispatchEvent(new Event('reunionUpdated'));
           }
+        });
+
+        // 로그인 알림 구독
+        client.subscribe(`/topic/login/${user.userId}`, (message) => {
+          const data: LoginToastData = JSON.parse(message.body);
+          const key = ++loginToastKeyRef.current;
+          setLoginToasts(prev => [...prev, { ...data, key }]);
         });
       },
       reconnectDelay: 5000,
@@ -208,6 +289,29 @@ export default function Layout({ children }: LayoutProps) {
       setNotifications(data);
     } catch (error) {
       console.error('알림 로드 실패:', error);
+    }
+  };
+
+  const loadNavBadges = async (userId?: string) => {
+    const targetId = userId || user?.userId;
+    if (!targetId) return;
+    // 해당 페이지에 있을 때는 서버값으로 덮어쓰지 않음 (페이지 내에서 자체 관리)
+    if (location.pathname !== '/messages') {
+      try {
+        const msgCount = await messageAPI.getUnreadCount(targetId);
+        setUnreadMsgCount(msgCount);
+      } catch (e) {
+        console.error('쪽지 뱃지 로드 실패:', e);
+      }
+    }
+    if (location.pathname !== '/chat') {
+      try {
+        const rooms = await chatAPI.getMyChatRooms(targetId);
+        const total = rooms.reduce((sum, r) => sum + r.unreadCount, 0);
+        setUnreadChatCount(total);
+      } catch (e) {
+        console.error('채팅 뱃지 로드 실패:', e);
+      }
     }
   };
 
@@ -254,6 +358,18 @@ export default function Layout({ children }: LayoutProps) {
       case 'FRIEND_ACCEPTED':
         // 현재 페이지 유지 (사이드바에서 확인)
         break;
+      case 'REUNION_INVITE':
+      case 'MEETING_CREATED':
+      case 'MEETING_CONFIRMED':
+      case 'MEETING_CANCELLED':
+      case 'FEE_CREATED':
+      case 'FEE_UPDATED':
+      case 'REUNION_JOIN_REQUEST':
+      case 'REUNION_JOIN_APPROVED':
+      case 'REUNION_JOIN_REJECTED':
+      case 'REUNION_POST':
+        navigate('/reunion');
+        break;
     }
   };
 
@@ -278,6 +394,16 @@ export default function Layout({ children }: LayoutProps) {
       case 'LIKE': return <svg {...s} style={{color: '#ef4444'}}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor"/></svg>;
       case 'CHAT': return <svg {...s}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
       case 'GROUP_CHAT': return <svg {...s}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+      case 'REUNION_INVITE':
+      case 'REUNION_JOIN_REQUEST':
+      case 'REUNION_JOIN_APPROVED':
+      case 'REUNION_JOIN_REJECTED':
+      case 'REUNION_POST':
+      case 'MEETING_CREATED':
+      case 'MEETING_CONFIRMED':
+      case 'MEETING_CANCELLED': return <svg {...s}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+      case 'FEE_CREATED':
+      case 'FEE_UPDATED': return <svg {...s}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
       default: return <svg {...s}><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11a6.002 6.002 0 0 0-4-5.659V5a2 2 0 1 0-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9"/></svg>;
     }
   };
@@ -390,10 +516,10 @@ export default function Layout({ children }: LayoutProps) {
         try {
           const profile = await userAPI.getProfile(request.userId);
           if (profile.schools && profile.schools.length > 0) {
-            const schoolDetails = profile.schools.map(school => {
+            const schoolDetails = Array.from(new Set(profile.schools.map(school => {
               const shortName = school.schoolName.replace('초등학교', '초').replace('중학교', '중').replace('고등학교', '고');
               return `${shortName}(${school.graduationYear})`;
-            });
+            })));
 
             schoolInfo[request.userId] = schoolDetails.join(', ');
           }
@@ -423,10 +549,10 @@ export default function Layout({ children }: LayoutProps) {
         try {
           const profile = await userAPI.getProfile(friend.userId);
           if (profile.schools && profile.schools.length > 0) {
-            const schoolDetails = profile.schools.map(school => {
+            const schoolDetails = Array.from(new Set(profile.schools.map(school => {
               const shortName = school.schoolName.replace('초등학교', '초').replace('중학교', '중').replace('고등학교', '고');
               return `${shortName}(${school.graduationYear})`;
-            });
+            })));
 
             schoolInfo[friend.userId] = schoolDetails.join(', ');
           }
@@ -456,10 +582,10 @@ export default function Layout({ children }: LayoutProps) {
         try {
           const profile = await userAPI.getProfile(request.userId);
           if (profile.schools && profile.schools.length > 0) {
-            const schoolDetails = profile.schools.map(school => {
+            const schoolDetails = Array.from(new Set(profile.schools.map(school => {
               const shortName = school.schoolName.replace('초등학교', '초').replace('중학교', '중').replace('고등학교', '고');
               return `${shortName}(${school.graduationYear})`;
-            });
+            })));
 
             schoolInfo[request.userId] = schoolDetails.join(', ');
           }
@@ -620,10 +746,15 @@ export default function Layout({ children }: LayoutProps) {
             <h1>우리반</h1>
           </div>
           <nav className="dash-nav">
-            <a href="#" onClick={() => navigate('/dashboard')} className="dash-nav-link">홈</a>
+            <a href="#" onClick={() => navigate('/dashboard')} className="dash-nav-link">내학교</a>
             <a href="#" onClick={() => navigate('/search')} className="dash-nav-link">동창찾기</a>
-            <a href="#" onClick={() => navigate('/messages')} className="dash-nav-link">쪽지</a>
-            <a href="#" onClick={() => navigate('/chat')} className="dash-nav-link">채팅</a>
+            <a href="#" onClick={() => { navigate('/messages'); setUnreadMsgCount(0); }} className="dash-nav-link">
+              쪽지{location.pathname !== '/messages' && unreadMsgCount > 0 && <span className="nav-new-badge">N</span>}
+            </a>
+            <a href="#" onClick={() => { navigate('/chat'); setUnreadChatCount(0); }} className="dash-nav-link">
+              채팅{location.pathname !== '/chat' && unreadChatCount > 0 && <span className="nav-new-badge">N</span>}
+            </a>
+            <a href="#" onClick={() => navigate('/reunion')} className="dash-nav-link">찐모임</a>
             {user?.role === 'ADMIN' && (
               <a href="#" onClick={() => navigate('/admin')} className="dash-nav-link" style={{color: '#7c3aed', fontWeight: 600}}>🛡️ 관리자</a>
             )}
@@ -999,6 +1130,30 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       )}
 
+      {/* 쪽지 알림 팝업 */}
+      {messagePopup && (
+        <MessageNotificationModal
+          message={messagePopup}
+          onClose={() => setMessagePopup(null)}
+        />
+      )}
+
+      {/* 친구 요청 팝업 */}
+      {friendRequestPopup && (
+        <FriendRequestPopup
+          notification={friendRequestPopup}
+          onAccept={(friendshipId, senderName) => {
+            handleAcceptFriend(friendshipId, senderName);
+            setFriendRequestPopup(null);
+          }}
+          onReject={(friendshipId) => {
+            handleRejectFriend(friendshipId);
+            setFriendRequestPopup(null);
+          }}
+          onClose={() => setFriendRequestPopup(null)}
+        />
+      )}
+
       {/* 성공/실패 알림 */}
       {confirmationMessage && (
         <ConfirmationModal
@@ -1006,6 +1161,16 @@ export default function Layout({ children }: LayoutProps) {
           onConfirm={() => setConfirmationMessage(null)}
         />
       )}
+
+      {/* 로그인 알림 토스트 (네이트온 스타일) */}
+      {loginToasts.map((toast, index) => (
+        <LoginToast
+          key={toast.key}
+          data={toast}
+          offsetIndex={index}
+          onDone={() => setLoginToasts(prev => prev.filter(t => t.key !== toast.key))}
+        />
+      ))}
     </div>
   );
 }

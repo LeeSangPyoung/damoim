@@ -94,6 +94,17 @@ public class ChatController {
         }
     }
 
+    // 모든 채팅방 메시지 일괄 읽음 처리
+    @PutMapping("/mark-all-read")
+    public ResponseEntity<?> markAllAsRead(@RequestParam String userId) {
+        try {
+            chatService.markAllAsRead(userId);
+            return ResponseEntity.ok(Map.of("message", "모든 메시지를 읽음 처리했습니다."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // 채팅방 나가기
     @DeleteMapping("/rooms/{roomId}/leave")
     public ResponseEntity<?> leaveRoom(

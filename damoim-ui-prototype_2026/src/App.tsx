@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
 import './App.css';
 import Retro2000s_v1 from './components/Retro2000s_v1';
@@ -18,13 +17,11 @@ import Board from './components/Board';
 import Search from './components/Search';
 import Messages from './pages/Messages';
 import Chat from './pages/Chat';
-import MessageNotificationModal from './components/MessageNotificationModal';
 import Layout from './components/Layout';
 import ProfileEdit from './components/ProfileEdit';
 import Admin from './pages/Admin';
+import Reunion from './pages/Reunion';
 import ClassmateList from './components/ClassmateList';
-import { getAuthData } from './utils/auth';
-import { messageAPI, MessageResponse } from './api/message';
 
 function Home() {
   return (
@@ -152,58 +149,8 @@ function Home() {
 }
 
 function App() {
-  const [newMessage, setNewMessage] = useState<MessageResponse | null>(null);
-  const [lastCheckedId, setLastCheckedId] = useState<number>(0);
-
-  useEffect(() => {
-    const checkNewMessages = async () => {
-      const { user } = getAuthData();
-      if (!user) return;
-
-      try {
-        const messages = await messageAPI.getReceivedMessages(user.userId);
-        const unreadMessages = messages.filter(msg => !msg.read);
-
-        if (unreadMessages.length > 0) {
-          const latestMessage = unreadMessages[0];
-
-          // 새로운 메시지인지 확인 (이전에 체크한 메시지보다 ID가 큰 경우)
-          if (latestMessage.id > lastCheckedId) {
-            setNewMessage(latestMessage);
-            setLastCheckedId(latestMessage.id);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to check new messages:', error);
-      }
-    };
-
-    // 로그인 상태 확인
-    const { user } = getAuthData();
-    if (user) {
-      // 첫 체크
-      checkNewMessages();
-
-      // 5초마다 체크
-      const interval = setInterval(checkNewMessages, 5000);
-
-      return () => clearInterval(interval);
-    }
-  }, [lastCheckedId]);
-
-  const handleCloseNotification = () => {
-    setNewMessage(null);
-  };
-
   return (
     <BrowserRouter>
-      {newMessage && (
-        <MessageNotificationModal
-          message={newMessage}
-          onClose={handleCloseNotification}
-        />
-      )}
-
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/home" element={<Home />} />
@@ -226,6 +173,7 @@ function App() {
         <Route path="/chat" element={<Layout><Chat /></Layout>} />
         <Route path="/classmates" element={<Layout><ClassmateList /></Layout>} />
         <Route path="/profile/edit" element={<Layout><ProfileEdit /></Layout>} />
+        <Route path="/reunion" element={<Layout><Reunion /></Layout>} />
         <Route path="/admin" element={<Layout><Admin /></Layout>} />
       </Routes>
     </BrowserRouter>

@@ -52,8 +52,8 @@ public class ImageService {
         Path filePath = uploadPath.resolve(newFilename);
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-        // Return URL
-        return "/uploads/images/" + newFilename;
+        // Return full URL (프론트엔드에서 직접 접근 가능하도록)
+        return "http://localhost:8080/uploads/images/" + newFilename;
     }
 
     private String getFileExtension(String filename) {

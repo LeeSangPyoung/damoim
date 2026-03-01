@@ -56,6 +56,12 @@ export const messageAPI = {
     });
   },
 
+  markAllAsRead: async (userId: string): Promise<void> => {
+    await apiClient.put('/messages/mark-all-read', null, {
+      params: { userId },
+    });
+  },
+
   deleteMessage: async (messageId: number, userId: string): Promise<void> => {
     await apiClient.delete(`/messages/${messageId}`, {
       params: { userId },

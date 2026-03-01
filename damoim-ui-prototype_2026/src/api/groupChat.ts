@@ -23,6 +23,7 @@ export interface GroupChatMessageResponse {
   senderUserId: string;
   senderName: string;
   content: string;
+  messageType: string; // "CHAT" | "SYSTEM"
   unreadCount: number;
   sentAt: string;
 }

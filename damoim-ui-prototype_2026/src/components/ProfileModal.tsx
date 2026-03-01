@@ -161,7 +161,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ profile, onClose, onSendMes
               </div>
               <button className="pm-friend-remove" onClick={handleRemoveFriend} disabled={friendLoading}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
-                해제
+                친구삭제
               </button>
             </div>
           </div>

@@ -1,17 +1,22 @@
 package com.ourclass.backend.service;
 
 import com.ourclass.backend.dto.*;
+import com.ourclass.backend.entity.Friendship;
 import com.ourclass.backend.entity.User;
 import com.ourclass.backend.entity.UserSchool;
+import com.ourclass.backend.repository.FriendshipRepository;
 import com.ourclass.backend.repository.UserRepository;
 import com.ourclass.backend.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +24,8 @@ import java.time.LocalDateTime;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final FriendshipRepository friendshipRepository;
+    private final SimpMessagingTemplate messagingTemplate;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
@@ -92,6 +99,28 @@ public class AuthService {
         userRepository.save(user);
 
         log.info("사용자 로그인: {}", user.getUserId());
+
+        // 친구들에게 로그인 알림 전송 (WebSocket)
+        try {
+            List<Friendship> friendships = friendshipRepository.findAcceptedFriendships(user);
+            log.info("로그인 알림: {}의 친구 수 = {}", user.getUserId(), friendships.size());
+            for (Friendship f : friendships) {
+                String friendUserId = f.getRequester().getUserId().equals(user.getUserId())
+                        ? f.getReceiver().getUserId()
+                        : f.getRequester().getUserId();
+                log.info("로그인 알림 전송: {} -> {}", user.getUserId(), friendUserId);
+                messagingTemplate.convertAndSend(
+                        "/topic/login/" + friendUserId,
+                        Map.of(
+                                "userId", user.getUserId(),
+                                "name", user.getName(),
+                                "profileImageUrl", user.getProfileImageUrl() != null ? user.getProfileImageUrl() : ""
+                        )
+                );
+            }
+        } catch (Exception e) {
+            log.warn("로그인 알림 전송 실패: {}", e.getMessage(), e);
+        }
 
         // JWT 토큰 생성
         String token = jwtUtil.generateToken(user.getUserId());

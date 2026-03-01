@@ -73,11 +73,17 @@ export default function ComposeMessageModal({
         f.userId.toLowerCase().includes(value.toLowerCase())
       );
       setFilteredFriends(filtered);
-      setShowDropdown(true);
     } else {
-      setFilteredFriends([]);
-      setShowDropdown(false);
+      setFilteredFriends(friends);
     }
+    setShowDropdown(true);
+  };
+
+  const showAllFriends = () => {
+    if (searchQuery.trim().length === 0) {
+      setFilteredFriends(friends);
+    }
+    setShowDropdown(true);
   };
 
   const handleSelectFriend = (friend: FriendResponse) => {
@@ -180,9 +186,11 @@ export default function ComposeMessageModal({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  onFocus={() => {
-                    if (searchQuery.trim().length >= 1 && filteredFriends.length > 0) {
-                      setShowDropdown(true);
+                  onFocus={() => showAllFriends()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown' && !showDropdown) {
+                      e.preventDefault();
+                      showAllFriends();
                     }
                   }}
                   placeholder="친구 이름을 입력하세요"

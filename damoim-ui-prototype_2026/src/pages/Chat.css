@@ -56,6 +56,30 @@
   color: #374151;
 }
 
+/* 모두 읽음 버튼 */
+.chat-mark-all-read-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: white;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chat-mark-all-read-btn:hover {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #16a34a;
+}
+
 .chat-create-group-btn {
   width: 36px;
   height: 36px;
@@ -878,4 +902,30 @@
   color: #9ca3af;
   font-style: italic;
   font-size: 13px;
+}
+
+/* 시스템 메시지 (카카오톡 스타일) */
+.chat-system-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: center;
+  max-width: 80%;
+  padding: 6px 0;
+}
+
+.chat-system-message-text {
+  background: rgba(0, 0, 0, 0.06);
+  color: #6b7280;
+  font-size: 12px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.chat-system-message-time {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 2px;
 }

@@ -7,6 +7,7 @@ import { groupChatAPI, GroupChatRoomResponse, GroupChatMessageResponse } from '.
 import { userAPI, ClassmateInfo } from '../api/user';
 import { getAuthData } from '../utils/auth';
 import ConfirmationModal from '../components/ConfirmationModal';
+import EmojiPicker from '../components/EmojiPicker';
 import './Chat.css';
 
 type ChatTab = 'dm' | 'group';
@@ -440,25 +441,41 @@ export default function Chat() {
 
   const handleInviteMembers = async () => {
     if (!user || !selectedGroupRoom || selectedInviteMembers.length === 0) return;
-    try {
-      setInviting(true);
-      for (const memberId of selectedInviteMembers) {
-        await groupChatAPI.inviteMember(selectedGroupRoom.id, user.userId, memberId);
-      }
-      setShowInviteModal(false);
-      // 방 정보 갱신
-      await loadGroupRooms();
-      const rooms = await groupChatAPI.getMyRooms(user.userId);
-      const updatedRoom = rooms.find(r => r.id === selectedGroupRoom.id);
-      if (updatedRoom) {
-        setSelectedGroupRoom(updatedRoom);
-      }
-    } catch (error) {
-      console.error('멤버 초대 실패:', error);
-      setModal({ type: 'error', message: '멤버 초대에 실패했습니다.', onConfirm: () => setModal(null) });
-    } finally {
-      setInviting(false);
-    }
+
+    // 선택된 멤버 이름 목록
+    const selectedNames = selectedInviteMembers
+      .map(id => inviteClassmates.find(c => c.userId === id)?.name || id)
+      .join(', ');
+
+    setModal({
+      type: 'confirm',
+      message: `${selectedNames}님을 초대하시겠습니까?`,
+      confirmText: '초대',
+      onConfirm: async () => {
+        setModal(null);
+        try {
+          setInviting(true);
+          for (const memberId of selectedInviteMembers) {
+            await groupChatAPI.inviteMember(selectedGroupRoom.id, user.userId, memberId);
+          }
+          setShowInviteModal(false);
+          // 방 정보 갱신
+          await loadGroupRooms();
+          const rooms = await groupChatAPI.getMyRooms(user.userId);
+          const updatedRoom = rooms.find(r => r.id === selectedGroupRoom.id);
+          if (updatedRoom) {
+            setSelectedGroupRoom(updatedRoom);
+          }
+          setModal({ type: 'success', message: `${selectedNames}님을 초대했습니다.`, onConfirm: () => setModal(null) });
+        } catch (error) {
+          console.error('멤버 초대 실패:', error);
+          setModal({ type: 'error', message: '멤버 초대에 실패했습니다.', onConfirm: () => setModal(null) });
+        } finally {
+          setInviting(false);
+        }
+      },
+      onCancel: () => setModal(null),
+    });
   };
 
   // 1:1 채팅방 나가기
@@ -541,6 +558,21 @@ export default function Chat() {
     });
   };
 
+  // 1:1 채팅 모두 읽음 처리
+  const handleMarkAllAsRead = async () => {
+    if (!user) return;
+    try {
+      await chatAPI.markAllAsRead(user.userId);
+      // 채팅방 목록 새로고침 (unreadCount 반영)
+      const data = await chatAPI.getMyChatRooms(user.userId);
+      setRooms(data);
+      setModal({ type: 'success', message: '모든 메시지를 읽음 처리했습니다.', onConfirm: () => setModal(null) });
+    } catch (error) {
+      console.error('일괄 읽음 처리 실패:', error);
+      setModal({ type: 'error', message: '읽음 처리에 실패했습니다.', onConfirm: () => setModal(null) });
+    }
+  };
+
   // 탭 전환 시 선택 초기화
   const handleTabChange = (tab: ChatTab) => {
     setActiveTab(tab);
@@ -607,6 +639,12 @@ export default function Chat() {
               그룹채팅
             </button>
           </div>
+          {activeTab === 'dm' && rooms.some(r => r.unreadCount > 0) && (
+            <button className="chat-mark-all-read-btn" onClick={handleMarkAllAsRead} title="모두 읽음 처리">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              모두 읽음
+            </button>
+          )}
           {activeTab === 'group' && (
             <button className="chat-create-group-btn" onClick={handleOpenCreateGroup}>
               +
@@ -788,6 +826,12 @@ export default function Chat() {
                 })
               ) : (
                 groupMessages.map(msg => (
+                  msg.messageType === 'SYSTEM' ? (
+                    <div key={msg.id} className="chat-system-message">
+                      <span className="chat-system-message-text">{msg.content}</span>
+                      <span className="chat-system-message-time">{formatTime(msg.sentAt)}</span>
+                    </div>
+                  ) : (
                   <div
                     key={msg.id}
                     className={`chat-message ${msg.senderUserId === user.userId ? 'mine' : 'theirs'}`}
@@ -816,13 +860,16 @@ export default function Chat() {
                       </button>
                     )}
                   </div>
+                  )
                 ))
+
               )}
               <div ref={messagesEndRef} />
             </div>
 
             {/* 입력 영역 */}
             <div className="chat-input-area">
+              <EmojiPicker onSelect={(emoji) => setInputValue(prev => prev + emoji)} />
               <textarea
                 className="chat-input"
                 placeholder="메시지를 입력하세요..."

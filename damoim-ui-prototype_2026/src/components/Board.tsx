@@ -9,6 +9,12 @@ import ComposeMessageModal from './ComposeMessageModal';
 import CreatePostModal from './CreatePostModal';
 import PostDetailModal from './PostDetailModal';
 
+const API_BASE_URL = 'http://localhost:8080';
+const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `${API_BASE_URL}${url}`;
+};
 
 const getLastSeenKey = (schoolName: string, graduationYear: string) =>
   `lastSeenPostId_${schoolName}_${graduationYear}`;
@@ -329,7 +335,7 @@ const Board = () => {
 
               {post.imageUrls && post.imageUrls.length > 0 && (
                 <div className="dash-post-thumbnail">
-                  <img src={post.imageUrls[0]} alt="Post thumbnail" />
+                  <img src={getImageUrl(post.imageUrls[0])} alt="Post thumbnail" />
                   {post.imageUrls.length > 1 && (
                     <div className="dash-post-image-count">+{post.imageUrls.length - 1}</div>
                   )}

@@ -53,6 +53,7 @@ public class GroupChatService {
         memberRepository.save(creatorMember);
 
         // 초대된 멤버 추가
+        StringBuilder invitedNames = new StringBuilder();
         for (String memberId : memberIds) {
             if (memberId.equals(creatorId)) continue;
             User memberUser = userRepository.findByUserId(memberId).orElse(null);
@@ -62,8 +63,14 @@ public class GroupChatService {
                         .user(memberUser)
                         .build();
                 memberRepository.save(member);
+                if (invitedNames.length() > 0) invitedNames.append(", ");
+                invitedNames.append(memberUser.getName());
             }
         }
+
+        // 시스템 메시지: 방 생성
+        createSystemMessage(room, creator,
+                creator.getName() + "님이 " + invitedNames + "님을 초대했습니다.");
 
         return toRoomResponse(room, creatorId);
     }
@@ -154,9 +161,11 @@ public class GroupChatService {
 
     // 멤버 초대
     @Transactional
-    public void inviteMember(Long roomId, String inviterId, String newMemberId) {
+    public GroupChatMessage inviteMember(Long roomId, String inviterId, String newMemberId) {
         GroupChatRoom room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("채팅방을 찾을 수 없습니다."));
+        User inviter = userRepository.findByUserId(inviterId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
         User newMember = userRepository.findByUserId(newMemberId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
@@ -169,11 +178,15 @@ public class GroupChatService {
                 .user(newMember)
                 .build();
         memberRepository.save(member);
+
+        // 시스템 메시지
+        return createSystemMessage(room, inviter,
+                inviter.getName() + "님이 " + newMember.getName() + "님을 초대했습니다.");
     }
 
     // 채팅방 나가기
     @Transactional
-    public void leaveRoom(Long roomId, String userId) {
+    public GroupChatMessage leaveRoom(Long roomId, String userId) {
         GroupChatRoom room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("채팅방을 찾을 수 없습니다."));
         User user = userRepository.findByUserId(userId)
@@ -181,7 +194,13 @@ public class GroupChatService {
 
         GroupChatMember member = memberRepository.findByRoomAndUser(room, user)
                 .orElseThrow(() -> new RuntimeException("멤버가 아닙니다."));
+
+        // 시스템 메시지 (삭제 전에 생성)
+        GroupChatMessage sysMsg = createSystemMessage(room, user,
+                user.getName() + "님이 나갔습니다.");
+
         memberRepository.delete(member);
+        return sysMsg;
     }
 
     // 멤버 강퇴
@@ -206,7 +225,24 @@ public class GroupChatService {
 
         GroupChatMember member = memberRepository.findByRoomAndUser(room, target)
                 .orElseThrow(() -> new RuntimeException("해당 사용자는 멤버가 아닙니다."));
+
+        User requester = userRepository.findByUserId(requesterId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        // 시스템 메시지 (삭제 전에 생성)
+        GroupChatMessage sysMsg = createSystemMessage(room, requester,
+                target.getName() + "님이 강퇴되었습니다.");
+
         memberRepository.delete(member);
+    }
+
+    public GroupChatMessage getLastSystemMessage(Long roomId) {
+        GroupChatRoom room = roomRepository.findById(roomId).orElse(null);
+        if (room == null) return null;
+        List<GroupChatMessage> messages = messageRepository.findByRoomOrderBySentAtAsc(room);
+        if (messages.isEmpty()) return null;
+        GroupChatMessage last = messages.get(messages.size() - 1);
+        return "SYSTEM".equals(last.getMessageType()) ? last : null;
     }
 
     @Transactional
@@ -262,8 +298,30 @@ public class GroupChatService {
                 .senderUserId(msg.getSender().getUserId())
                 .senderName(msg.getSender().getName())
                 .content(msg.getContent())
+                .messageType(msg.getMessageType())
                 .unreadCount(unreadCount)
                 .sentAt(msg.getSentAt() != null ? msg.getSentAt().toString() : null)
                 .build();
+    }
+
+    // 시스템 메시지 생성 헬퍼
+    private GroupChatMessage createSystemMessage(GroupChatRoom room, User actor, String content) {
+        GroupChatMessage message = GroupChatMessage.builder()
+                .room(room)
+                .sender(actor)
+                .content(content)
+                .messageType("SYSTEM")
+                .build();
+        messageRepository.save(message);
+
+        room.setLastMessage(content);
+        room.setLastMessageAt(LocalDateTime.now());
+        roomRepository.save(room);
+
+        return message;
+    }
+
+    public GroupChatMessageResponse getSystemMessageResponse(GroupChatMessage msg) {
+        return toMessageResponse(msg, msg.getRoom());
     }
 }

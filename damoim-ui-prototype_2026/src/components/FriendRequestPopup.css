@@ -1,0 +1,121 @@
+.friend-req-popup-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: friendReqFadeIn 0.3s ease-out;
+}
+
+@keyframes friendReqFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.friend-req-popup-box {
+  background: white;
+  border-radius: 16px;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  animation: friendReqSlideDown 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes friendReqSlideDown {
+  from { transform: translateY(-50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.friend-req-popup-header {
+  background: #4a4a4a;
+  color: white;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.friend-req-popup-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.friend-req-popup-body {
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.friend-req-popup-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: white;
+  font-size: 24px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.friend-req-popup-text {
+  font-size: 15px;
+  color: #1f2937;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.friend-req-popup-text strong {
+  color: #4a4a4a;
+  font-size: 17px;
+}
+
+.friend-req-popup-actions {
+  padding: 16px 24px 24px;
+  display: flex;
+  gap: 12px;
+}
+
+.friend-req-reject-btn,
+.friend-req-accept-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.friend-req-reject-btn {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.friend-req-reject-btn:hover {
+  background: #e5e7eb;
+}
+
+.friend-req-accept-btn {
+  background: #f59e0b;
+  color: white;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+}
+
+.friend-req-accept-btn:hover {
+  background: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}

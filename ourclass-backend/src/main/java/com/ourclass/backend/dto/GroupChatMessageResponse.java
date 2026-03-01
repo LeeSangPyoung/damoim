@@ -15,6 +15,7 @@ public class GroupChatMessageResponse {
     private String senderUserId;
     private String senderName;
     private String content;
+    private String messageType;
     private int unreadCount;
     private String sentAt;
 }

@@ -65,6 +65,17 @@ public class MessageController {
         }
     }
 
+    @PutMapping("/mark-all-read")
+    public ResponseEntity<?> markAllAsRead(@RequestParam String userId) {
+        try {
+            messageService.markAllAsRead(userId);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            log.error("쪽지 일괄 읽음 처리 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @PutMapping("/{messageId}/read")
     public ResponseEntity<?> markAsRead(
             @PathVariable Long messageId,
