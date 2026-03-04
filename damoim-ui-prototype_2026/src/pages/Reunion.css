@@ -145,6 +145,30 @@
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.4));
 }
 
+.bf-card-new-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
+  animation: bf-badge-pulse 2s infinite;
+}
+
+@keyframes bf-badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
 .bf-card-body {
   padding: 16px;
 }
@@ -300,6 +324,21 @@
 .bf-tab.active {
   color: #f59e0b;
   border-bottom-color: #f59e0b;
+}
+
+.bf-tab-new-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-left: 4px;
+  vertical-align: middle;
 }
 
 .bf-tab-content {
@@ -1195,6 +1234,14 @@
   border-color: #f59e0b;
 }
 
+.bf-vote-option.expired {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.bf-vote-option.expired:hover {
+  background: white;
+}
+
 .bf-vote-check {
   width: 20px;
   height: 20px;
@@ -1284,6 +1331,81 @@
 .bf-meeting-cancel-btn:hover {
   background: #fee2e2;
   color: #dc2626;
+}
+
+/* 모임 확정 옵션 선택 */
+.bf-confirm-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.bf-confirm-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: #fff;
+}
+
+.bf-confirm-option:hover {
+  border-color: #c4b5fd;
+  background: #faf5ff;
+}
+
+.bf-confirm-option.selected {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+}
+
+.bf-confirm-option-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  font-size: 12px;
+  font-weight: 700;
+  color: transparent;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.bf-confirm-option.selected .bf-confirm-option-check {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: #fff;
+}
+
+.bf-confirm-option-text {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.bf-confirm-option-votes {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #f3f0ff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.bf-confirm-warn {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #dc2626;
+  font-weight: 500;
 }
 
 .bf-meeting-empty {
@@ -1616,6 +1738,22 @@
 
 .bf-option-row input {
   flex: 1;
+}
+
+.bf-shop-pick-btn {
+  background: #fffbeb;
+  color: #f59e0b;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.bf-shop-pick-btn:hover {
+  background: #fef3c7;
+  border-color: #f59e0b;
 }
 
 .bf-option-remove {

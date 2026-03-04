@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,6 +31,9 @@ public class UserService {
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
+        LocalDateTime fiveMinAgo = LocalDateTime.now().minusMinutes(5);
+        boolean online = isUserOnline(user, fiveMinAgo);
+
         return ProfileResponse.builder()
                 .id(user.getId())
                 .userId(user.getUserId())
@@ -37,6 +41,8 @@ public class UserService {
                 .email(user.getEmail())
                 .profileImageUrl(user.getProfileImageUrl())
                 .bio(user.getBio())
+                .online(online)
+                .lastActiveTime(online ? null : getLastActiveTimeStr(user))
                 .schools(user.getSchools().stream()
                         .map(school -> ProfileResponse.SchoolInfo.builder()
                                 .id(school.getId())
@@ -156,6 +162,8 @@ public class UserService {
                             .name(user.getName())
                             .profileImageUrl(user.getProfileImageUrl())
                             .bio(user.getBio())
+                            .online(true)
+                            .lastActiveTime(null)
                             .school(matchedSchool != null ? ClassmateSearchResponse.SchoolInfo.builder()
                                     .schoolCode(matchedSchool.getSchoolCode())
                                     .schoolType(matchedSchool.getSchoolType())
@@ -191,11 +199,14 @@ public class UserService {
 
         log.info("검색 결과: {} 명", users.size());
 
+        LocalDateTime fiveMinAgo = LocalDateTime.now().minusMinutes(5);
+
         List<ClassmateSearchResponse.ClassmateInfo> results = users.stream()
                 .filter(user -> !user.getUserId().equals(currentUserId)) // 본인 제외
                 .map(user -> {
                     // 첫 번째 학교 정보를 기본으로 사용
                     UserSchool firstSchool = user.getSchools().isEmpty() ? null : user.getSchools().get(0);
+                    boolean online = isUserOnline(user, fiveMinAgo);
 
                     return ClassmateSearchResponse.ClassmateInfo.builder()
                             .id(user.getId())
@@ -203,6 +214,8 @@ public class UserService {
                             .name(user.getName())
                             .profileImageUrl(user.getProfileImageUrl())
                             .bio(user.getBio())
+                            .online(online)
+                            .lastActiveTime(online ? null : getLastActiveTimeStr(user))
                             .school(firstSchool != null ? ClassmateSearchResponse.SchoolInfo.builder()
                                     .schoolCode(firstSchool.getSchoolCode())
                                     .schoolType(firstSchool.getSchoolType())
@@ -244,5 +257,19 @@ public class UserService {
         }
 
         return false;
+    }
+
+    private static final DateTimeFormatter ACTIVE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /**
+     * 사용자의 마지막 활동 시간 문자열 반환
+     */
+    private String getLastActiveTimeStr(User user) {
+        // 가장 최근 활동: lastActivityTime > lastLogoutTime > lastLoginTime 순
+        LocalDateTime last = user.getLastActivityTime();
+        if (last == null) last = user.getLastLogoutTime();
+        if (last == null) last = user.getLastLoginTime();
+        if (last == null) return null;
+        return last.format(ACTIVE_FMT);
     }
 }

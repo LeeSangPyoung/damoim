@@ -19,6 +19,7 @@ public class MeetingResponse {
     private String status;
     private String finalDate;
     private String finalLocation;
+    private String voteDeadline;
     private String createdByUserId;
     private String createdByName;
     private String createdAt;

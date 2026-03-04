@@ -18,6 +18,8 @@ public class ProfileResponse {
     private String email;
     private String profileImageUrl;
     private String bio;
+    private Boolean online;
+    private String lastActiveTime;
     private List<SchoolInfo> schools;
 
     @Data

@@ -26,6 +26,8 @@ public class ClassmateSearchResponse {
         private String profileImageUrl;
         private String bio;
         private SchoolInfo school;
+        private Boolean online;
+        private String lastActiveTime; // ISO format or null
     }
 
     @Data

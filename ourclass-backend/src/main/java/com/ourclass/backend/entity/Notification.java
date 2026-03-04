@@ -39,6 +39,9 @@ public class Notification {
     @Column(name = "reference_id")
     private Long referenceId;
 
+    @Column(name = "reunion_id")
+    private Long reunionId;
+
     @Builder.Default
     @Column(name = "is_read", nullable = false)
     private boolean read = false;

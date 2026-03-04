@@ -424,6 +424,19 @@
   color: #9ca3af;
 }
 
+.search-result-lastactive {
+  margin: 0 0 6px 0;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.search-result-online-label {
+  margin: 0 0 6px 0;
+  font-size: 11px;
+  color: #22c55e;
+  font-weight: 600;
+}
+
 .search-result-bio {
   margin: 0;
   font-size: 13px;

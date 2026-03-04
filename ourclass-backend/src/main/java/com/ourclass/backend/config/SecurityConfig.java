@@ -37,7 +37,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/schools/**").permitAll()  // 학교 검색 API 허용
                         .requestMatchers("/api/admin/**").permitAll()  // 관리자 API 허용
                         .requestMatchers("/api/reunions/**").permitAll()  // 동창회 API 허용
+                        .requestMatchers("/api/shops/**").permitAll()  // 동창 가게 API 허용
                         .requestMatchers("/ws/**").permitAll()  // WebSocket 허용
+                        .requestMatchers("/error").permitAll()  // 에러 페이지 허용
                         .requestMatchers("/uploads/**").permitAll()  // 업로드된 이미지 접근 허용
                         .anyRequest().authenticated()
                 );

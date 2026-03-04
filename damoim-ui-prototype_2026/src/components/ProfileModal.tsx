@@ -7,6 +7,22 @@ import { friendAPI, FriendshipStatus } from '../api/friend';
 import { getAuthData } from '../utils/auth';
 import ConfirmationModal from './ConfirmationModal';
 
+function formatRelativeTime(dateStr?: string): string {
+  if (!dateStr) return '';
+  const date = new Date(dateStr.replace(' ', 'T'));
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return '방금 전';
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}시간 전`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 7) return `${diffDay}일 전`;
+  if (diffDay < 30) return `${Math.floor(diffDay / 7)}주 전`;
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
 interface ProfileModalProps {
   profile: ProfileResponse;
   onClose: () => void;
@@ -237,6 +253,16 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ profile, onClose, onSendMes
               )}
             </div>
             <p className="profile-modal-userid">@{profile.userId}</p>
+            {profile.online ? (
+              <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#22c55e', fontWeight: 600 }}>
+                <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#22c55e', marginRight: 5 }}></span>
+                접속중
+              </p>
+            ) : profile.lastActiveTime ? (
+              <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#9ca3af' }}>
+                {formatRelativeTime(profile.lastActiveTime)} 접속
+              </p>
+            ) : null}
           </div>
         </div>
 

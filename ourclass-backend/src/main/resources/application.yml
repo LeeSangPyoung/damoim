@@ -9,6 +9,7 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   jpa:
+    open-in-view: true
     hibernate:
       ddl-auto: update
     show-sql: true
@@ -52,4 +53,5 @@ logging:
   level:
     com.ourclass: DEBUG
     org.springframework.web: DEBUG
+    org.springframework.security: WARN
     org.hibernate.SQL: DEBUG

@@ -11,8 +11,8 @@ import java.util.List;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
-    // 우리 학교: 같은 학교명으로 작성된 게시글 (post.schoolName 기준)
-    @Query("SELECT p FROM Post p WHERE p.schoolName = :schoolName ORDER BY p.createdAt DESC")
+    // 우리 학교: 같은 학교명으로 작성된 게시글 (post.schoolName 기준, author JOIN FETCH)
+    @Query("SELECT p FROM Post p JOIN FETCH p.author WHERE p.schoolName = :schoolName ORDER BY p.createdAt DESC")
     List<Post> findBySchoolName(@Param("schoolName") String schoolName);
 
     // 우리 학년: 같은 학교 + 같은 졸업년도, 작성자의 학년까지 매칭

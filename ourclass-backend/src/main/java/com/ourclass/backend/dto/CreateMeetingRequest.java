@@ -10,4 +10,5 @@ public class CreateMeetingRequest {
     private String description;
     private List<String> dateOptions;
     private List<String> locationOptions;
+    private String voteDeadline;
 }

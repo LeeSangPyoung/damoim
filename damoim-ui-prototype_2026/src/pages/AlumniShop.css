@@ -1,0 +1,1105 @@
+/* 동창 가게 페이지 */
+.shop-container {
+  min-height: calc(100vh - 130px);
+  background: #f5f5f5;
+  padding: 24px;
+}
+
+.shop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.shop-header h2 {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.shop-header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.shop-btn-primary {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shop-btn-primary:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
+.shop-btn-secondary {
+  background: white;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shop-btn-secondary:hover {
+  border-color: #374151;
+  color: #1f2937;
+}
+
+/* 학교 필터 (체크박스 태그 스타일) */
+.shop-school-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.shop-school-filter-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.shop-school-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1.5px solid #d1d5db;
+  background: white;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.shop-school-tag:hover {
+  border-color: #6b7280;
+  color: #6b7280;
+}
+
+.shop-school-tag.active {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #6b7280;
+  font-weight: 700;
+}
+
+.shop-school-tag-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid #d1d5db;
+  background: white;
+  font-size: 10px;
+  font-weight: 700;
+  color: transparent;
+  transition: all 0.2s;
+}
+
+.shop-school-tag.active .shop-school-tag-check {
+  background: white;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+/* 카테고리 필터 */
+.shop-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.shop-category-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shop-category-row.sub {
+  padding: 10px 14px;
+  background: #f9fafb;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+.shop-category-btn {
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.shop-category-btn:hover {
+  border-color: #374151;
+  color: #374151;
+}
+
+.shop-category-btn.active {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #6b7280;
+  font-weight: 700;
+}
+
+.shop-subcategory-btn {
+  padding: 5px 12px;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.shop-subcategory-btn:hover {
+  background: #f3f4f6;
+  border-color: #374151;
+}
+
+.shop-subcategory-btn.active {
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #9ca3af;
+  font-weight: 700;
+}
+
+.shop-search-bar {
+  position: relative;
+  max-width: 300px;
+  align-self: flex-end;
+}
+
+.shop-search-bar input {
+  width: 100%;
+  padding: 8px 16px 8px 36px;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 13px;
+  background: white;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.shop-search-bar input:focus {
+  border-color: #374151;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+.shop-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+/* 카드 그리드 */
+.shop-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.shop-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.shop-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+  border-color: #9ca3af;
+}
+
+.shop-card-image {
+  width: 100%;
+  height: 160px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: #9ca3af;
+  overflow: hidden;
+}
+
+.shop-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shop-card-body {
+  padding: 16px;
+}
+
+.shop-card-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: #fff;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.shop-card-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.shop-card-address {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shop-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.shop-card-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+.shop-card-rating span {
+  color: #9ca3af;
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.shop-card-owner {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.shop-card-owner strong {
+  color: #1a1a1a;
+}
+
+/* 빈 상태 */
+.shop-empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: #9ca3af;
+}
+
+.shop-empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.shop-empty h3 {
+  font-size: 18px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.shop-empty p {
+  font-size: 14px;
+}
+
+/* === 상세 뷰 === */
+.shop-detail {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.shop-detail-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 20px;
+}
+
+.shop-detail-back:hover {
+  color: #1f2937;
+}
+
+.shop-detail-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.shop-detail-image {
+  width: 100%;
+  height: 280px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 80px;
+  overflow: hidden;
+}
+
+.shop-detail-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shop-detail-body {
+  padding: 24px;
+}
+
+.shop-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.shop-detail-name {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.shop-detail-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: #fff;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 10px;
+}
+
+.shop-detail-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #f59e0b;
+}
+
+.shop-detail-rating span {
+  font-size: 14px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.shop-detail-owner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.shop-detail-owner-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #6b7280;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.shop-detail-owner-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shop-detail-owner-info {
+  flex: 1;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.shop-detail-owner-info strong {
+  color: #1a1a1a;
+}
+
+/* 사장님 인터랙션 버튼 (채팅/쪽지/친추) */
+.shop-detail-owner-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.shop-owner-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shop-owner-action-btn:hover {
+  border-color: #374151;
+  color: #1f2937;
+  background: #f9fafb;
+}
+
+.shop-owner-action-done {
+  border-color: #22c55e;
+  color: #22c55e;
+  cursor: default;
+}
+
+.shop-owner-action-done:hover {
+  border-color: #22c55e;
+  color: #22c55e;
+  background: #f0fdf4;
+}
+
+.shop-owner-action-pending {
+  border-color: #9ca3af;
+  color: #9ca3af;
+  cursor: default;
+}
+
+.shop-owner-action-pending:hover {
+  border-color: #9ca3af;
+  color: #9ca3af;
+  background: #f9fafb;
+}
+
+.shop-detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.shop-detail-info-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.shop-detail-info-icon {
+  width: 20px;
+  color: #9ca3af;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.shop-detail-description {
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.6;
+  margin-bottom: 24px;
+  white-space: pre-wrap;
+}
+
+.shop-detail-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+/* === 후기 섹션 === */
+.shop-reviews-section {
+  border-top: 1px solid #f3f4f6;
+  padding-top: 20px;
+}
+
+.shop-reviews-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.shop-reviews-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.shop-review-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.shop-review-item:last-child {
+  border-bottom: none;
+}
+
+.shop-review-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e8e3dc;
+  color: #8b7d6b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.shop-review-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shop-review-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-review-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.shop-review-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.shop-review-stars {
+  color: #f59e0b;
+  font-size: 12px;
+}
+
+.shop-review-date {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-left: auto;
+}
+
+.shop-review-content {
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.shop-review-delete {
+  background: none;
+  border: none;
+  color: #d1d5db;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+.shop-review-delete:hover {
+  color: #ef4444;
+}
+
+/* 후기 작성 폼 */
+.shop-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+  margin-top: 12px;
+}
+
+.shop-review-stars-input {
+  display: flex;
+  gap: 4px;
+}
+
+.shop-review-star-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #e5e7eb;
+  transition: color 0.15s;
+  padding: 0;
+}
+
+.shop-review-star-btn.filled {
+  color: #f59e0b;
+}
+
+.shop-review-form textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 13px;
+  resize: vertical;
+  min-height: 60px;
+  outline: none;
+  font-family: inherit;
+}
+
+.shop-review-form textarea:focus {
+  border-color: #374151;
+}
+
+.shop-review-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* === 모달 === */
+.shop-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.shop-modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.shop-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.shop-modal-header h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.shop-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 4px;
+}
+
+.shop-modal-close:hover {
+  color: #1a1a1a;
+}
+
+.shop-modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.shop-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shop-form-group label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.shop-form-group input,
+.shop-form-group textarea,
+.shop-form-group select {
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.shop-form-group input:focus,
+.shop-form-group textarea:focus,
+.shop-form-group select:focus {
+  border-color: #374151;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+.shop-form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* 영업시간 피커 */
+.shop-hours-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+}
+
+.shop-hours-mode {
+  display: flex;
+  gap: 4px;
+  background: #e5e7eb;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.shop-hours-mode-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.shop-hours-mode-btn.active {
+  background: #fff;
+  color: #374151;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.shop-hours-days {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shop-hours-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shop-hours-row.closed {
+  opacity: 0.55;
+}
+
+.shop-hours-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  min-width: 24px;
+  text-align: center;
+}
+
+.shop-hours-label.weekend {
+  color: #ef4444;
+}
+
+.shop-hours-row select {
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+  min-width: 80px;
+  transition: border-color 0.2s;
+}
+
+.shop-hours-row select:focus {
+  border-color: #374151;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+.shop-hours-sep {
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.shop-hours-closed-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #9ca3af;
+  cursor: pointer;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.shop-hours-closed-toggle input[type="checkbox"] {
+  accent-color: #374151;
+  cursor: pointer;
+  width: 13px;
+  height: 13px;
+}
+
+.shop-hours-closed-text {
+  font-size: 13px;
+  color: #ef4444;
+  font-weight: 600;
+  flex: 1;
+}
+
+.shop-hours-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.shop-hours-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.shop-hours-section-toggle input[type="checkbox"] {
+  accent-color: #374151;
+  cursor: pointer;
+}
+
+.shop-hours-holiday-select {
+  min-width: 100px !important;
+}
+
+.shop-detail-hours {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shop-detail-hours div {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.shop-form-image-upload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shop-form-image-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.shop-form-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shop-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid #f3f4f6;
+}
+
+/* 토스트 */
+.shop-toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a1a;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 9999;
+  animation: shop-toast-in 0.3s ease;
+}
+
+@keyframes shop-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* 동창가게 선택 팝업 (찐모임용) */
+.shop-picker-modal {
+  max-width: 480px;
+}
+
+.shop-picker-list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.shop-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.shop-picker-item:hover {
+  background: #f9fafb;
+}
+
+.shop-picker-item.selected {
+  background: #f3f4f6;
+  border-left: 3px solid #1f2937;
+}
+
+.shop-picker-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-picker-item-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.shop-picker-item-address {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.shop-picker-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.shop-picker-item-rating {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.shop-picker-item.already-selected {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+.shop-picker-item.already-selected:hover {
+  background: #f9fafb;
+}
+
+.shop-picker-check {
+  color: #1f2937;
+  font-size: 20px;
+}

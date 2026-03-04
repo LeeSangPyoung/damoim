@@ -44,6 +44,8 @@ public class ReunionMeeting {
     @Column(length = 200)
     private String finalLocation;
 
+    private LocalDateTime voteDeadline;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;

@@ -17,6 +17,8 @@ export interface ProfileResponse {
   email: string;
   profileImageUrl?: string;
   bio?: string;
+  online?: boolean;
+  lastActiveTime?: string;
   schools: SchoolInfo[];
 }
 
@@ -42,6 +44,8 @@ export interface ClassmateInfo {
   name: string;
   profileImageUrl?: string;
   bio?: string;
+  online?: boolean;
+  lastActiveTime?: string;
   school: {
     schoolCode?: string;
     schoolType: string;

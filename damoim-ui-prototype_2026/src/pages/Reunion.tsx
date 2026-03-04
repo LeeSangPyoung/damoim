@@ -12,7 +12,11 @@ import {
   ReunionCommentResponse,
 } from '../api/reunion';
 import { userAPI, ClassmateInfo } from '../api/user';
+import { alumniShopAPI, ShopResponse, SHOP_CATEGORIES, MAIN_CATEGORIES } from '../api/alumniShop';
+import { CategoryIcon } from '../components/CategoryIcons';
+import { notificationAPI, NotificationResponse } from '../api/notification';
 import './Reunion.css';
+import './AlumniShop.css';
 
 type View = 'dashboard' | 'detail';
 type DetailTab = 'feed' | 'meetings' | 'fees' | 'members';
@@ -229,7 +233,6 @@ export default function Reunion() {
   const [meetings, setMeetings] = useState<MeetingResponse[]>([]);
 
   // Fees
-  const [fees, setFees] = useState<FeeResponse[]>([]);
   const [feeSummary, setFeeSummary] = useState<FeeSummaryResponse | null>(null);
   const [feeGroups, setFeeGroups] = useState<FeeGroupResponse[]>([]);
   const [expandedFeeGroups, setExpandedFeeGroups] = useState<Set<number>>(new Set());
@@ -261,15 +264,24 @@ export default function Reunion() {
   const [newMeetingDesc, setNewMeetingDesc] = useState('');
   const [dateOptions, setDateOptions] = useState<{date: string, time: string}[]>([{date: '', time: ''}]);
   const [locationOptions, setLocationOptions] = useState<string[]>(['']);
+  const [voteDeadline, setVoteDeadline] = useState<{date: string, time: string}>({date: '', time: ''});
+
+  // 동창가게 선택 팝업
+  const [showShopPicker, setShowShopPicker] = useState(false);
+  const [shopList, setShopList] = useState<ShopResponse[]>([]);
+  const [shopCategory, setShopCategory] = useState('전체');
+  const [shopSubCategory, setShopSubCategory] = useState('전체');
+  const [shopSearch, setShopSearch] = useState('');
+  const [shopPickerIndex, setShopPickerIndex] = useState<number>(0);
 
   // Create Fee form
   const [feeAmount, setFeeAmount] = useState('');
   const [feeDesc, setFeeDesc] = useState('');
   const [feeDueDate, setFeeDueDate] = useState('');
 
-  // Confirm Meeting form
-  const [confirmDate, setConfirmDate] = useState('');
-  const [confirmLocation, setConfirmLocation] = useState('');
+  // Confirm Meeting form — 선택된 옵션 ID들
+  const [confirmDateIds, setConfirmDateIds] = useState<Set<number>>(new Set());
+  const [confirmLocationIds, setConfirmLocationIds] = useState<Set<number>>(new Set());
 
   // Invite
   const [classmates, setClassmates] = useState<ClassmateInfo[]>([]);
@@ -278,8 +290,58 @@ export default function Reunion() {
   // Toast
   const [toast, setToast] = useState('');
 
+  // Notifications — 모임별 미읽음 알림
+  const [reunionNotifs, setReunionNotifs] = useState<NotificationResponse[]>([]);
+
+  const REUNION_NOTIF_TYPES = new Set([
+    'REUNION_INVITE', 'MEETING_CREATED', 'MEETING_CONFIRMED', 'MEETING_CANCELLED',
+    'FEE_CREATED', 'FEE_UPDATED', 'REUNION_JOIN_REQUEST', 'REUNION_JOIN_APPROVED',
+    'REUNION_JOIN_REJECTED', 'REUNION_POST', 'REUNION_TREASURER_ASSIGNED'
+  ]);
+
+  const getUnreadCountForReunion = (reunionId: number) =>
+    reunionNotifs.filter(n => !n.read && n.reunionId === reunionId).length;
+
+  const FEED_TYPES = new Set(['REUNION_POST']);
+  const MEETING_TYPES = new Set(['MEETING_CREATED', 'MEETING_CONFIRMED', 'MEETING_CANCELLED']);
+  const FEE_TYPES = new Set(['FEE_CREATED', 'FEE_UPDATED']);
+  const MEMBER_TYPES = new Set(['REUNION_INVITE', 'REUNION_JOIN_REQUEST', 'REUNION_JOIN_APPROVED', 'REUNION_JOIN_REJECTED', 'REUNION_TREASURER_ASSIGNED']);
+
+  const getTabUnreadCount = (reunionId: number, tab: DetailTab) => {
+    const typeSet = tab === 'feed' ? FEED_TYPES : tab === 'meetings' ? MEETING_TYPES : tab === 'fees' ? FEE_TYPES : MEMBER_TYPES;
+    return reunionNotifs.filter(n => !n.read && n.reunionId === reunionId && typeSet.has(n.type)).length;
+  };
+
+  const loadNotifications = async () => {
+    if (!user) return;
+    try {
+      const all = await notificationAPI.getNotifications(user.userId);
+      setReunionNotifs(all.filter(n => REUNION_NOTIF_TYPES.has(n.type)));
+    } catch (e) {
+      console.error('알림 로드 실패:', e);
+    }
+  };
+
+  const markReunionNotifsRead = async (reunionId: number) => {
+    if (!user) return;
+    const unread = reunionNotifs.filter(n => !n.read && n.reunionId === reunionId);
+    if (unread.length === 0) return;
+    try {
+      await Promise.all(unread.map(n => notificationAPI.markAsRead(n.id, user.userId)));
+      setReunionNotifs(prev => prev.map(n => n.reunionId === reunionId ? { ...n, read: true } : n));
+    } catch (e) {
+      console.error('알림 읽음 처리 실패:', e);
+    }
+  };
+
   useEffect(() => {
-    if (user) loadReunions();
+    if (user) {
+      loadReunions();
+      loadNotifications();
+    }
+    const handler = () => loadNotifications();
+    window.addEventListener('reunionUpdated', handler);
+    return () => window.removeEventListener('reunionUpdated', handler);
   }, []);
 
   const showToast = (msg: string) => {
@@ -305,11 +367,19 @@ export default function Reunion() {
       setSelected(detail);
       setActiveTab('feed');
       setView('detail');
-      loadPosts(r.id);
-      loadMeetings(r.id);
-      loadFees(r.id);
-      loadFeeGroups(r.id);
-      if (detail.myRole === 'ADMIN' || detail.myRole === 'LEADER') loadJoinRequests(r.id);
+      markReunionNotifsRead(r.id);
+
+      // 병렬 요청으로 모든 데이터 동시 로드
+      const promises: Promise<void>[] = [
+        loadPosts(r.id),
+        loadMeetings(r.id),
+        loadFeeGroups(r.id),
+        alumniShopAPI.getShops(user.userId).then(shops => setShopList(shops)).catch(() => {}),
+      ];
+      if (detail.myRole === 'ADMIN' || detail.myRole === 'LEADER') {
+        promises.push(loadJoinRequests(r.id));
+      }
+      await Promise.all(promises);
     } catch (e) {
       console.error('모임 상세 로드 실패:', e);
     }
@@ -341,23 +411,20 @@ export default function Reunion() {
     }
   };
 
-  const loadFees = async (reunionId: number) => {
-    if (!user) return;
-    try {
-      const data = await reunionAPI.getFees(reunionId, user.userId);
-      setFees(data);
-      const summary = await reunionAPI.getFeeSummary(reunionId, user.userId);
-      setFeeSummary(summary);
-    } catch (e) {
-      console.error('회비 로드 실패:', e);
-    }
-  };
-
   const loadFeeGroups = async (reunionId: number) => {
     if (!user) return;
     try {
       const data = await reunionAPI.getFeeGroups(reunionId, user.userId);
       setFeeGroups(data);
+
+      // feeGroups 데이터에서 요약 정보 계산 (별도 API 호출 불필요)
+      const allFees = data.flatMap(g => g.fees);
+      const totalAmount = data.reduce((sum, g) => sum + g.totalAmount, 0);
+      const totalPaid = data.reduce((sum, g) => sum + g.totalPaid, 0);
+      const paidCount = allFees.filter(f => f.status === 'PAID').length;
+      const unpaidCount = allFees.filter(f => f.status === 'UNPAID').length;
+      const partialCount = allFees.filter(f => f.status === 'PARTIAL').length;
+      setFeeSummary({ totalAmount, totalPaid, totalUnpaid: totalAmount - totalPaid, paidCount, unpaidCount, partialCount });
     } catch (e) {
       console.error('회비 그룹 로드 실패:', e);
     }
@@ -482,11 +549,19 @@ export default function Reunion() {
 
   const handleLike = async (postId: number) => {
     if (!user || !selected) return;
+
+    // 낙관적 업데이트
+    setPosts(prev => prev.map(p =>
+      p.id === postId
+        ? { ...p, liked: !p.liked, likeCount: p.liked ? p.likeCount - 1 : p.likeCount + 1 }
+        : p
+    ));
+
     try {
       await reunionAPI.togglePostLike(postId, user.userId);
-      loadPosts(selected.id);
     } catch (e) {
       console.error('좋아요 실패:', e);
+      loadPosts(selected.id); // 실패 시 서버 데이터로 복원
     }
   };
 
@@ -599,17 +674,20 @@ export default function Reunion() {
   const handleCreateMeeting = async () => {
     if (!user || !selected || !newMeetingTitle.trim()) return;
     try {
+      const deadlineStr = voteDeadline.date ? `${voteDeadline.date} ${voteDeadline.time || '23:59'}` : undefined;
       await reunionAPI.createMeeting(selected.id, user.userId, {
         title: newMeetingTitle.trim(),
         description: newMeetingDesc.trim() || undefined,
         dateOptions: dateOptions.filter(d => d.date.trim()).map(d => `${d.date} ${d.time || '00:00'}`),
         locationOptions: locationOptions.filter(l => l.trim()),
+        voteDeadline: deadlineStr,
       });
       setShowCreateMeeting(false);
       setNewMeetingTitle('');
       setNewMeetingDesc('');
       setDateOptions([{date: '', time: ''}]);
       setLocationOptions(['']);
+      setVoteDeadline({date: '', time: ''});
       loadMeetings(selected.id);
       showToast('모임이 만들어졌습니다');
     } catch (e) {
@@ -628,12 +706,28 @@ export default function Reunion() {
   };
 
   const handleConfirmMeeting = async () => {
-    if (!user || !showConfirmMeeting || !confirmDate.trim() || !confirmLocation.trim()) return;
+    if (!user || !showConfirmMeeting) return;
+    if (confirmDateIds.size > 1 || confirmLocationIds.size > 1) {
+      alert('날짜와 장소를 각각 하나만 선택해주세요.');
+      return;
+    }
+    if (confirmDateIds.size === 0 && showConfirmMeeting.dateOptions.length > 0) {
+      alert('확정할 날짜를 선택해주세요.');
+      return;
+    }
+    if (confirmLocationIds.size === 0 && showConfirmMeeting.locationOptions.length > 0) {
+      alert('확정할 장소를 선택해주세요.');
+      return;
+    }
+    const selectedDate = showConfirmMeeting.dateOptions.find(o => confirmDateIds.has(o.id));
+    const selectedLocation = showConfirmMeeting.locationOptions.find(o => confirmLocationIds.has(o.id));
+    const finalDate = selectedDate?.optionValue || '';
+    const finalLocation = selectedLocation?.optionValue || '';
     try {
-      await reunionAPI.confirmMeeting(showConfirmMeeting.id, user.userId, confirmDate.trim(), confirmLocation.trim());
+      await reunionAPI.confirmMeeting(showConfirmMeeting.id, user.userId, finalDate, finalLocation);
       setShowConfirmMeeting(null);
-      setConfirmDate('');
-      setConfirmLocation('');
+      setConfirmDateIds(new Set());
+      setConfirmLocationIds(new Set());
       if (selected) loadMeetings(selected.id);
       showToast('모임이 확정되었습니다');
     } catch (e) {
@@ -665,24 +759,10 @@ export default function Reunion() {
       setFeeAmount('');
       setFeeDesc('');
       setFeeDueDate('');
-      loadFees(selected.id);
       loadFeeGroups(selected.id);
       showToast('회비가 등록되었습니다');
     } catch (e) {
       console.error('회비 생성 실패:', e);
-    }
-  };
-
-  const handlePayFee = async (feeId: number, amount: number) => {
-    if (!user || !selected) return;
-    const input = window.prompt('납부 금액을 입력하세요', String(amount));
-    if (!input) return;
-    try {
-      await reunionAPI.updateFeePayment(feeId, user.userId, parseInt(input));
-      loadFees(selected.id);
-      showToast('납부 처리되었습니다');
-    } catch (e) {
-      console.error('납부 실패:', e);
     }
   };
 
@@ -699,7 +779,6 @@ export default function Reunion() {
     try {
       await reunionAPI.toggleFeePayment(feeId, user.userId);
       loadFeeGroups(selected.id);
-      loadFees(selected.id);
     } catch (e) {
       console.error('납부 토글 실패:', e);
     }
@@ -710,7 +789,6 @@ export default function Reunion() {
     try {
       await reunionAPI.addMemberToFeeGroup(feeGroupId, user.userId, targetUserId);
       loadFeeGroups(selected.id);
-      loadFees(selected.id);
       showToast('멤버가 추가되었습니다');
     } catch (e: any) {
       showToast(e?.response?.data?.error || '추가 실패');
@@ -723,7 +801,6 @@ export default function Reunion() {
     try {
       await reunionAPI.removeMemberFromFeeGroup(feeGroupId, user.userId, targetUserId);
       loadFeeGroups(selected.id);
-      loadFees(selected.id);
       showToast('멤버가 제외되었습니다');
     } catch (e) {
       console.error('회비 멤버 제외 실패:', e);
@@ -736,7 +813,6 @@ export default function Reunion() {
     try {
       await reunionAPI.deleteFeeGroup(feeGroupId, user.userId);
       loadFeeGroups(selected.id);
-      loadFees(selected.id);
       showToast('회비가 삭제되었습니다');
     } catch (e) {
       console.error('회비 삭제 실패:', e);
@@ -917,25 +993,29 @@ export default function Reunion() {
             </div>
           ) : (
             <div className="bf-card-grid">
-              {filteredReunions.map(r => (
-                <div key={r.id} className="bf-card" onClick={() => openDetail(r)}>
-                  <div
-                    className="bf-card-cover"
-                    style={r.coverImageUrl ? { backgroundImage: `url(${getImageUrl(r.coverImageUrl)})` } : undefined}
-                  >
-                    <div className="bf-card-cover-overlay" />
-                  </div>
-                  <div className="bf-card-body">
-                    <div className="bf-card-name">{r.name}</div>
-                    <div className="bf-card-meta">
-                      <span>{r.memberCount}명</span>
-                      {r.schoolName && <span>{r.schoolName}</span>}
-                      {r.graduationYear && <span>{r.graduationYear}년</span>}
+              {filteredReunions.map(r => {
+                const unread = getUnreadCountForReunion(r.id);
+                return (
+                  <div key={r.id} className="bf-card" onClick={() => openDetail(r)}>
+                    <div
+                      className="bf-card-cover"
+                      style={r.coverImageUrl ? { backgroundImage: `url(${getImageUrl(r.coverImageUrl)})` } : undefined}
+                    >
+                      <div className="bf-card-cover-overlay" />
+                      {unread > 0 && <span className="bf-card-new-badge">N</span>}
                     </div>
-                    {r.description && <div className="bf-card-desc">{r.description}</div>}
+                    <div className="bf-card-body">
+                      <div className="bf-card-name">{r.name}</div>
+                      <div className="bf-card-meta">
+                        <span>{r.memberCount}명</span>
+                        {r.schoolName && <span>{r.schoolName}</span>}
+                        {r.graduationYear && <span>{r.graduationYear}년</span>}
+                      </div>
+                      {r.description && <div className="bf-card-desc">{r.description}</div>}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </>
@@ -967,15 +1047,19 @@ export default function Reunion() {
 
           {/* Tabs */}
           <div className="bf-tabs">
-            {(['feed', 'meetings', 'fees', 'members'] as DetailTab[]).map(tab => (
-              <button
-                key={tab}
-                className={`bf-tab ${activeTab === tab ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab)}
-              >
-                {{ feed: '피드', meetings: '모임', fees: '회비', members: '멤버' }[tab]}
-              </button>
-            ))}
+            {(['feed', 'meetings', 'fees', 'members'] as DetailTab[]).map(tab => {
+              const tabUnread = selected ? getTabUnreadCount(selected.id, tab) : 0;
+              return (
+                <button
+                  key={tab}
+                  className={`bf-tab ${activeTab === tab ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {{ feed: '피드', meetings: '모임', fees: '회비', members: '멤버' }[tab]}
+                  {tabUnread > 0 && <span className="bf-tab-new-badge">N</span>}
+                </button>
+              );
+            })}
           </div>
 
           {/* Tab Content */}
@@ -1174,9 +1258,9 @@ export default function Reunion() {
                   <button className="bf-btn-primary" onClick={() => setShowCreateMeeting(true)}>+ 모임 만들기</button>
                 </div>
 
-                {meetings.length === 0 && <div className="bf-meeting-empty">아직 등록된 모임이 없습니다</div>}
+                {meetings.filter(m => m.status !== 'CANCELLED').length === 0 && <div className="bf-meeting-empty">아직 등록된 모임이 없습니다</div>}
 
-                {meetings.map(mt => (
+                {meetings.filter(m => m.status !== 'CANCELLED').map(mt => (
                   <div key={mt.id} className="bf-meeting-card">
                     <div className="bf-meeting-card-header">
                       <div className="bf-meeting-title">{mt.title}</div>
@@ -1192,13 +1276,30 @@ export default function Reunion() {
                       </div>
                     )}
 
-                    {mt.status === 'VOTING' && (
+                    {mt.status === 'VOTING' && (() => {
+                      const isExpired = mt.voteDeadline ? new Date(mt.voteDeadline.replace(' ', 'T')) < new Date() : false;
+                      const deadlineDate = mt.voteDeadline ? new Date(mt.voteDeadline.replace(' ', 'T')) : null;
+                      const dDayMs = deadlineDate ? deadlineDate.getTime() - Date.now() : null;
+                      const dDay = dDayMs != null ? Math.ceil(dDayMs / (1000 * 60 * 60 * 24)) : null;
+                      return (
                       <>
+                        {mt.voteDeadline && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: isExpired ? '#fef2f2' : '#fffbeb', borderRadius: '8px', fontSize: '13px', marginBottom: '8px' }}>
+                            <span style={{ fontWeight: 600, color: isExpired ? '#dc2626' : '#b45309' }}>
+                              {isExpired ? '투표 마감됨' : `마감: ${mt.voteDeadline}`}
+                            </span>
+                            {!isExpired && dDay != null && (
+                              <span style={{ background: dDay <= 1 ? '#fee2e2' : '#fef3c7', color: dDay <= 1 ? '#dc2626' : '#92400e', padding: '1px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>
+                                {dDay <= 0 ? '오늘 마감' : `D-${dDay}`}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         {mt.dateOptions.length > 0 && (
                           <div className="bf-vote-section">
                             <div className="bf-vote-section-title">날짜 투표</div>
                             {mt.dateOptions.map(opt => (
-                              <div key={opt.id} className={`bf-vote-option ${opt.myVote ? 'voted' : ''}`} onClick={() => handleVote(opt.id)} title={opt.myVote ? '클릭하여 투표 취소' : '클릭하여 투표'}>
+                              <div key={opt.id} className={`bf-vote-option ${opt.myVote ? 'voted' : ''} ${isExpired ? 'expired' : ''}`} onClick={() => !isExpired && handleVote(opt.id)} title={isExpired ? '투표가 마감되었습니다' : opt.myVote ? '클릭하여 투표 취소' : '클릭하여 투표'}>
                                 {opt.myVote && <span className="bf-vote-check">✓</span>}
                                 <span className="bf-vote-option-text">{opt.optionValue}</span>
                                 <div className="bf-vote-option-bar">
@@ -1213,25 +1314,46 @@ export default function Reunion() {
                         {mt.locationOptions.length > 0 && (
                           <div className="bf-vote-section">
                             <div className="bf-vote-section-title">장소 투표</div>
-                            {mt.locationOptions.map(opt => (
-                              <div key={opt.id} className={`bf-vote-option ${opt.myVote ? 'voted' : ''}`} onClick={() => handleVote(opt.id)} title={opt.myVote ? '클릭하여 투표 취소' : '클릭하여 투표'}>
+                            {mt.locationOptions.map(opt => {
+                              const matchShop = opt.optionValue.match(/^(.+?)\s*\((.+)\)$/);
+                              const sName = matchShop ? matchShop[1] : null;
+                              const foundShop = sName ? shopList.find(s => s.shopName === sName) : null;
+                              const displayText = foundShop ? foundShop.shopName : opt.optionValue;
+                              return (
+                              <div key={opt.id} className={`bf-vote-option ${opt.myVote ? 'voted' : ''} ${isExpired ? 'expired' : ''}`} onClick={() => !isExpired && handleVote(opt.id)} title={isExpired ? '투표가 마감되었습니다' : opt.myVote ? '클릭하여 투표 취소' : '클릭하여 투표'}>
                                 {opt.myVote && <span className="bf-vote-check">✓</span>}
-                                <span className="bf-vote-option-text">{opt.optionValue}</span>
+                                <span className="bf-vote-option-text">
+                                  {displayText}
+                                  {foundShop && (
+                                    <span style={{ marginLeft: '8px', fontSize: '11px', color: '#2563eb', background: '#eff6ff', padding: '1px 6px', borderRadius: '8px', fontWeight: 600 }}>
+                                      {foundShop.ownerName} · {(foundShop.ownerSchools || []).join(', ')}
+                                    </span>
+                                  )}
+                                </span>
                                 <div className="bf-vote-option-bar">
                                   <div className="bf-vote-option-bar-fill" style={{ width: `${(opt.voteCount / getMaxVotes(mt)) * 100}%` }} />
                                 </div>
                                 <span className="bf-vote-option-count">{opt.voteCount}</span>
                                 <span className="bf-vote-voters">{opt.voters.map(v => v.name).join(', ')}</span>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </>
-                    )}
+                      );
+                    })()}
 
-                    {isLeader && mt.status === 'VOTING' && (
+                    {(isLeader || (user && mt.createdByUserId === user?.userId)) && mt.status === 'VOTING' && (
                       <div className="bf-meeting-admin-actions">
-                        <button className="bf-meeting-confirm-btn" onClick={() => { setShowConfirmMeeting(mt); setConfirmDate(''); setConfirmLocation(''); }}>확정하기</button>
+                        <button className="bf-meeting-confirm-btn" onClick={() => {
+                          setShowConfirmMeeting(mt);
+                          // 최다 득표 옵션을 기본 선택 (동점이면 모두 선택)
+                          const maxDateVotes = Math.max(0, ...mt.dateOptions.map(o => o.voteCount));
+                          const maxLocVotes = Math.max(0, ...mt.locationOptions.map(o => o.voteCount));
+                          setConfirmDateIds(new Set(maxDateVotes > 0 ? mt.dateOptions.filter(o => o.voteCount === maxDateVotes).map(o => o.id) : []));
+                          setConfirmLocationIds(new Set(maxLocVotes > 0 ? mt.locationOptions.filter(o => o.voteCount === maxLocVotes).map(o => o.id) : []));
+                        }}>확정하기</button>
                         <button className="bf-meeting-cancel-btn" onClick={() => handleCancelMeeting(mt.id)}>취소하기</button>
                       </div>
                     )}
@@ -1564,11 +1686,35 @@ export default function Reunion() {
                 </div>
               </div>
               <div className="bf-modal-field">
+                <label>투표 마감일</label>
+                <BfDateTimePicker
+                  value={voteDeadline}
+                  onChange={v => setVoteDeadline(v)}
+                />
+                <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>미설정 시 수동으로 확정할 때까지 투표 가능</div>
+              </div>
+              <div className="bf-modal-field">
                 <label>장소 옵션</label>
                 <div className="bf-option-list">
                   {locationOptions.map((l, i) => (
                     <div key={i} className="bf-option-row">
                       <input value={l} onChange={e => { const arr = [...locationOptions]; arr[i] = e.target.value; setLocationOptions(arr); }} placeholder="예: 강남역 근처 한우집" />
+                      <button
+                        className="bf-shop-pick-btn"
+                        title="동창가게에서 선택"
+                        onClick={async () => {
+                          if (!user) return;
+                          try {
+                            const shops = await alumniShopAPI.getShops(user.userId);
+                            setShopList(shops);
+                            setShopPickerIndex(i);
+                            setShowShopPicker(true);
+                            setShopCategory('전체');
+                            setShopSubCategory('전체');
+                            setShopSearch('');
+                          } catch (e) { console.error(e); }
+                        }}
+                      >🏪</button>
                       {locationOptions.length > 1 && <button className="bf-option-remove" onClick={() => setLocationOptions(locationOptions.filter((_, j) => j !== i))}>x</button>}
                     </div>
                   ))}
@@ -1579,6 +1725,108 @@ export default function Reunion() {
             <div className="bf-modal-footer">
               <button className="bf-modal-cancel" onClick={() => setShowCreateMeeting(false)}>취소</button>
               <button className="bf-modal-submit" onClick={handleCreateMeeting} disabled={!newMeetingTitle.trim()}>만들기</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 동창가게 선택 팝업 */}
+      {showShopPicker && (
+        <div className="bf-modal-backdrop" style={{ zIndex: 2100 }} onClick={() => setShowShopPicker(false)}>
+          <div className="bf-modal shop-picker-modal" onClick={e => e.stopPropagation()}>
+            <div className="bf-modal-header">
+              <h3>동창 가게에서 장소 선택</h3>
+              <button className="bf-modal-close" onClick={() => setShowShopPicker(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #f3f4f6' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  className={`shop-category-btn ${shopCategory === '전체' ? 'active' : ''}`}
+                  onClick={() => { setShopCategory('전체'); setShopSubCategory('전체'); }}
+                  style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '14px', border: '1px solid #e5e7eb', background: shopCategory === '전체' ? '#f59e0b' : 'white', color: shopCategory === '전체' ? 'white' : '#6b7280', cursor: 'pointer', fontWeight: 600 }}
+                >전체</button>
+                {MAIN_CATEGORIES.map(cat => (
+                  <button
+                    key={cat}
+                    className={`shop-category-btn ${shopCategory === cat ? 'active' : ''}`}
+                    onClick={() => { setShopCategory(cat); setShopSubCategory('전체'); }}
+                    style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '14px', border: '1px solid #e5e7eb', background: shopCategory === cat ? '#f59e0b' : 'white', color: shopCategory === cat ? 'white' : '#6b7280', cursor: 'pointer', fontWeight: 600 }}
+                  ><CategoryIcon category={cat} /> {cat}</button>
+                ))}
+              </div>
+              {shopCategory !== '전체' && SHOP_CATEGORIES[shopCategory] && (
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '8px', padding: '6px 10px', background: '#fefce8', borderRadius: '8px' }}>
+                  <button
+                    onClick={() => setShopSubCategory('전체')}
+                    style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '12px', border: '1px solid #fde68a', background: shopSubCategory === '전체' ? '#f59e0b' : 'white', color: shopSubCategory === '전체' ? 'white' : '#92400e', cursor: 'pointer', fontWeight: 600 }}
+                  >전체</button>
+                  {SHOP_CATEGORIES[shopCategory].map(sub => (
+                    <button
+                      key={sub}
+                      onClick={() => setShopSubCategory(sub)}
+                      style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '12px', border: '1px solid #fde68a', background: shopSubCategory === sub ? '#f59e0b' : 'white', color: shopSubCategory === sub ? 'white' : '#92400e', cursor: 'pointer', fontWeight: 600 }}
+                    >{sub}</button>
+                  ))}
+                </div>
+              )}
+              <input
+                style={{ width: '100%', marginTop: '8px', padding: '5px 10px', border: '1px solid #e5e7eb', borderRadius: '16px', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+                placeholder="검색..."
+                value={shopSearch}
+                onChange={e => setShopSearch(e.target.value)}
+              />
+            </div>
+            <div className="shop-picker-list">
+              {shopList
+                .filter(s => shopCategory === '전체' || s.category === shopCategory)
+                .filter(s => shopSubCategory === '전체' || s.subCategory === shopSubCategory)
+                .filter(s => !shopSearch || s.shopName.includes(shopSearch) || s.address.includes(shopSearch) || s.ownerName.includes(shopSearch))
+                .map(shop => {
+                  const label = `${shop.shopName} (${shop.address})`;
+                  const alreadySelected = locationOptions.some((l, idx) => idx !== shopPickerIndex && l === label);
+                  return (
+                  <div
+                    key={shop.id}
+                    className={`shop-picker-item${alreadySelected ? ' already-selected' : ''}`}
+                    onClick={() => {
+                      if (alreadySelected) return;
+                      const arr = [...locationOptions];
+                      arr[shopPickerIndex] = label;
+                      setLocationOptions(arr);
+                      setShowShopPicker(false);
+                    }}
+                  >
+                    <div className="shop-picker-item-info">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="shop-picker-item-name">{shop.shopName}</div>
+                        {alreadySelected && <span style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 600 }}>이미 선택됨</span>}
+                        <span style={{ background: '#fff', color: '#6b7280', border: '1px solid #e5e7eb', padding: '1px 6px', borderRadius: '8px', fontSize: '11px', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '2px' }}><CategoryIcon category={shop.category} /> {shop.subCategory || shop.category}</span>
+                        {shop.averageRating != null && <span className="shop-picker-item-rating" style={{ flexShrink: 0 }}>★ {shop.averageRating}</span>}
+                      </div>
+                      <div className="shop-picker-item-address" style={{ marginTop: '2px' }}>
+                        📍 {shop.address}{shop.detailAddress ? ` ${shop.detailAddress}` : ''}
+                      </div>
+                      <div className="shop-picker-item-meta" style={{ marginTop: '3px' }}>
+                        <span style={{ color: '#374151', fontWeight: 600 }}>{shop.ownerName}</span>
+                        {(shop.ownerSchools || []).length > 0 && (
+                          <span style={{ background: '#eff6ff', color: '#2563eb', padding: '1px 6px', borderRadius: '8px', fontSize: '10px', fontWeight: 600 }}>
+                            {(shop.ownerSchools || []).join(' · ')}
+                          </span>
+                        )}
+                        {shop.phone && <span style={{ color: '#9ca3af' }}>📞 {shop.phone}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  );
+                })}
+
+              {shopList.filter(s => shopCategory === '전체' || s.category === shopCategory).filter(s => shopSubCategory === '전체' || s.subCategory === shopSubCategory).filter(s => !shopSearch || s.shopName.includes(shopSearch) || s.address.includes(shopSearch) || s.ownerName.includes(shopSearch)).length === 0 && (
+                <div style={{ padding: '32px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                  등록된 동창 가게가 없습니다
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1595,18 +1843,56 @@ export default function Reunion() {
               </button>
             </div>
             <div className="bf-modal-body">
-              <div className="bf-modal-field">
-                <label>확정 날짜 *</label>
-                <input value={confirmDate} onChange={e => setConfirmDate(e.target.value)} placeholder="예: 2026-03-15 18:00" />
-              </div>
-              <div className="bf-modal-field">
-                <label>확정 장소 *</label>
-                <input value={confirmLocation} onChange={e => setConfirmLocation(e.target.value)} placeholder="예: 강남역 한우집" />
-              </div>
+              {showConfirmMeeting.dateOptions.length > 0 && (
+                <div className="bf-modal-field">
+                  <label>확정 날짜 선택 *</label>
+                  <div className="bf-confirm-options">
+                    {showConfirmMeeting.dateOptions.map(opt => (
+                      <div
+                        key={opt.id}
+                        className={`bf-confirm-option ${confirmDateIds.has(opt.id) ? 'selected' : ''}`}
+                        onClick={() => {
+                          const next = new Set(confirmDateIds);
+                          if (next.has(opt.id)) next.delete(opt.id); else next.add(opt.id);
+                          setConfirmDateIds(next);
+                        }}
+                      >
+                        <span className="bf-confirm-option-check">{confirmDateIds.has(opt.id) ? '✓' : ''}</span>
+                        <span className="bf-confirm-option-text">{opt.optionValue}</span>
+                        <span className="bf-confirm-option-votes">{opt.voteCount}표</span>
+                      </div>
+                    ))}
+                  </div>
+                  {confirmDateIds.size > 1 && <p className="bf-confirm-warn">⚠ 날짜는 하나만 선택해주세요</p>}
+                </div>
+              )}
+              {showConfirmMeeting.locationOptions.length > 0 && (
+                <div className="bf-modal-field">
+                  <label>확정 장소 선택 *</label>
+                  <div className="bf-confirm-options">
+                    {showConfirmMeeting.locationOptions.map(opt => (
+                      <div
+                        key={opt.id}
+                        className={`bf-confirm-option ${confirmLocationIds.has(opt.id) ? 'selected' : ''}`}
+                        onClick={() => {
+                          const next = new Set(confirmLocationIds);
+                          if (next.has(opt.id)) next.delete(opt.id); else next.add(opt.id);
+                          setConfirmLocationIds(next);
+                        }}
+                      >
+                        <span className="bf-confirm-option-check">{confirmLocationIds.has(opt.id) ? '✓' : ''}</span>
+                        <span className="bf-confirm-option-text">{opt.optionValue}</span>
+                        <span className="bf-confirm-option-votes">{opt.voteCount}표</span>
+                      </div>
+                    ))}
+                  </div>
+                  {confirmLocationIds.size > 1 && <p className="bf-confirm-warn">⚠ 장소는 하나만 선택해주세요</p>}
+                </div>
+              )}
             </div>
             <div className="bf-modal-footer">
               <button className="bf-modal-cancel" onClick={() => setShowConfirmMeeting(null)}>취소</button>
-              <button className="bf-modal-submit" onClick={handleConfirmMeeting} disabled={!confirmDate.trim() || !confirmLocation.trim()}>확정하기</button>
+              <button className="bf-modal-submit" onClick={handleConfirmMeeting}>확정하기</button>
             </div>
           </div>
         </div>

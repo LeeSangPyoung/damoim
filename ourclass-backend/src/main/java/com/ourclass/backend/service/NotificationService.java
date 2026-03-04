@@ -26,6 +26,12 @@ public class NotificationService {
     @Transactional
     public void createAndSend(String recipientUserId, String senderUserId, String senderName,
                                String type, String content, Long referenceId) {
+        createAndSend(recipientUserId, senderUserId, senderName, type, content, referenceId, null);
+    }
+
+    @Transactional
+    public void createAndSend(String recipientUserId, String senderUserId, String senderName,
+                               String type, String content, Long referenceId, Long reunionId) {
         User recipient = userRepository.findByUserId(recipientUserId).orElse(null);
         if (recipient == null) {
             log.warn("알림 수신자를 찾을 수 없습니다: {}", recipientUserId);
@@ -39,6 +45,7 @@ public class NotificationService {
                 .type(type)
                 .content(content)
                 .referenceId(referenceId)
+                .reunionId(reunionId)
                 .build();
 
         Notification saved = notificationRepository.save(notification);
@@ -102,6 +109,7 @@ public class NotificationService {
                 .type(notification.getType())
                 .content(notification.getContent())
                 .referenceId(notification.getReferenceId())
+                .reunionId(notification.getReunionId())
                 .read(notification.isRead())
                 .createdAt(notification.getCreatedAt())
                 .build();

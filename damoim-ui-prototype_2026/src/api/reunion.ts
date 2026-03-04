@@ -48,6 +48,7 @@ export interface MeetingResponse {
   status: 'VOTING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
   finalDate?: string;
   finalLocation?: string;
+  voteDeadline?: string;
   createdByUserId: string;
   createdByName: string;
   createdAt: string;
@@ -275,6 +276,7 @@ export const reunionAPI = {
     description?: string;
     dateOptions: string[];
     locationOptions: string[];
+    voteDeadline?: string;
   }): Promise<MeetingResponse> => {
     const response = await apiClient.post(`/reunions/${reunionId}/meetings`, data, { params: { userId } });
     return response.data;

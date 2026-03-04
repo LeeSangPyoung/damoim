@@ -163,6 +163,7 @@ export default function Layout({ children }: LayoutProps) {
   useEffect(() => {
     if (!user) return;
     loadNavBadges(user.userId);
+    // 찐모임 알림 읽음 처리는 Reunion.tsx에서 모임별로 처리
   }, [location.pathname, user?.userId]);
 
   // 창 닫을 때 로그아웃 시도
@@ -241,7 +242,8 @@ export default function Layout({ children }: LayoutProps) {
             newNotif.type === 'REUNION_JOIN_REQUEST' ||
             newNotif.type === 'REUNION_JOIN_APPROVED' ||
             newNotif.type === 'REUNION_JOIN_REJECTED' ||
-            newNotif.type === 'REUNION_POST'
+            newNotif.type === 'REUNION_POST' ||
+            newNotif.type === 'REUNION_TREASURER_ASSIGNED'
           ) {
             // 베스트프랜드 관련 알림
             window.dispatchEvent(new Event('reunionUpdated'));
@@ -295,23 +297,18 @@ export default function Layout({ children }: LayoutProps) {
   const loadNavBadges = async (userId?: string) => {
     const targetId = userId || user?.userId;
     if (!targetId) return;
-    // 해당 페이지에 있을 때는 서버값으로 덮어쓰지 않음 (페이지 내에서 자체 관리)
-    if (location.pathname !== '/messages') {
-      try {
-        const msgCount = await messageAPI.getUnreadCount(targetId);
-        setUnreadMsgCount(msgCount);
-      } catch (e) {
-        console.error('쪽지 뱃지 로드 실패:', e);
-      }
+    try {
+      const msgCount = await messageAPI.getUnreadCount(targetId);
+      setUnreadMsgCount(msgCount);
+    } catch (e) {
+      console.error('쪽지 뱃지 로드 실패:', e);
     }
-    if (location.pathname !== '/chat') {
-      try {
-        const rooms = await chatAPI.getMyChatRooms(targetId);
-        const total = rooms.reduce((sum, r) => sum + r.unreadCount, 0);
-        setUnreadChatCount(total);
-      } catch (e) {
-        console.error('채팅 뱃지 로드 실패:', e);
-      }
+    try {
+      const rooms = await chatAPI.getMyChatRooms(targetId);
+      const total = rooms.reduce((sum, r) => sum + r.unreadCount, 0);
+      setUnreadChatCount(total);
+    } catch (e) {
+      console.error('채팅 뱃지 로드 실패:', e);
     }
   };
 
@@ -748,15 +745,22 @@ export default function Layout({ children }: LayoutProps) {
           <nav className="dash-nav">
             <a href="#" onClick={() => navigate('/dashboard')} className="dash-nav-link">내학교</a>
             <a href="#" onClick={() => navigate('/search')} className="dash-nav-link">동창찾기</a>
-            <a href="#" onClick={() => { navigate('/messages'); setUnreadMsgCount(0); }} className="dash-nav-link">
-              쪽지{location.pathname !== '/messages' && unreadMsgCount > 0 && <span className="nav-new-badge">N</span>}
+            <a href="#" onClick={() => navigate('/messages')} className="dash-nav-link">
+              쪽지{unreadMsgCount > 0 && <span className="nav-new-badge">N</span>}
             </a>
-            <a href="#" onClick={() => { navigate('/chat'); setUnreadChatCount(0); }} className="dash-nav-link">
-              채팅{location.pathname !== '/chat' && unreadChatCount > 0 && <span className="nav-new-badge">N</span>}
+            <a href="#" onClick={() => navigate('/chat')} className="dash-nav-link">
+              채팅{unreadChatCount > 0 && <span className="nav-new-badge">N</span>}
             </a>
-            <a href="#" onClick={() => navigate('/reunion')} className="dash-nav-link">찐모임</a>
+            <a href="#" onClick={() => navigate('/reunion')} className="dash-nav-link">
+              찐모임{(() => {
+                const reunionTypes = new Set(['REUNION_INVITE', 'MEETING_CREATED', 'MEETING_CONFIRMED', 'MEETING_CANCELLED', 'FEE_CREATED', 'FEE_UPDATED', 'REUNION_JOIN_REQUEST', 'REUNION_JOIN_APPROVED', 'REUNION_JOIN_REJECTED', 'REUNION_POST', 'REUNION_TREASURER_ASSIGNED']);
+                const count = notifications.filter(n => !n.read && reunionTypes.has(n.type)).length;
+                return count > 0 ? <span className="nav-new-badge">N</span> : null;
+              })()}
+            </a>
+            <a href="#" onClick={() => navigate('/alumni-shop')} className="dash-nav-link">동창가게</a>
             {user?.role === 'ADMIN' && (
-              <a href="#" onClick={() => navigate('/admin')} className="dash-nav-link" style={{color: '#7c3aed', fontWeight: 600}}>🛡️ 관리자</a>
+              <a href="#" onClick={() => navigate('/admin')} className="dash-nav-link">관리자</a>
             )}
           </nav>
           <div className="dash-header-right">

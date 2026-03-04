@@ -18,6 +18,7 @@ public class NotificationResponse {
     private String type;
     private String content;
     private Long referenceId;
+    private Long reunionId;
     private boolean read;
     private LocalDateTime createdAt;
 }

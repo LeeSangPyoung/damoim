@@ -21,6 +21,7 @@ import Layout from './components/Layout';
 import ProfileEdit from './components/ProfileEdit';
 import Admin from './pages/Admin';
 import Reunion from './pages/Reunion';
+import AlumniShop from './pages/AlumniShop';
 import ClassmateList from './components/ClassmateList';
 
 function Home() {
@@ -174,6 +175,7 @@ function App() {
         <Route path="/classmates" element={<Layout><ClassmateList /></Layout>} />
         <Route path="/profile/edit" element={<Layout><ProfileEdit /></Layout>} />
         <Route path="/reunion" element={<Layout><Reunion /></Layout>} />
+        <Route path="/alumni-shop" element={<Layout><AlumniShop /></Layout>} />
         <Route path="/admin" element={<Layout><Admin /></Layout>} />
       </Routes>
     </BrowserRouter>

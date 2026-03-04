@@ -7,6 +7,23 @@ import { friendAPI, FriendshipStatus } from '../api/friend';
 import ProfileModal from './ProfileModal';
 import ComposeMessageModal from './ComposeMessageModal';
 
+function formatRelativeTime(dateStr?: string): string {
+  if (!dateStr) return '';
+  const date = new Date(dateStr.replace(' ', 'T'));
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return '방금 전';
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}시간 전`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 7) return `${diffDay}일 전`;
+  if (diffDay < 30) return `${Math.floor(diffDay / 7)}주 전`;
+  // 오래된 경우 날짜 표시
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
 const Search = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<{ userId: string; name: string; email: string } | null>(null);
@@ -225,7 +242,7 @@ const Search = () => {
                 <h3>검색 결과</h3>
                 <span className="search-results-count">{
                   results.filter((classmate) => {
-                    const isOnline = classmates.some(c => c.userId === classmate.userId);
+                    const isOnline = classmate.online || classmates.some(c => c.userId === classmate.userId);
                     const isSameClass = searchClassFilter === '같은반'
                       ? userSchools.some(s =>
                           s.schoolCode === classmate.school.schoolCode &&
@@ -250,7 +267,7 @@ const Search = () => {
               ) : (
                 <div className="search-results-grid">
                   {results.filter((classmate) => {
-                    const isOnline = classmates.some(c => c.userId === classmate.userId);
+                    const isOnline = classmate.online || classmates.some(c => c.userId === classmate.userId);
                     const isSameClass = searchClassFilter === '같은반'
                       ? userSchools.some(s =>
                           s.schoolCode === classmate.school.schoolCode &&
@@ -264,7 +281,7 @@ const Search = () => {
                     if (searchOnlineStatus === '비접속중' && isOnline) return false;
                     return true;
                   }).map((classmate) => {
-                    const isOnline = classmates.some(c => c.userId === classmate.userId);
+                    const isOnline = classmate.online || classmates.some(c => c.userId === classmate.userId);
                     return (
                     <div
                       key={classmate.id}
@@ -304,6 +321,14 @@ const Search = () => {
                           <p className="search-result-class">
                             {classmate.school.grade}학년 {classmate.school.classNumber}반
                           </p>
+                        )}
+                        {!isOnline && classmate.lastActiveTime && (
+                          <p className="search-result-lastactive">
+                            {formatRelativeTime(classmate.lastActiveTime)} 접속
+                          </p>
+                        )}
+                        {isOnline && (
+                          <p className="search-result-online-label">접속중</p>
                         )}
                         {classmate.bio && (
                           <p className="search-result-bio">{classmate.bio}</p>

@@ -20,4 +20,7 @@ public interface MeetingVoteRepository extends JpaRepository<MeetingVote, Long> 
 
     @Query(value = "SELECT v.id as vid, u.user_id as uid, u.name as uname FROM meeting_votes v JOIN users u ON v.user_id = u.id WHERE v.vote_option_id = :optionId", nativeQuery = true)
     List<Object[]> findVotesByOptionIdNative(@Param("optionId") Long optionId);
+
+    @Query(value = "SELECT v.vote_option_id as oid, v.id as vid, u.user_id as uid, u.name as uname FROM meeting_votes v JOIN users u ON v.user_id = u.id WHERE v.vote_option_id IN :optionIds", nativeQuery = true)
+    List<Object[]> findVotesByOptionIdsNative(@Param("optionIds") List<Long> optionIds);
 }

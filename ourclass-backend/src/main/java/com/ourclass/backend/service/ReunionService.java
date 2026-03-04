@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -93,7 +94,7 @@ public class ReunionService {
                         memberId, creatorUserId, creator.getName(),
                         "REUNION_INVITE",
                         "[" + reunion.getName() + "] 동창회에 초대되었습니다",
-                        reunion.getId()
+                        reunion.getId(), reunion.getId()
                 );
             }
         }
@@ -102,6 +103,7 @@ public class ReunionService {
         return toReunionResponse(reunion, creatorUserId);
     }
 
+    @Transactional(readOnly = true)
     public List<ReunionResponse> getMyReunions(String userId) {
         List<Reunion> reunions = reunionRepository.findByMemberUserId(userId);
         return reunions.stream()
@@ -109,6 +111,7 @@ public class ReunionService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public ReunionResponse getReunionDetail(Long reunionId, String userId) {
         Reunion reunion = reunionRepository.findById(reunionId)
                 .orElseThrow(() -> new RuntimeException("동창회를 찾을 수 없습니다"));
@@ -145,7 +148,7 @@ public class ReunionService {
                     memberId, inviterUserId, inviter.getName(),
                     "REUNION_INVITE",
                     "[" + reunion.getName() + "] 동창회에 초대되었습니다",
-                    reunion.getId()
+                    reunion.getId(), reunion.getId()
             );
         }
     }
@@ -248,7 +251,7 @@ public class ReunionService {
                     admin.getUser().getUserId(), userId, user.getName(),
                     "REUNION_JOIN_REQUEST",
                     "[" + reunion.getName() + "] " + user.getName() + "님이 가입을 요청했습니다",
-                    reunion.getId()
+                    reunion.getId(), reunion.getId()
             );
         }
 
@@ -308,7 +311,7 @@ public class ReunionService {
                 request.getUser().getUserId(), adminUserId, admin.getName(),
                 "REUNION_JOIN_APPROVED",
                 "[" + request.getReunion().getName() + "] 가입이 승인되었습니다",
-                request.getReunion().getId()
+                request.getReunion().getId(), request.getReunion().getId()
         );
         log.info("가입 승인: {} -> {}", request.getUser().getUserId(), request.getReunion().getName());
     }
@@ -334,7 +337,7 @@ public class ReunionService {
                 request.getUser().getUserId(), adminUserId, admin.getName(),
                 "REUNION_JOIN_REJECTED",
                 "[" + request.getReunion().getName() + "] 가입이 거절되었습니다",
-                request.getReunion().getId()
+                request.getReunion().getId(), request.getReunion().getId()
         );
     }
 
@@ -384,7 +387,7 @@ public class ReunionService {
                     m.getUser().getUserId(), userId, user.getName(),
                     "REUNION_POST",
                     "[" + reunion.getName() + "] " + user.getName() + "님이 새 글을 올렸습니다",
-                    post.getId()
+                    post.getId(), reunion.getId()
             );
         }
 
@@ -533,11 +536,24 @@ public class ReunionService {
         User creator = userRepository.findByUserId(creatorUserId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
+        // 마감일 파싱
+        LocalDateTime deadline = null;
+        if (request.getVoteDeadline() != null && !request.getVoteDeadline().isBlank()) {
+            try {
+                String dl = request.getVoteDeadline().trim();
+                if (dl.length() == 16) dl += ":00"; // "yyyy-MM-dd HH:mm" → append :00
+                deadline = LocalDateTime.parse(dl, DT_FMT);
+            } catch (Exception e) {
+                log.warn("마감일 파싱 실패: {}", request.getVoteDeadline());
+            }
+        }
+
         ReunionMeeting meeting = ReunionMeeting.builder()
                 .reunion(reunion)
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .status(MeetingStatus.VOTING)
+                .voteDeadline(deadline)
                 .createdBy(creator)
                 .build();
         meetingRepository.save(meeting);
@@ -576,7 +592,7 @@ public class ReunionService {
                     m.getUser().getUserId(), creatorUserId, creator.getName(),
                     "MEETING_CREATED",
                     "[" + reunion.getName() + "] 새 모임: " + meeting.getTitle(),
-                    meeting.getId()
+                    meeting.getId(), reunion.getId()
             );
         }
 
@@ -610,6 +626,12 @@ public class ReunionService {
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
+        // 마감일 체크
+        ReunionMeeting meeting = option.getMeeting();
+        if (meeting.getVoteDeadline() != null && LocalDateTime.now().isAfter(meeting.getVoteDeadline())) {
+            throw new RuntimeException("투표 마감일이 지났습니다");
+        }
+
         // 토글: 이미 투표했으면 취소, 아니면 투표
         if (voteRepository.existsByVoteOptionAndUser(option, user)) {
             MeetingVote vote = voteRepository.findByVoteOptionAndUser(option, user)
@@ -636,11 +658,12 @@ public class ReunionService {
         User admin = userRepository.findByUserId(adminUserId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
-        // 관리자 확인
+        // 관리자 또는 모임 등록자 확인
+        boolean isCreator = meeting.getCreatedBy().getUserId().equals(adminUserId);
         ReunionMember adminMember = memberRepository.findByReunionAndUser(meeting.getReunion(), admin)
                 .orElseThrow(() -> new RuntimeException("동창회 멤버가 아닙니다"));
-        if (!isLeaderOrAdmin(adminMember.getRole())) {
-            throw new RuntimeException("모임장만 확정할 수 있습니다");
+        if (!isCreator && !isLeaderOrAdmin(adminMember.getRole())) {
+            throw new RuntimeException("모임장 또는 등록자만 확정할 수 있습니다");
         }
 
         meeting.setStatus(MeetingStatus.CONFIRMED);
@@ -656,7 +679,7 @@ public class ReunionService {
                     m.getUser().getUserId(), adminUserId, admin.getName(),
                     "MEETING_CONFIRMED",
                     "[" + meeting.getReunion().getName() + "] 모임 확정: " + finalDate + " " + finalLocation,
-                    meeting.getId()
+                    meeting.getId(), meeting.getReunion().getId()
             );
         }
 
@@ -686,7 +709,7 @@ public class ReunionService {
                     m.getUser().getUserId(), adminUserId, admin.getName(),
                     "MEETING_CANCELLED",
                     "[" + meeting.getReunion().getName() + "] 모임 취소: " + meeting.getTitle(),
-                    meeting.getId()
+                    meeting.getId(), meeting.getReunion().getId()
             );
         }
     }
@@ -731,7 +754,7 @@ public class ReunionService {
                         m.getUser().getUserId(), adminUserId, admin.getName(),
                         "FEE_CREATED",
                         "[" + reunion.getName() + "] 회비 " + request.getAmount() + "원이 등록되었습니다",
-                        fee.getId()
+                        fee.getId(), reunion.getId()
                 );
             }
         }
@@ -799,7 +822,7 @@ public class ReunionService {
                     fee.getUser().getUserId(), adminUserId, admin.getName(),
                     "FEE_UPDATED",
                     "[" + fee.getReunion().getName() + "] 회비 납부가 확인되었습니다",
-                    fee.getId()
+                    fee.getId(), fee.getReunion().getId()
             );
         }
 
@@ -852,17 +875,25 @@ public class ReunionService {
                     .collect(Collectors.toList());
         }
 
+        // 배치 쿼리: 모든 옵션의 투표를 한 번에 조회 (N+1 해결)
+        List<Long> optionIds = options.stream().map(MeetingVoteOption::getId).collect(Collectors.toList());
+        Map<Long, List<Object[]>> votesByOption = new java.util.HashMap<>();
+        if (!optionIds.isEmpty()) {
+            List<Object[]> allVotes = voteRepository.findVotesByOptionIdsNative(optionIds);
+            for (Object[] row : allVotes) {
+                Long optionId = ((Number) row[0]).longValue();
+                votesByOption.computeIfAbsent(optionId, k -> new ArrayList<>()).add(row);
+            }
+        }
+
         List<MeetingResponse.VoteOptionInfo> dateOptions = new ArrayList<>();
         List<MeetingResponse.VoteOptionInfo> locationOptions = new ArrayList<>();
 
         for (MeetingVoteOption opt : options) {
-            // 네이티브 SQL로 DB 직접 조회 (JPA 캐시 완전 우회)
-            List<Object[]> voteRows = voteRepository.findVotesByOptionIdNative(opt.getId());
-            log.info("Option ID={}, native votes count={}, voters={}", opt.getId(), voteRows.size(),
-                    voteRows.stream().map(r -> String.valueOf(r[1])).collect(Collectors.joining(",")));
+            List<Object[]> voteRows = votesByOption.getOrDefault(opt.getId(), new ArrayList<>());
 
             boolean myVote = voteRows.stream()
-                    .anyMatch(r -> String.valueOf(r[1]).equals(currentUserId));
+                    .anyMatch(r -> String.valueOf(r[2]).equals(currentUserId));
 
             MeetingResponse.VoteOptionInfo info = MeetingResponse.VoteOptionInfo.builder()
                     .id(opt.getId())
@@ -870,8 +901,8 @@ public class ReunionService {
                     .optionValue(opt.getOptionValue())
                     .voteCount(voteRows.size())
                     .voters(voteRows.stream().map(r -> MeetingResponse.VoterInfo.builder()
-                            .userId(String.valueOf(r[1]))
-                            .name(String.valueOf(r[2]))
+                            .userId(String.valueOf(r[2]))
+                            .name(String.valueOf(r[3]))
                             .build()
                     ).collect(Collectors.toList()))
                     .myVote(myVote)
@@ -892,6 +923,7 @@ public class ReunionService {
                 .status(meeting.getStatus().name())
                 .finalDate(meeting.getFinalDate())
                 .finalLocation(meeting.getFinalLocation())
+                .voteDeadline(meeting.getVoteDeadline() != null ? meeting.getVoteDeadline().format(DT_FMT) : null)
                 .createdByUserId(meeting.getCreatedBy().getUserId())
                 .createdByName(meeting.getCreatedBy().getName())
                 .createdAt(meeting.getCreatedAt() != null ? meeting.getCreatedAt().format(DT_FMT) : null)
@@ -1041,7 +1073,7 @@ public class ReunionService {
                 targetUserId, leaderUserId, leader.getName(),
                 "REUNION_TREASURER_ASSIGNED",
                 "[" + reunion.getName() + "] 총무로 지정되었습니다",
-                reunion.getId()
+                reunion.getId(), reunion.getId()
         );
         log.info("총무 지정: {} in {}", targetUserId, reunion.getName());
     }
@@ -1114,7 +1146,7 @@ public class ReunionService {
                         m.getUser().getUserId(), callerUserId, caller.getName(),
                         "FEE_CREATED",
                         "[" + reunion.getName() + "] 회비 " + request.getAmount() + "원이 등록되었습니다",
-                        feeGroup.getId()
+                        feeGroup.getId(), reunion.getId()
                 );
             }
         }
@@ -1163,7 +1195,7 @@ public class ReunionService {
                     fee.getUser().getUserId(), callerUserId, caller.getName(),
                     "FEE_UPDATED",
                     "[" + fee.getReunion().getName() + "] " + msg,
-                    fee.getId()
+                    fee.getId(), fee.getReunion().getId()
             );
         }
 

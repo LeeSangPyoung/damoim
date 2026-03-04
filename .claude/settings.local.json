@@ -18,7 +18,8 @@
       "Bash(npx tsc:*)",
       "Bash(killall:*)",
       "Bash(PGPASSWORD=postgres psql:*)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(git push:*)"
     ]
   }
 }

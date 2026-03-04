@@ -35,6 +35,7 @@ const saveLastSeen = (schoolName: string, graduationYear: string, tab: string, m
 
 const Board = () => {
   const navigate = useNavigate();
+  const { user } = getAuthData();
   const [searchParams, setSearchParams] = useSearchParams();
   const schoolName = searchParams.get('school') || '';
   const graduationYear = searchParams.get('year') || '';
@@ -68,7 +69,6 @@ const Board = () => {
   // 프로필에서 해당 학교의 학년/반 데이터 로드
   useEffect(() => {
     const loadGradeClasses = async () => {
-      const { user } = getAuthData();
       if (!user || !schoolName) return;
       try {
         const profile = await userAPI.getProfile(user.userId);
@@ -101,7 +101,6 @@ const Board = () => {
   }, [schoolName, graduationYear]);
 
   const loadNewCounts = async () => {
-    const { user } = getAuthData();
     if (!user) return;
     try {
       const lastSeen = getLastSeen(schoolName, graduationYear);
@@ -113,28 +112,31 @@ const Board = () => {
   };
 
   const loadPosts = async () => {
-    const { user } = getAuthData();
     if (!user) return;
 
     setLoading(true);
     try {
-      // 전체 선택이거나 멀티셀렉트일 경우 필터 없이 가져와서 프론트엔드에서 필터링
-      const shouldFilterFrontend = activeTab === 'myClass' && !isAllSelected && selectedClasses.length > 0;
-      const data = await postAPI.getPosts(user.userId, activeTab, schoolName, graduationYear);
-
-      let filteredData = data;
-      if (shouldFilterFrontend) {
-        // 선택된 학년/반에 해당하는 게시글만 필터링
-        filteredData = data.filter(post =>
-          selectedClasses.some(sc =>
-            post.targetGrade === sc.grade && post.targetClassNumber === sc.classNumber
-          )
+      // 서버사이드 필터링: 선택된 학년/반 파라미터를 서버에 전달
+      let data: PostResponse[];
+      if (activeTab === 'myClass' && !isAllSelected && selectedClasses.length === 1) {
+        // 단일 학년/반 선택 → 서버에서 필터링
+        data = await postAPI.getPosts(user.userId, activeTab, schoolName, graduationYear, selectedClasses[0].grade, selectedClasses[0].classNumber);
+      } else if (activeTab === 'myClass' && !isAllSelected && selectedClasses.length > 1) {
+        // 복수 학년/반 → 병렬 요청 후 합산 (중복 제거)
+        const results = await Promise.all(
+          selectedClasses.map(sc => postAPI.getPosts(user.userId, activeTab, schoolName, graduationYear, sc.grade, sc.classNumber))
         );
+        const merged = results.flat();
+        const seen = new Set<number>();
+        data = merged.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
+        data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      } else {
+        data = await postAPI.getPosts(user.userId, activeTab, schoolName, graduationYear);
       }
 
-      setPosts(filteredData);
-      if (filteredData.length > 0) {
-        const maxId = Math.max(...filteredData.map(p => p.id));
+      setPosts(data);
+      if (data.length > 0) {
+        const maxId = Math.max(...data.map(p => p.id));
         saveLastSeen(schoolName, graduationYear, activeTab, maxId);
         setNewCounts(prev => ({ ...prev, [activeTab]: 0 }));
       }
@@ -160,14 +162,20 @@ const Board = () => {
 
   const handleLike = async (postId: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    const { user } = getAuthData();
     if (!user) return;
+
+    // 낙관적 업데이트
+    setPosts(prev => prev.map(p =>
+      p.id === postId
+        ? { ...p, liked: !p.liked, likeCount: p.liked ? p.likeCount - 1 : p.likeCount + 1 }
+        : p
+    ));
 
     try {
       await postAPI.toggleLike(postId, user.userId);
-      loadPosts();
     } catch (error) {
       console.error('Failed to toggle like:', error);
+      loadPosts(); // 실패 시 서버 데이터로 복원
     }
   };
 
