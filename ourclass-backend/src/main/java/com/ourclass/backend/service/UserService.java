@@ -135,20 +135,10 @@ public class UserService {
                 .collect(Collectors.toList());
         log.info("본인 제외 후: {}", filteredUsers.size());
 
-        List<User> onlineUsers = filteredUsers.stream()
-                .filter(user -> {
-                    boolean online = isUserOnline(user, fiveMinutesAgo);
-                    if (!online) {
-                        log.debug("오프라인 사용자: {} - loginTime: {}, logoutTime: {}, activityTime: {}",
-                                user.getUserId(), user.getLastLoginTime(), user.getLastLogoutTime(), user.getLastActivityTime());
-                    }
-                    return online;
-                })
-                .collect(Collectors.toList());
-        log.info("접속 중인 사용자 수: {}", onlineUsers.size());
-
-        List<ClassmateSearchResponse.ClassmateInfo> classmates = onlineUsers.stream()
+        List<ClassmateSearchResponse.ClassmateInfo> classmates = filteredUsers.stream()
                 .map(user -> {
+                    boolean online = isUserOnline(user, fiveMinutesAgo);
+
                     // 해당 학교 정보만 추출
                     UserSchool matchedSchool = user.getSchools().stream()
                             .filter(s -> schoolCode.equals(s.getSchoolCode())
@@ -162,8 +152,8 @@ public class UserService {
                             .name(user.getName())
                             .profileImageUrl(user.getProfileImageUrl())
                             .bio(user.getBio())
-                            .online(true)
-                            .lastActiveTime(null)
+                            .online(online)
+                            .lastActiveTime(online ? null : getLastActiveTimeStr(user))
                             .school(matchedSchool != null ? ClassmateSearchResponse.SchoolInfo.builder()
                                     .schoolCode(matchedSchool.getSchoolCode())
                                     .schoolType(matchedSchool.getSchoolType())
@@ -175,6 +165,8 @@ public class UserService {
                             .build();
                 })
                 .collect(Collectors.toList());
+        log.info("전체 동창 수: {} (온라인: {})", classmates.size(),
+                classmates.stream().filter(c -> Boolean.TRUE.equals(c.getOnline())).count());
 
         return ClassmateSearchResponse.builder()
                 .classmates(classmates)

@@ -59,6 +59,9 @@ public class ChatController {
             @RequestParam String userId) {
         try {
             List<ChatMessageResponse> messages = chatService.getMessages(roomId, userId);
+            // 읽음 처리 후 상대방에게 읽음 이벤트 브로드캐스트
+            messagingTemplate.convertAndSend("/topic/chat/" + roomId,
+                    Map.of("type", "READ", "userId", userId));
             return ResponseEntity.ok(messages);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

@@ -60,6 +60,9 @@ public class GroupChatController {
             @RequestParam String userId) {
         try {
             List<GroupChatMessageResponse> messages = groupChatService.getMessages(roomId, userId);
+            // 읽음 처리 후 상대방에게 읽음 이벤트 브로드캐스트
+            messagingTemplate.convertAndSend("/topic/group-chat/" + roomId,
+                    Map.of("type", "READ", "userId", userId));
             return ResponseEntity.ok(messages);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

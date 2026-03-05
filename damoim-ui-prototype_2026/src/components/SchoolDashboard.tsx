@@ -203,19 +203,26 @@ export default function SchoolDashboard() {
                   {/* 설명/상세 정보 */}
                   <p className="school-card-description">
                     {school.graduationYear}년 졸업
-                    {school.gradeClasses.length > 0 && (
-                      <>
-                        {' · '}
-                        {school.gradeClasses.map((gc, i) => (
-                          <span key={i}>
-                            {i > 0 && ', '}
-                            {gc.grade && `${gc.grade}학년`}
-                            {gc.classNumber && ` ${gc.classNumber}반`}
+                  </p>
+                  {school.gradeClasses.length > 0 && (
+                    <div className="school-card-grades">
+                      {school.gradeClasses
+                        .slice()
+                        .sort((a, b) => Number(a.grade || 0) - Number(b.grade || 0))
+                        .map((gc, i) => (
+                          <span
+                            key={i}
+                            className="school-card-grade-chip school-card-grade-chip-clickable"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/board?school=${encodeURIComponent(school.schoolName)}&year=${encodeURIComponent(school.graduationYear)}&code=${encodeURIComponent(school.schoolCode || '')}&tab=myClass&grade=${gc.grade}&class=${gc.classNumber}`);
+                            }}
+                          >
+                            {gc.grade}학년 {gc.classNumber}반
                           </span>
                         ))}
-                      </>
-                    )}
-                  </p>
+                    </div>
+                  )}
 
                   {/* 통계 요약 */}
                   <div className="school-card-meta">

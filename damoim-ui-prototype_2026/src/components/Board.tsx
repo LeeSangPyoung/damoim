@@ -79,6 +79,14 @@ const Board = () => {
           .filter((s: SchoolInfo) => s.grade)
           .map((s: SchoolInfo) => ({ grade: s.grade!, classNumber: s.classNumber }));
         setGradeClasses(gc);
+
+        // URL에서 grade/class 파라미터가 있으면 자동 필터링
+        const urlGrade = searchParams.get('grade');
+        const urlClass = searchParams.get('class');
+        if (urlGrade && urlClass) {
+          setIsAllSelected(false);
+          setSelectedClasses([{ grade: urlGrade, classNumber: urlClass }]);
+        }
       } catch {
         setGradeClasses([]);
       }

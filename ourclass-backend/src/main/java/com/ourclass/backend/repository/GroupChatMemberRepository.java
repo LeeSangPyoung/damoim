@@ -15,6 +15,6 @@ public interface GroupChatMemberRepository extends JpaRepository<GroupChatMember
     Optional<GroupChatMember> findByRoomAndUser(GroupChatRoom room, User user);
     boolean existsByRoomAndUser(GroupChatRoom room, User user);
 
-    @Query("SELECT COUNT(m) FROM GroupChatMember m WHERE m.room = :room AND m.lastReadMessageId < :messageId")
+    @Query("SELECT COUNT(m) FROM GroupChatMember m WHERE m.room = :room AND (m.lastReadMessageId IS NULL OR m.lastReadMessageId < :messageId)")
     long countUnreadMembers(@Param("room") GroupChatRoom room, @Param("messageId") Long messageId);
 }

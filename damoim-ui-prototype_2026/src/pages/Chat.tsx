@@ -30,6 +30,7 @@ export default function Chat() {
   const [inputValue, setInputValue] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const stompClientRef = useRef<Client | null>(null);
 
   // 그룹채팅 생성 모달
@@ -91,6 +92,7 @@ export default function Chat() {
         }
 
         const onlineUserIds = new Set(Array.from(allClassmatesMap.keys()));
+        onlineUserIds.add(user.userId);
         setOnlineClassmates(onlineUserIds);
       }
     } catch (error) {
@@ -128,6 +130,21 @@ export default function Chat() {
     }
   }, [roomIdParam]);
 
+  // 새 채팅 메시지 알림 시 방 목록 + 현재 방 메시지 갱신
+  useEffect(() => {
+    const handler = async () => {
+      if (!user) return;
+      // 방 목록 갱신
+      try {
+        const data = await chatAPI.getMyChatRooms(user.userId);
+        setRooms(data);
+      } catch {}
+      loadGroupRooms();
+    };
+    window.addEventListener('chatNewMessage', handler);
+    return () => window.removeEventListener('chatNewMessage', handler);
+  }, [user?.userId]);
+
   // 그룹 채팅방 목록 로드
   const loadGroupRooms = useCallback(async () => {
     if (!user) return;
@@ -159,13 +176,36 @@ export default function Chat() {
     const client = new Client({
       webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
       onConnect: () => {
-        client.subscribe(`/topic/chat/${selectedRoom.id}`, (message) => {
-          const newMsg: ChatMessageResponse = JSON.parse(message.body);
-          setMessages(prev => {
-            if (prev.find(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
+        client.subscribe(`/topic/chat/${selectedRoom.id}`, async (message) => {
+          const parsed = JSON.parse(message.body);
+          // 읽음 이벤트 처리: 상대방이 메시지를 읽었을 때
+          if (parsed.type === 'READ') {
+            if (parsed.userId !== user?.userId) {
+              // 상대방이 읽었으므로 메시지의 isRead 상태 업데이트
+              setMessages(prev => prev.map(m => ({ ...m, isRead: true })));
+            }
+            return;
+          }
+          const newMsg: ChatMessageResponse = parsed;
+          // 상대방 메시지면 읽음 처리 포함하여 전체 메시지 다시 로드
+          if (newMsg.senderUserId !== user?.userId) {
+            try {
+              const msgs = await chatAPI.getMessages(selectedRoom.id, user!.userId);
+              setMessages(msgs);
+            } catch {
+              setMessages(prev => {
+                if (prev.find(m => m.id === newMsg.id)) return prev;
+                return [...prev, newMsg];
+              });
+            }
+          } else {
+            setMessages(prev => {
+              if (prev.find(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+          }
           loadRoomsAndSelect();
+          window.dispatchEvent(new Event('chatRead'));
         });
       },
       onStompError: (frame) => {
@@ -189,13 +229,30 @@ export default function Chat() {
     const client = new Client({
       webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
       onConnect: () => {
-        client.subscribe(`/topic/group-chat/${selectedGroupRoom.id}`, (message) => {
-          const newMsg: GroupChatMessageResponse = JSON.parse(message.body);
-          setGroupMessages(prev => {
-            if (prev.find(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
+        client.subscribe(`/topic/group-chat/${selectedGroupRoom.id}`, async (message) => {
+          const parsed = JSON.parse(message.body);
+          // 읽음 이벤트 처리: 누군가 메시지를 읽었을 때 unreadCount 갱신
+          if (parsed.type === 'READ') {
+            if (parsed.userId !== user?.userId) {
+              try {
+                const msgs = await groupChatAPI.getMessages(selectedGroupRoom.id, user!.userId);
+                setGroupMessages(msgs);
+              } catch {}
+            }
+            return;
+          }
+          const newMsg: GroupChatMessageResponse = parsed;
+          try {
+            const msgs = await groupChatAPI.getMessages(selectedGroupRoom.id, user!.userId);
+            setGroupMessages(msgs);
+          } catch {
+            setGroupMessages(prev => {
+              if (prev.find(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+          }
           loadGroupRooms();
+          window.dispatchEvent(new Event('chatRead'));
         });
       },
       onStompError: (frame) => {
@@ -219,6 +276,7 @@ export default function Chat() {
       const data = await chatAPI.getMessages(room.id, user.userId);
       setMessages(data);
       loadRoomsAndSelect();
+      window.dispatchEvent(new Event('chatRead'));
     } catch (error) {
       console.error('메시지 로딩 실패:', error);
     }
@@ -250,7 +308,8 @@ export default function Chat() {
           return [...prev, msg];
         });
         setInputValue('');
-        loadRoomsAndSelect();
+        loadRoomsAndSelect(selectedRoom.id);
+        setTimeout(() => inputRef.current?.focus(), 0);
       } catch (error) {
         console.error('메시지 전송 실패:', error);
       } finally {
@@ -266,6 +325,7 @@ export default function Chat() {
         });
         setInputValue('');
         loadGroupRooms();
+        setTimeout(() => inputRef.current?.focus(), 0);
       } catch (error) {
         console.error('그룹 메시지 전송 실패:', error);
       } finally {
@@ -871,6 +931,7 @@ export default function Chat() {
             <div className="chat-input-area">
               <EmojiPicker onSelect={(emoji) => setInputValue(prev => prev + emoji)} />
               <textarea
+                ref={inputRef}
                 className="chat-input"
                 placeholder="메시지를 입력하세요..."
                 value={inputValue}

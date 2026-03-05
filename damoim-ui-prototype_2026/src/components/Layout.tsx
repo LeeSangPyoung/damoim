@@ -87,8 +87,9 @@ export default function Layout({ children }: LayoutProps) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
-  // 친구 학교 정보
+  // 친구 학교 정보 & 온라인 상태
   const [friendSchools, setFriendSchools] = useState<Record<string, string>>({});
+  const [friendOnline, setFriendOnline] = useState<Record<string, boolean>>({});
 
   // 현재 경로 ref (WebSocket 콜백에서 최신 경로 참조용)
   const locationRef = useRef(location.pathname);
@@ -119,9 +120,12 @@ export default function Layout({ children }: LayoutProps) {
     loadData(user.userId);
   }, [user?.userId]);
 
-  // Heartbeat - 활동 시간 업데이트 (2분마다)
+  // Heartbeat - 활동 시간 업데이트 (즉시 + 2분마다)
   useEffect(() => {
     if (!user) return;
+
+    // 즉시 한 번 전송
+    authAPI.heartbeat(user.userId).catch(() => {});
 
     const intervalId = setInterval(async () => {
       try {
@@ -163,8 +167,14 @@ export default function Layout({ children }: LayoutProps) {
   useEffect(() => {
     if (!user) return;
     loadNavBadges(user.userId);
-    // 찐모임 알림 읽음 처리는 Reunion.tsx에서 모임별로 처리
   }, [location.pathname, user?.userId]);
+
+  // 채팅 읽음 시 즉시 뱃지 갱신
+  useEffect(() => {
+    const handler = () => loadNavBadges();
+    window.addEventListener('chatRead', handler);
+    return () => window.removeEventListener('chatRead', handler);
+  }, [user?.userId]);
 
   // 창 닫을 때 로그아웃 시도
   useEffect(() => {
@@ -190,9 +200,12 @@ export default function Layout({ children }: LayoutProps) {
 
     const client = new Client({
       webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+      debug: (str) => console.log('[STOMP]', str),
       onConnect: () => {
+        console.log('[WebSocket] Connected! Subscribing for user:', user.userId);
         client.subscribe(`/topic/notifications/${user.userId}`, async (message) => {
           const newNotif: NotificationResponse = JSON.parse(message.body);
+          console.log('[WebSocket] Notification received:', newNotif.type, newNotif.content);
           const currentPath = locationRef.current;
 
           // 해당 페이지에 있으면 자동 읽음 처리 (벨 카운트 증가 안 함)
@@ -232,6 +245,22 @@ export default function Layout({ children }: LayoutProps) {
             loadNavBadges();
           } else if (newNotif.type === 'CHAT' || newNotif.type === 'GROUP_CHAT') {
             loadNavBadges();
+            // 채팅 페이지에 있으면 방 목록 갱신
+            window.dispatchEvent(new Event('chatNewMessage'));
+            // 채팅 페이지가 아닐 때만 토스트 표시 (채팅 토스트는 1개만 유지, 최신으로 교체)
+            if (locationRef.current !== '/chat') {
+              const key = ++loginToastKeyRef.current;
+              setLoginToasts(prev => {
+                const withoutChat = prev.filter(t => t.type !== 'chat');
+                return [...withoutChat, {
+                  key,
+                  userId: newNotif.senderUserId,
+                  name: newNotif.senderName,
+                  type: 'chat' as const,
+                  message: newNotif.content,
+                }];
+              });
+            }
           } else if (
             newNotif.type === 'REUNION_INVITE' ||
             newNotif.type === 'MEETING_CREATED' ||
@@ -257,6 +286,8 @@ export default function Layout({ children }: LayoutProps) {
           setLoginToasts(prev => [...prev, { ...data, key }]);
         });
       },
+      onDisconnect: () => console.log('[WebSocket] Disconnected'),
+      onStompError: (frame) => console.error('[WebSocket] STOMP Error:', frame),
       reconnectDelay: 5000,
     });
 
@@ -448,9 +479,9 @@ export default function Layout({ children }: LayoutProps) {
 
         const allResults = await Promise.all(searchPromises);
 
-        // 결과 병합
+        // 결과 병합 (온라인 동창만 표시)
         for (const classmatesData of allResults) {
-          for (const classmate of classmatesData.classmates) {
+          for (const classmate of classmatesData.classmates.filter((c: ClassmateInfo) => c.online)) {
             // 학교 정보 포맷팅 (프로필 로드 없이 기존 데이터 사용)
             const shortName = classmate.school.schoolName
               .replace('초등학교', '초')
@@ -489,7 +520,7 @@ export default function Layout({ children }: LayoutProps) {
           }
         }
 
-        setClassmates(Array.from(allClassmatesMap.values()));
+        setClassmates(Array.from(allClassmatesMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'ko')));
         setTotalClassmates(allClassmatesMap.size);
       }
     } catch (error) {
@@ -507,13 +538,24 @@ export default function Layout({ children }: LayoutProps) {
       // 내 학교 정보 로드
       const myProfile = await userAPI.getProfile(targetId);
 
-      // 각 요청자의 학교 정보 로드
+      // 내 학교 키 세트
+      const mySchoolKeys = new Set(
+        (myProfile.schools || []).map(s => `${s.schoolName}|${s.graduationYear}`)
+      );
+
+      // 각 요청자의 학교 정보 로드 (공통 학교만 표시)
       const schoolInfo: Record<string, string> = {};
+      const onlineInfo: Record<string, boolean> = {};
       for (const request of data) {
         try {
           const profile = await userAPI.getProfile(request.userId);
+          onlineInfo[request.userId] = profile.online || false;
           if (profile.schools && profile.schools.length > 0) {
-            const schoolDetails = Array.from(new Set(profile.schools.map(school => {
+            const commonSchools = profile.schools.filter(school =>
+              mySchoolKeys.has(`${school.schoolName}|${school.graduationYear}`)
+            );
+            const targetSchools = commonSchools.length > 0 ? commonSchools : profile.schools;
+            const schoolDetails = Array.from(new Set(targetSchools.map(school => {
               const shortName = school.schoolName.replace('초등학교', '초').replace('중학교', '중').replace('고등학교', '고');
               return `${shortName}(${school.graduationYear})`;
             })));
@@ -525,6 +567,7 @@ export default function Layout({ children }: LayoutProps) {
         }
       }
       setFriendSchools(prev => ({ ...prev, ...schoolInfo }));
+      setFriendOnline(prev => ({ ...prev, ...onlineInfo }));
     } catch (error) {
       console.error('친구 요청 로드 실패:', error);
     }
@@ -540,13 +583,25 @@ export default function Layout({ children }: LayoutProps) {
       // 내 학교 정보 로드
       const myProfile = await userAPI.getProfile(targetId);
 
-      // 각 친구의 학교 정보 로드
+      // 내 학교 키 세트 (schoolName + graduationYear)
+      const mySchoolKeys = new Set(
+        (myProfile.schools || []).map(s => `${s.schoolName}|${s.graduationYear}`)
+      );
+
+      // 각 친구의 학교 정보 로드 (공통 학교만 표시)
       const schoolInfo: Record<string, string> = {};
+      const onlineInfo: Record<string, boolean> = {};
       for (const friend of data) {
         try {
           const profile = await userAPI.getProfile(friend.userId);
+          onlineInfo[friend.userId] = profile.online || false;
           if (profile.schools && profile.schools.length > 0) {
-            const schoolDetails = Array.from(new Set(profile.schools.map(school => {
+            // 나와 공통인 학교만 필터링
+            const commonSchools = profile.schools.filter(school =>
+              mySchoolKeys.has(`${school.schoolName}|${school.graduationYear}`)
+            );
+            const targetSchools = commonSchools.length > 0 ? commonSchools : profile.schools;
+            const schoolDetails = Array.from(new Set(targetSchools.map(school => {
               const shortName = school.schoolName.replace('초등학교', '초').replace('중학교', '중').replace('고등학교', '고');
               return `${shortName}(${school.graduationYear})`;
             })));
@@ -558,6 +613,7 @@ export default function Layout({ children }: LayoutProps) {
         }
       }
       setFriendSchools(prev => ({ ...prev, ...schoolInfo }));
+      setFriendOnline(prev => ({ ...prev, ...onlineInfo }));
     } catch (error) {
       console.error('친구 목록 로드 실패:', error);
     }
@@ -573,13 +629,24 @@ export default function Layout({ children }: LayoutProps) {
       // 내 학교 정보 로드
       const myProfile = await userAPI.getProfile(targetId);
 
-      // 각 수신자의 학교 정보 로드
+      // 내 학교 키 세트
+      const mySchoolKeys = new Set(
+        (myProfile.schools || []).map(s => `${s.schoolName}|${s.graduationYear}`)
+      );
+
+      // 각 수신자의 학교 정보 로드 (공통 학교만 표시)
       const schoolInfo: Record<string, string> = {};
+      const onlineInfo: Record<string, boolean> = {};
       for (const request of data) {
         try {
           const profile = await userAPI.getProfile(request.userId);
+          onlineInfo[request.userId] = profile.online || false;
           if (profile.schools && profile.schools.length > 0) {
-            const schoolDetails = Array.from(new Set(profile.schools.map(school => {
+            const commonSchools = profile.schools.filter(school =>
+              mySchoolKeys.has(`${school.schoolName}|${school.graduationYear}`)
+            );
+            const targetSchools = commonSchools.length > 0 ? commonSchools : profile.schools;
+            const schoolDetails = Array.from(new Set(targetSchools.map(school => {
               const shortName = school.schoolName.replace('초등학교', '초').replace('중학교', '중').replace('고등학교', '고');
               return `${shortName}(${school.graduationYear})`;
             })));
@@ -591,6 +658,7 @@ export default function Layout({ children }: LayoutProps) {
         }
       }
       setFriendSchools(prev => ({ ...prev, ...schoolInfo }));
+      setFriendOnline(prev => ({ ...prev, ...onlineInfo }));
     } catch (error) {
       console.error('보낸 요청 로드 실패:', error);
     }
@@ -970,7 +1038,7 @@ export default function Layout({ children }: LayoutProps) {
                   ) : (
                     <div className="dash-friend-list">
                       {myFriends.map(friend => {
-                        const isOnline = classmates.some(c => c.userId === friend.userId);
+                        const isOnline = friendOnline[friend.userId] || false;
                         return (
                         <div key={friend.friendshipId} className="dash-friend-item">
                           <div className="dash-user-avatar-wrap">
@@ -1006,7 +1074,7 @@ export default function Layout({ children }: LayoutProps) {
                         받은 요청 <span className="dash-friend-req-count">{pendingRequests.length}</span>
                       </div>
                       {pendingRequests.map(req => {
-                        const isOnline = classmates.some(c => c.userId === req.userId);
+                        const isOnline = friendOnline[req.userId] || false;
                         return (
                         <div key={req.friendshipId} className="dash-friend-request-item">
                           <div className="dash-user-avatar-wrap">
@@ -1048,7 +1116,7 @@ export default function Layout({ children }: LayoutProps) {
                         보낸 요청 <span className="dash-friend-req-count">{sentRequests.length}</span>
                       </div>
                       {sentRequests.map(req => {
-                        const isOnline = classmates.some(c => c.userId === req.userId);
+                        const isOnline = friendOnline[req.userId] || false;
                         return (
                         <div key={req.friendshipId} className="dash-friend-request-item">
                           <div className="dash-user-avatar-wrap">
@@ -1166,13 +1234,17 @@ export default function Layout({ children }: LayoutProps) {
         />
       )}
 
-      {/* 로그인 알림 토스트 (네이트온 스타일) */}
+      {/* 알림 토스트 (네이트온 스타일) */}
       {loginToasts.map((toast, index) => (
         <LoginToast
           key={toast.key}
           data={toast}
           offsetIndex={index}
           onDone={() => setLoginToasts(prev => prev.filter(t => t.key !== toast.key))}
+          onClick={toast.type === 'chat' ? () => {
+            setLoginToasts(prev => prev.filter(t => t.key !== toast.key));
+            navigate('/chat');
+          } : undefined}
         />
       ))}
     </div>

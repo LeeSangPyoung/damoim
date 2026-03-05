@@ -84,3 +84,22 @@
   from { width: 100%; }
   to { width: 0%; }
 }
+
+/* 채팅 메시지 토스트 변형 */
+.login-toast-chat {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(59, 130, 246, 0.25);
+  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+}
+
+.login-toast-chat:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(59, 130, 246, 0.4);
+}
+
+.login-toast-avatar-chat {
+  background: #3b82f6 !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+.login-toast-indicator-chat {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa) !important;
+}

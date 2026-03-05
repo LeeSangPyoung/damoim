@@ -186,7 +186,15 @@ public class AuthService {
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
-        user.setLastActivityTime(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        user.setLastActivityTime(now);
+
+        // 로그아웃 이후 토큰으로 재접속한 경우 로그인 시간도 갱신
+        if (user.getLastLogoutTime() != null &&
+            (user.getLastLoginTime() == null || user.getLastLogoutTime().isAfter(user.getLastLoginTime()))) {
+            user.setLastLoginTime(now);
+        }
+
         userRepository.save(user);
     }
 

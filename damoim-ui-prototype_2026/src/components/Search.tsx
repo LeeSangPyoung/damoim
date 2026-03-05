@@ -182,7 +182,7 @@ const Search = () => {
             동창 찾기
           </h2>
 
-          <div className="search-filters">
+          <form className="search-filters" onSubmit={(e) => { e.preventDefault(); handleSearch(); }}>
             <div className="search-filter-row">
               <input
                 type="text"
@@ -223,16 +223,16 @@ const Search = () => {
             </div>
 
             <div className="search-buttons">
-              <button onClick={handleSearch} className="search-btn search-btn-primary">
+              <button type="submit" className="search-btn search-btn-primary">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 검색하기
               </button>
-              <button onClick={handleReset} className="search-btn search-btn-secondary">
+              <button type="button" onClick={handleReset} className="search-btn search-btn-secondary">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                 초기화
               </button>
             </div>
-          </div>
+          </form>
 
           {loading && <div className="search-loading">검색 중...</div>}
 

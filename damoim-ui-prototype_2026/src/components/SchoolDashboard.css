@@ -238,7 +238,36 @@
   color: #6b7280;
   margin: 0;
   line-height: 1.6;
+}
+
+.school-card-grades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   flex: 1;
+  align-content: flex-start;
+}
+
+.school-card-grade-chip {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+}
+
+.school-card-grade-chip-clickable {
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.school-card-grade-chip-clickable:hover {
+  background: #fde68a;
+  border-color: #f59e0b;
+  transform: translateY(-1px);
 }
 
 /* === META INFO === */
