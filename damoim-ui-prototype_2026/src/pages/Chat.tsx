@@ -108,13 +108,19 @@ export default function Chat() {
     if (!user) return;
     try {
       const data = await chatAPI.getMyChatRooms(user.userId);
+      console.log('[loadRoomsAndSelect] targetRoomId:', targetRoomId, 'rooms:', data.map(r => `${r.otherUser.name}: unread=${r.unreadCount}`));
       setRooms(data);
       if (targetRoomId) {
         const targetRoom = data.find(r => r.id === targetRoomId);
         if (targetRoom) {
+          setActiveTab('dm');
           setSelectedRoom(targetRoom);
           const msgs = await chatAPI.getMessages(targetRoom.id, user.userId);
           setMessages(msgs);
+          // 읽음 처리 후 방 목록 갱신 (unreadCount 반영)
+          const updatedRooms = await chatAPI.getMyChatRooms(user.userId);
+          setRooms(updatedRooms);
+          window.dispatchEvent(new Event('chatRead'));
         }
       }
     } catch (error) {
@@ -123,8 +129,32 @@ export default function Chat() {
   }, [user]);
 
   useEffect(() => {
+    const typeParam = searchParams.get('type');
     const targetId = roomIdParam ? Number(roomIdParam) : undefined;
-    loadRoomsAndSelect(targetId);
+
+    if (typeParam === 'group' && targetId) {
+      // 그룹 채팅방 선택
+      setActiveTab('group');
+      (async () => {
+        try {
+          const data = await groupChatAPI.getMyRooms(user!.userId);
+          setGroupRooms(data);
+          const target = data.find(r => r.id === targetId);
+          if (target) {
+            setSelectedGroupRoom(target);
+            const msgs = await groupChatAPI.getMessages(target.id, user!.userId);
+            setGroupMessages(msgs);
+            // 읽음 처리 후 방 목록 갱신 (unreadCount 반영)
+            const updatedRooms = await groupChatAPI.getMyRooms(user!.userId);
+            setGroupRooms(updatedRooms);
+            window.dispatchEvent(new Event('chatRead'));
+          }
+        } catch {}
+      })();
+    } else {
+      loadRoomsAndSelect(targetId);
+    }
+
     if (roomIdParam) {
       setSearchParams({}, { replace: true });
     }
@@ -134,12 +164,22 @@ export default function Chat() {
   useEffect(() => {
     const handler = async () => {
       if (!user) return;
-      // 방 목록 갱신
+      console.log('[chatNewMessage] 이벤트 수신!');
+      // 즉시 방 목록 갱신 (lastMessage 반영)
       try {
         const data = await chatAPI.getMyChatRooms(user.userId);
+        console.log('[chatNewMessage] 1차 갱신:', data.map(r => `${r.otherUser.name}: unread=${r.unreadCount}`));
         setRooms(data);
       } catch {}
       loadGroupRooms();
+      // 트랜잭션 커밋 후 정확한 unreadCount 반영을 위해 500ms 후 한번 더 갱신
+      setTimeout(async () => {
+        try {
+          const data = await chatAPI.getMyChatRooms(user!.userId);
+          console.log('[chatNewMessage] 2차 갱신:', data.map(r => `${r.otherUser.name}: unread=${r.unreadCount}`));
+          setRooms(data);
+        } catch {}
+      }, 500);
     };
     window.addEventListener('chatNewMessage', handler);
     return () => window.removeEventListener('chatNewMessage', handler);

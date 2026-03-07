@@ -164,8 +164,14 @@ const Board = () => {
     }
   };
 
-  const handlePostClick = (post: PostResponse) => {
-    setSelectedPost(post);
+  const handlePostClick = async (post: PostResponse) => {
+    if (!user) return;
+    try {
+      const detail = await postAPI.getPost(post.id, user.userId);
+      setSelectedPost(detail);
+    } catch {
+      setSelectedPost(post);
+    }
   };
 
   const handleLike = async (postId: number, e: React.MouseEvent) => {

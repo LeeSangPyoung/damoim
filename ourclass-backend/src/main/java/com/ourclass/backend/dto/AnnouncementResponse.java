@@ -14,6 +14,7 @@ public class AnnouncementResponse {
     private String title;
     private String content;
     private Boolean active;
+    private Integer intervalSeconds;
     private String createdByName;
     private String createdAt;
     private String updatedAt;

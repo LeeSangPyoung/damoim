@@ -29,6 +29,10 @@ public class Announcement {
     @Builder.Default
     private Boolean active = true;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer intervalSeconds = 30; // 배너 반복 주기 (초)
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;

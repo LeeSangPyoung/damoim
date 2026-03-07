@@ -10,6 +10,7 @@ import com.ourclass.backend.entity.UserSchool;
 import com.ourclass.backend.repository.AlumniShopRepository;
 import com.ourclass.backend.repository.AlumniShopReviewRepository;
 import com.ourclass.backend.repository.UserRepository;
+import com.ourclass.backend.repository.UserSchoolRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,8 @@ public class AlumniShopService {
     private final AlumniShopRepository shopRepository;
     private final AlumniShopReviewRepository reviewRepository;
     private final UserRepository userRepository;
+    private final UserSchoolRepository userSchoolRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public ShopResponse createShop(String userId, CreateShopRequest request) {
@@ -54,6 +57,30 @@ public class AlumniShopService {
 
         shopRepository.save(shop);
         log.info("동창 가게 등록: {} by {}", shop.getShopName(), userId);
+
+        // 같은 학교 동창들에게 알림 전송
+        try {
+            Set<String> notified = new HashSet<>();
+            notified.add(userId); // 본인 제외
+            for (UserSchool us : owner.getSchools()) {
+                List<UserSchool> classmates = userSchoolRepository.findBySchoolCodeAndGraduationYear(
+                        us.getSchoolCode(), us.getGraduationYear());
+                for (UserSchool cm : classmates) {
+                    String cmUserId = cm.getUser().getUserId();
+                    if (!notified.contains(cmUserId)) {
+                        notified.add(cmUserId);
+                        notificationService.createAndSend(
+                                cmUserId, userId, owner.getName(),
+                                "NEW_SHOP",
+                                owner.getName() + "님이 동창가게에 '" + shop.getShopName() + "'을(를) 등록했어요!",
+                                shop.getId()
+                        );
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("가게 등록 알림 전송 실패: {}", e.getMessage());
+        }
 
         return toShopResponse(shop);
     }

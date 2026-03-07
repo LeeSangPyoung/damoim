@@ -79,6 +79,7 @@ export interface AnnouncementItem {
   title: string;
   content: string;
   active: boolean;
+  intervalSeconds: number;
   createdByName: string;
   createdAt: string;
   updatedAt: string;
@@ -158,11 +159,11 @@ export const adminAPI = {
     const response = await apiClient.get('/admin/announcements/active');
     return response.data;
   },
-  createAnnouncement: async (adminId: string, title: string, content: string): Promise<AnnouncementItem> => {
-    const response = await apiClient.post('/admin/announcements', { title, content }, { params: { adminId } });
+  createAnnouncement: async (adminId: string, title: string, content: string, intervalSeconds?: number): Promise<AnnouncementItem> => {
+    const response = await apiClient.post('/admin/announcements', { title, content, intervalSeconds }, { params: { adminId } });
     return response.data;
   },
-  updateAnnouncement: async (adminId: string, id: number, data: { title?: string; content?: string; active?: boolean }): Promise<AnnouncementItem> => {
+  updateAnnouncement: async (adminId: string, id: number, data: { title?: string; content?: string; active?: boolean; intervalSeconds?: number }): Promise<AnnouncementItem> => {
     const response = await apiClient.put(`/admin/announcements/${id}`, data, { params: { adminId } });
     return response.data;
   },

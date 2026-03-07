@@ -2110,13 +2110,46 @@
   font-weight: 700;
   color: white;
   flex-shrink: 0;
+  position: relative;
+}
+
+.bf-invite-row-avatar.online {
+  background: #f59e0b;
+}
+
+.bf-online-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border-radius: 50%;
+  border: 2px solid #f9fafb;
+}
+
+.bf-invite-row-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .bf-invite-row-name {
-  flex: 1;
   font-size: 13px;
   font-weight: 500;
   color: #1a1a1a;
+}
+
+.bf-invite-online-badge {
+  font-size: 11px;
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.bf-invite-offline-time {
+  font-size: 11px;
+  color: #9ca3af;
 }
 
 .bf-invite-row-btn {

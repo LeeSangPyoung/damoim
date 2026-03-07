@@ -201,12 +201,13 @@ public class AdminService {
     }
 
     @Transactional
-    public AnnouncementResponse createAnnouncement(String title, String content, String adminId) {
+    public AnnouncementResponse createAnnouncement(String title, String content, Integer intervalSeconds, String adminId) {
         User admin = verifyAdmin(adminId);
         Announcement announcement = Announcement.builder()
                 .title(title)
                 .content(content)
                 .active(true)
+                .intervalSeconds(intervalSeconds != null ? intervalSeconds : 30)
                 .createdBy(admin)
                 .build();
         announcement = announcementRepository.save(announcement);
@@ -214,13 +215,14 @@ public class AdminService {
     }
 
     @Transactional
-    public AnnouncementResponse updateAnnouncement(Long id, String title, String content, Boolean active, String adminId) {
+    public AnnouncementResponse updateAnnouncement(Long id, String title, String content, Boolean active, Integer intervalSeconds, String adminId) {
         verifyAdmin(adminId);
         Announcement announcement = announcementRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("공지사항을 찾을 수 없습니다."));
         if (title != null) announcement.setTitle(title);
         if (content != null) announcement.setContent(content);
         if (active != null) announcement.setActive(active);
+        if (intervalSeconds != null) announcement.setIntervalSeconds(intervalSeconds);
         announcement = announcementRepository.save(announcement);
         return toAnnouncementResponse(announcement);
     }
@@ -354,6 +356,7 @@ public class AdminService {
                 .title(a.getTitle())
                 .content(a.getContent())
                 .active(a.getActive())
+                .intervalSeconds(a.getIntervalSeconds())
                 .createdByName(a.getCreatedBy().getName())
                 .createdAt(a.getCreatedAt().toString())
                 .updatedAt(a.getUpdatedAt().toString())

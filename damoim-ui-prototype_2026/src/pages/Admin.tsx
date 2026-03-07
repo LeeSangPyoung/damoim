@@ -29,7 +29,7 @@ export default function Admin() {
   const [modal, setModal] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ message: string; onConfirm: () => void } | null>(null);
   // 공지사항 작성/수정
-  const [announcementForm, setAnnouncementForm] = useState<{ id?: number; title: string; content: string } | null>(null);
+  const [announcementForm, setAnnouncementForm] = useState<{ id?: number; title: string; content: string; intervalSeconds: number } | null>(null);
 
   const { user } = getAuthData();
 
@@ -103,10 +103,10 @@ export default function Admin() {
     if (!announcementForm || !announcementForm.title.trim() || !announcementForm.content.trim()) return;
     try {
       if (announcementForm.id) {
-        await adminAPI.updateAnnouncement(user!.userId, announcementForm.id, { title: announcementForm.title, content: announcementForm.content });
+        await adminAPI.updateAnnouncement(user!.userId, announcementForm.id, { title: announcementForm.title, content: announcementForm.content, intervalSeconds: announcementForm.intervalSeconds });
         success('공지사항이 수정되었습니다.');
       } else {
-        await adminAPI.createAnnouncement(user!.userId, announcementForm.title, announcementForm.content);
+        await adminAPI.createAnnouncement(user!.userId, announcementForm.title, announcementForm.content, announcementForm.intervalSeconds);
         success('공지사항이 등록되었습니다.');
       }
       setAnnouncementForm(null);
@@ -162,6 +162,13 @@ export default function Admin() {
               value={announcementForm.title} onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })} />
             <textarea className="adm-form-textarea" placeholder="내용" rows={5}
               value={announcementForm.content} onChange={e => setAnnouncementForm({ ...announcementForm, content: e.target.value })} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap' }}>배너 반복 주기:</label>
+              <input type="number" className="adm-form-input" min={10} max={600} style={{ width: 80 }}
+                value={announcementForm.intervalSeconds}
+                onChange={e => setAnnouncementForm({ ...announcementForm, intervalSeconds: Math.max(10, parseInt(e.target.value) || 30) })} />
+              <span style={{ fontSize: 13, color: '#888' }}>초 (최소 10초)</span>
+            </div>
             <div className="adm-form-actions">
               <button className="adm-reset-btn" onClick={() => setAnnouncementForm(null)}>취소</button>
               <button className="adm-search-btn" onClick={handleSaveAnnouncement}
@@ -363,7 +370,7 @@ export default function Admin() {
             {activeMenu === 'announcements' && (<>
               <div className="adm-section-header">
                 <div className="adm-section-title">공지사항</div>
-                <button className="adm-search-btn" onClick={() => setAnnouncementForm({ title: '', content: '' })}>새 공지 작성</button>
+                <button className="adm-search-btn" onClick={() => setAnnouncementForm({ title: '', content: '', intervalSeconds: 30 })}>새 공지 작성</button>
               </div>
               {loading ? <div className="adm-loading">불러오는 중...</div> : announcements.length === 0 ? <div className="adm-empty">공지사항이 없습니다.</div> : (
                 <div className="adm-list">
@@ -379,7 +386,7 @@ export default function Admin() {
                           </div>
                           <div className="adm-post-content">{a.content}</div>
                           <div className="adm-post-meta">
-                            <span>{a.createdByName}</span><span>·</span><span>{formatDateTime(a.createdAt)}</span>
+                            <span>{a.createdByName}</span><span>·</span><span>{formatDateTime(a.createdAt)}</span><span>·</span><span>반복: {a.intervalSeconds}초</span>
                           </div>
                         </div>
                       </div>
@@ -387,7 +394,7 @@ export default function Admin() {
                         <button className="adm-btn adm-btn-promote" onClick={() => handleToggleAnnouncement(a)}>
                           {a.active ? '비활성' : '활성화'}
                         </button>
-                        <button className="adm-btn adm-btn-demote" onClick={() => setAnnouncementForm({ id: a.id, title: a.title, content: a.content })}>수정</button>
+                        <button className="adm-btn adm-btn-demote" onClick={() => setAnnouncementForm({ id: a.id, title: a.title, content: a.content, intervalSeconds: a.intervalSeconds })}>수정</button>
                         <button className="adm-btn adm-btn-danger" onClick={() => handleDeleteAnnouncement(a.id)}>삭제</button>
                       </div>
                     </div>

@@ -15,6 +15,7 @@ import FriendRequestPopup from './FriendRequestPopup';
 import MessageNotificationModal from './MessageNotificationModal';
 import LoginToast, { LoginToastData } from './LoginToast';
 import { messageAPI, MessageResponse } from '../api/message';
+import { adminAPI, AnnouncementItem } from '../api/admin';
 import './Dashboard.css';
 
 interface LayoutProps {
@@ -87,6 +88,82 @@ export default function Layout({ children }: LayoutProps) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
+  // 웰컴 배너 롤링 알림
+  const [bannerEvent, setBannerEvent] = useState<{ text: string; link?: string; isAnnouncement?: boolean } | null>(null);
+  const [bannerAnimState, setBannerAnimState] = useState<'idle' | 'slide-in' | 'slide-out'>('idle');
+  const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
+  const announcementTimersRef = useRef<ReturnType<typeof setInterval>[]>([]);
+
+  // 공지사항 로딩
+  const loadAnnouncements = async () => {
+    try {
+      const data = await adminAPI.getActiveAnnouncements();
+      setAnnouncements(data);
+    } catch (e) {
+      console.error('공지사항 로드 실패:', e);
+    }
+  };
+
+  // 각 공지사항별 interval로 강제 배너 표시
+  useEffect(() => {
+    // 기존 타이머 정리
+    announcementTimersRef.current.forEach(t => clearInterval(t));
+    announcementTimersRef.current = [];
+    if (announcements.length === 0) return;
+
+    const showAnnouncement = (a: AnnouncementItem) => {
+      if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
+      setBannerAnimState('slide-out');
+      setTimeout(() => {
+        setBannerEvent({ text: `[공지] ${a.title} - ${a.content}`, isAnnouncement: true });
+        setBannerAnimState('slide-in');
+        bannerTimeoutRef.current = setTimeout(() => {
+          setBannerAnimState('slide-out');
+          setTimeout(() => {
+            setBannerEvent(null);
+            setBannerAnimState('idle');
+          }, 550);
+        }, 6000);
+      }, 550);
+    };
+
+    // 각 공지사항마다 개별 interval 타이머 등록
+    announcements.forEach((a, i) => {
+      const intervalMs = (a.intervalSeconds || 30) * 1000;
+      // 첫 표시: 3초 + (공지 인덱스 * 2초) 딜레이로 겹침 방지
+      const firstDelay = 3000 + i * 2000;
+      const firstTimer = setTimeout(() => {
+        showAnnouncement(a);
+        // 이후 intervalSeconds마다 반복
+        const repeater = setInterval(() => showAnnouncement(a), intervalMs);
+        announcementTimersRef.current.push(repeater);
+      }, firstDelay);
+      announcementTimersRef.current.push(firstTimer as unknown as ReturnType<typeof setInterval>);
+    });
+
+    return () => {
+      announcementTimersRef.current.forEach(t => clearInterval(t));
+      announcementTimersRef.current = [];
+    };
+  }, [announcements]);
+
+  const showBannerEvent = (text: string, link?: string) => {
+    if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
+    setBannerAnimState('slide-out');
+    setTimeout(() => {
+      setBannerEvent({ text, link });
+      setBannerAnimState('slide-in');
+      bannerTimeoutRef.current = setTimeout(() => {
+        setBannerAnimState('slide-out');
+        setTimeout(() => {
+          setBannerEvent(null);
+          setBannerAnimState('idle');
+        }, 550);
+      }, 5000);
+    }, 550);
+  };
+
   // 친구 학교 정보 & 온라인 상태
   const [friendSchools, setFriendSchools] = useState<Record<string, string>>({});
   const [friendOnline, setFriendOnline] = useState<Record<string, boolean>>({});
@@ -112,6 +189,7 @@ export default function Layout({ children }: LayoutProps) {
     loadNotifications(userData.userId);
     loadUnreadNotifCount(userData.userId);
     loadNavBadges(userData.userId);
+    loadAnnouncements();
   }, [navigate]);
 
   // 접속 중인 동창: 항상 전체 학교 동창 로드 (게시판 탭과 무관)
@@ -148,6 +226,14 @@ export default function Layout({ children }: LayoutProps) {
       loadSentRequests(user.userId);
     }, 10 * 1000); // 10초
 
+    return () => clearInterval(intervalId);
+  }, [user?.userId]);
+
+  // 공지사항 주기적 폴링 (30초마다)
+  useEffect(() => {
+    if (!user) return;
+    loadAnnouncements();
+    const intervalId = setInterval(loadAnnouncements, 30 * 1000);
     return () => clearInterval(intervalId);
   }, [user?.userId]);
 
@@ -222,7 +308,7 @@ export default function Layout({ children }: LayoutProps) {
             setUnreadNotifCount(prev => prev + 1);
           }
 
-          // 알림 타입별 처리
+          // 알림 타입별 처리 + 배너 이벤트
           if (newNotif.type === 'FRIEND_REQUEST') {
             setFriendRequestPopup(newNotif);
             loadPendingRequests();
@@ -230,8 +316,9 @@ export default function Layout({ children }: LayoutProps) {
             loadMyFriends();
             loadSentRequests();
           } else if (newNotif.type === 'MESSAGE') {
+            loadNavBadges();
+            window.dispatchEvent(new Event('messageNewMessage'));
             if (currentPath !== '/messages') {
-              // 쪽지 알림 → 최신 쪽지 가져와서 팝업 표시
               try {
                 const messages = await messageAPI.getReceivedMessages(user!.userId);
                 const unread = messages.filter(m => !m.read);
@@ -245,9 +332,7 @@ export default function Layout({ children }: LayoutProps) {
             loadNavBadges();
           } else if (newNotif.type === 'CHAT' || newNotif.type === 'GROUP_CHAT') {
             loadNavBadges();
-            // 채팅 페이지에 있으면 방 목록 갱신
             window.dispatchEvent(new Event('chatNewMessage'));
-            // 채팅 페이지가 아닐 때만 토스트 표시 (채팅 토스트는 1개만 유지, 최신으로 교체)
             if (locationRef.current !== '/chat') {
               const key = ++loginToastKeyRef.current;
               setLoginToasts(prev => {
@@ -258,9 +343,15 @@ export default function Layout({ children }: LayoutProps) {
                   name: newNotif.senderName,
                   type: 'chat' as const,
                   message: newNotif.content,
+                  referenceId: newNotif.referenceId,
+                  notifType: newNotif.type,
                 }];
               });
             }
+          } else if (newNotif.type === 'POST') {
+            showBannerEvent('새 게시글이 작성되었어요! 확인해보세요.', '/board');
+          } else if (newNotif.type === 'NEW_SHOP') {
+            showBannerEvent(`${newNotif.senderName}님이 동창가게에 새 가게를 등록했어요!`, '/alumni-shop');
           } else if (
             newNotif.type === 'REUNION_INVITE' ||
             newNotif.type === 'MEETING_CREATED' ||
@@ -274,8 +365,8 @@ export default function Layout({ children }: LayoutProps) {
             newNotif.type === 'REUNION_POST' ||
             newNotif.type === 'REUNION_TREASURER_ASSIGNED'
           ) {
-            // 베스트프랜드 관련 알림
             window.dispatchEvent(new Event('reunionUpdated'));
+            showBannerEvent(`찐모임 소식이 있어요! ${newNotif.content || '확인해보세요.'}`, '/reunion');
           }
         });
 
@@ -938,10 +1029,29 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </header>
 
-      {/* 웰컴 배너 - 검은띠 */}
+      {/* 웰컴 배너 - 롤링 알림 */}
       {user && (
         <div className="welcome-banner-top">
-          <span>반가워요, <strong>{user.name}</strong>님! 오늘 <strong>{classmates.length}</strong>명의 동창이 접속 중이에요</span>
+          <div className="welcome-banner-roller">
+            {/* 기본 메시지 */}
+            <span
+              className={`welcome-banner-item ${bannerAnimState === 'idle' ? 'active' : 'slide-out'}`}
+            >
+              반가워요, <strong>{user.name}</strong>님! 오늘 <strong>{classmates.length}</strong>명의 동창이 접속 중이에요
+            </span>
+            {/* 이벤트 메시지 */}
+            {bannerEvent && (
+              <span
+                className={`welcome-banner-item ${bannerEvent.isAnnouncement ? 'welcome-banner-announcement' : 'welcome-banner-event'} ${bannerAnimState === 'slide-in' ? 'active' : 'slide-out'}`}
+                onClick={() => {
+                  if (bannerEvent.link) navigate(bannerEvent.link);
+                }}
+                style={{ cursor: bannerEvent.link ? 'pointer' : 'default' }}
+              >
+                {bannerEvent.text}
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -1243,7 +1353,13 @@ export default function Layout({ children }: LayoutProps) {
           onDone={() => setLoginToasts(prev => prev.filter(t => t.key !== toast.key))}
           onClick={toast.type === 'chat' ? () => {
             setLoginToasts(prev => prev.filter(t => t.key !== toast.key));
-            navigate('/chat');
+            const roomId = (toast as any).referenceId;
+            const notifType = (toast as any).notifType;
+            if (roomId) {
+              navigate(`/chat?roomId=${roomId}${notifType === 'GROUP_CHAT' ? '&type=group' : ''}`);
+            } else {
+              navigate('/chat');
+            }
           } : undefined}
         />
       ))}

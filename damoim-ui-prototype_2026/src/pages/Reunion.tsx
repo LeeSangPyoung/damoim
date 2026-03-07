@@ -917,10 +917,15 @@ export default function Reunion() {
   const canManageFees = isLeader || selected?.myRole === 'TREASURER';
 
   const memberIds = selected ? selected.members.map(m => m.userId) : [];
-  const filteredClassmates = classmates.filter(c =>
-    !memberIds.includes(c.userId) &&
-    (inviteSearch === '' || c.name.includes(inviteSearch) || c.userId.includes(inviteSearch))
-  );
+  const filteredClassmates = classmates
+    .filter(c =>
+      !memberIds.includes(c.userId) &&
+      (inviteSearch === '' || c.name.includes(inviteSearch) || c.userId.includes(inviteSearch))
+    )
+    .sort((a, b) => {
+      if (a.online === b.online) return a.name.localeCompare(b.name, 'ko');
+      return a.online ? -1 : 1;
+    });
 
   const filteredReunions = reunions.filter(r =>
     searchQuery === '' || r.name.includes(searchQuery) || (r.schoolName || '').includes(searchQuery)
@@ -1950,8 +1955,18 @@ export default function Reunion() {
                 )}
                 {filteredClassmates.map(c => (
                   <div key={c.userId} className="bf-invite-row">
-                    <div className="bf-invite-row-avatar">{c.name[0]}</div>
-                    <div className="bf-invite-row-name">{c.name} ({c.userId})</div>
+                    <div className={`bf-invite-row-avatar ${c.online ? 'online' : ''}`}>
+                      {c.name[0]}
+                      {c.online && <span className="bf-online-dot"></span>}
+                    </div>
+                    <div className="bf-invite-row-info">
+                      <div className="bf-invite-row-name">{c.name} ({c.userId})</div>
+                      {c.online ? (
+                        <span className="bf-invite-online-badge">접속중</span>
+                      ) : (
+                        c.lastActiveTime && <span className="bf-invite-offline-time">{c.lastActiveTime}</span>
+                      )}
+                    </div>
                     <button className="bf-invite-row-btn" onClick={() => handleInvite(c.userId)}>초대</button>
                   </div>
                 ))}

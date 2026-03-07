@@ -58,6 +58,7 @@ public class ChatController {
             @PathVariable Long roomId,
             @RequestParam String userId) {
         try {
+            System.out.println("[DEBUG] getMessages 호출 - roomId: " + roomId + ", userId: " + userId);
             List<ChatMessageResponse> messages = chatService.getMessages(roomId, userId);
             // 읽음 처리 후 상대방에게 읽음 이벤트 브로드캐스트
             messagingTemplate.convertAndSend("/topic/chat/" + roomId,
@@ -101,6 +102,7 @@ public class ChatController {
     @PutMapping("/mark-all-read")
     public ResponseEntity<?> markAllAsRead(@RequestParam String userId) {
         try {
+            System.out.println("[DEBUG] markAllAsRead 호출 - userId: " + userId);
             chatService.markAllAsRead(userId);
             return ResponseEntity.ok(Map.of("message", "모든 메시지를 읽음 처리했습니다."));
         } catch (Exception e) {

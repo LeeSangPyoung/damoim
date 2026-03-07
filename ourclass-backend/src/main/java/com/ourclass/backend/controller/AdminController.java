@@ -174,9 +174,10 @@ public class AdminController {
     }
 
     @PostMapping("/announcements")
-    public ResponseEntity<?> createAnnouncement(@RequestBody Map<String, String> body, @RequestParam String adminId) {
+    public ResponseEntity<?> createAnnouncement(@RequestBody Map<String, Object> body, @RequestParam String adminId) {
         try {
-            return ResponseEntity.ok(adminService.createAnnouncement(body.get("title"), body.get("content"), adminId));
+            Integer intervalSeconds = body.containsKey("intervalSeconds") ? ((Number) body.get("intervalSeconds")).intValue() : null;
+            return ResponseEntity.ok(adminService.createAnnouncement((String) body.get("title"), (String) body.get("content"), intervalSeconds, adminId));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -188,7 +189,8 @@ public class AdminController {
             String title = body.containsKey("title") ? (String) body.get("title") : null;
             String content = body.containsKey("content") ? (String) body.get("content") : null;
             Boolean active = body.containsKey("active") ? (Boolean) body.get("active") : null;
-            return ResponseEntity.ok(adminService.updateAnnouncement(id, title, content, active, adminId));
+            Integer intervalSeconds = body.containsKey("intervalSeconds") ? ((Number) body.get("intervalSeconds")).intValue() : null;
+            return ResponseEntity.ok(adminService.updateAnnouncement(id, title, content, active, intervalSeconds, adminId));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

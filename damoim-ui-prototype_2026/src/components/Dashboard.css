@@ -50,19 +50,87 @@
   color: #1a1a1a;
 }
 
-/* === 웰컴 배너 (상단 검은띠) === */
+/* === 웰컴 배너 (상단 롤링 알림) === */
 .welcome-banner-top {
   background: #4a4a4a;
   color: white;
-  padding: 12px 24px;
   text-align: center;
   font-size: 15px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  height: 44px;
+  position: relative;
 }
 
 .welcome-banner-top strong {
   font-weight: 700;
   color: #ffffff;
+}
+
+.welcome-banner-roller {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.welcome-banner-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  transition: transform 0.5s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.5s ease;
+  will-change: transform, opacity;
+}
+
+.welcome-banner-item.active {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.welcome-banner-item.slide-out {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.welcome-banner-item.slide-in {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* 이벤트 배너 (게시글, 가게 등록 등) - 오렌지 배경 */
+.welcome-banner-event {
+  background: linear-gradient(135deg, #e8a838, #d4922a);
+  font-weight: 500;
+}
+
+.welcome-banner-event:hover {
+  background: linear-gradient(135deg, #d4922a, #c4821a);
+}
+
+/* 이벤트가 slide-out 초기 상태 (아래에서 대기) */
+.welcome-banner-event.slide-out {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+/* 공지사항 배너 - 검정 배경 유지, 부드러운 페이드 인/아웃 */
+.welcome-banner-announcement {
+  font-weight: 500;
+}
+
+.welcome-banner-announcement.slide-out {
+  transform: translateY(0);
+  opacity: 0;
+}
+
+.welcome-banner-announcement.active {
+  transform: translateY(0);
+  opacity: 1;
 }
 
 /* === HEADER === */

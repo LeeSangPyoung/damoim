@@ -40,6 +40,16 @@ export default function Messages() {
     return () => window.removeEventListener('messageSent', handleMessageSent);
   }, [user]);
 
+  // 새 쪽지 수신 시 목록 자동 갱신
+  useEffect(() => {
+    const handleNewMessage = () => {
+      loadMessages();
+      loadUnreadCount();
+    };
+    window.addEventListener('messageNewMessage', handleNewMessage);
+    return () => window.removeEventListener('messageNewMessage', handleNewMessage);
+  }, [user]);
+
   const loadMessages = async (userId?: string) => {
     const targetUserId = userId || user?.userId;
     if (!targetUserId) return;
