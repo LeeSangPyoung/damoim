@@ -2466,3 +2466,608 @@
   color: #9ca3af;
   font-size: 13px;
 }
+
+/* ===== Confirmed Meeting Shop Card ===== */
+.bf-confirmed-shop-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 10px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.bf-confirmed-shop-card:hover {
+  background: #dcfce7;
+}
+
+.bf-confirmed-shop-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.bf-confirmed-shop-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bf-confirmed-shop-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.bf-confirmed-shop-rating {
+  color: #f59e0b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bf-confirmed-shop-address {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bf-confirmed-shop-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.bf-confirmed-shop-owner {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.bf-confirmed-shop-phone {
+  color: #64748b;
+}
+
+.bf-confirmed-shop-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #16a34a;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* ===== Vote Summary ===== */
+.bf-confirmed-vote-summary {
+  margin-top: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.bf-confirmed-vote-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #334155;
+  margin-bottom: 12px;
+}
+
+.bf-confirmed-vote-group {
+  margin-bottom: 14px;
+}
+
+.bf-confirmed-vote-group:last-child {
+  margin-bottom: 0;
+}
+
+.bf-confirmed-vote-label {
+  font-size: 11px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.bf-confirmed-vote-row {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.bf-confirmed-vote-row:last-child {
+  margin-bottom: 0;
+}
+
+.bf-confirmed-vote-row.selected {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.bf-confirmed-vote-row-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.bf-confirmed-vote-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #16a34a;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.bf-confirmed-vote-text {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bf-confirmed-vote-shop-badge {
+  background: #16a34a;
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.bf-confirmed-vote-count {
+  flex-shrink: 0;
+  min-width: 36px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #3b82f6;
+  background: #eff6ff;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.bf-confirmed-vote-count.zero {
+  color: #9ca3af;
+  background: #f3f4f6;
+}
+
+.bf-confirmed-vote-bar {
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.bf-confirmed-vote-bar-fill {
+  height: 100%;
+  background: #93c5fd;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  min-width: 0;
+}
+
+.bf-confirmed-vote-bar-fill.selected {
+  background: #4ade80;
+}
+
+.bf-confirmed-vote-names {
+  font-size: 11px;
+  color: #94a3b8;
+  padding-left: 2px;
+}
+
+/* ===== Attendees ===== */
+.bf-confirmed-attendees {
+  margin-top: 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.bf-confirmed-attendees-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 6px;
+}
+
+.bf-confirmed-attendees-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bf-confirmed-attendee-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: white;
+  border: 1px solid #93c5fd;
+  border-radius: 14px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.bf-confirmed-attendee-chip .attendee-icon {
+  font-size: 11px;
+}
+
+/* ===== Review Prompt Button ===== */
+.bf-review-prompt-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 0;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.bf-review-prompt-btn:hover {
+  background: #fde68a;
+}
+
+/* ===== Review Modal ===== */
+.bf-review-modal {
+  background: white;
+  border-radius: 14px;
+  width: 90%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.bf-review-modal-shop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #f0fdf4;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.bf-review-modal-shop-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.bf-review-modal-shop-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bf-review-modal-shop-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.bf-review-modal-shop-address {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.bf-review-modal-shop-meeting {
+  font-size: 11px;
+  color: #16a34a;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.bf-review-modal-body {
+  padding: 16px 18px;
+}
+
+.bf-review-rating-picker {
+  margin-bottom: 14px;
+}
+
+.bf-review-rating-picker label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.bf-review-stars {
+  display: flex;
+  gap: 4px;
+}
+
+.bf-review-star {
+  font-size: 28px;
+  color: #d1d5db;
+  cursor: pointer;
+  transition: color 0.15s, transform 0.1s;
+}
+
+.bf-review-star:hover {
+  transform: scale(1.15);
+}
+
+.bf-review-star.active {
+  color: #f59e0b;
+}
+
+.bf-review-textarea-wrap {
+  position: relative;
+}
+
+.bf-review-textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.bf-review-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.bf-review-char-count {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* ===== Vote Option - Shop Rich Info ===== */
+.bf-vote-option.bf-vote-option-shop {
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  gap: 8px;
+}
+
+.bf-vote-shop-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.bf-vote-shop-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.bf-vote-shop-detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.bf-vote-shop-name-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.bf-vote-shop-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #1e293b;
+}
+
+.bf-vote-shop-rating {
+  color: #f59e0b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bf-vote-shop-badge {
+  background: #16a34a;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.bf-vote-shop-address {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bf-vote-shop-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.bf-vote-shop-meta span:first-child {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+/* ===== Confirmed Shop Hours ===== */
+.bf-confirmed-shop-hours {
+  color: #64748b;
+}
+
+/* ===== Shop Recommend Section (Meeting Creation) ===== */
+.bf-shop-recommend {
+  margin-top: 12px;
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.bf-shop-recommend-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 8px;
+}
+
+.bf-shop-recommend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bf-shop-recommend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.bf-shop-recommend-item:hover:not(.added) {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.bf-shop-recommend-item.added {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.bf-shop-recommend-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.bf-shop-recommend-img-placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+.bf-shop-recommend-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bf-shop-recommend-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #1e293b;
+}
+
+.bf-shop-recommend-rating {
+  color: #f59e0b;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.bf-shop-recommend-address {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bf-shop-recommend-meta {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+.bf-shop-recommend-action {
+  flex-shrink: 0;
+}
+
+.bf-shop-recommend-add {
+  background: #16a34a;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.bf-shop-recommend-added {
+  background: #e5e7eb;
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+}

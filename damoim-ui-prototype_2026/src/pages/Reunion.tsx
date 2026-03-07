@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAuthData } from '../utils/auth';
 import {
   reunionAPI,
@@ -12,7 +13,7 @@ import {
   ReunionCommentResponse,
 } from '../api/reunion';
 import { userAPI, ClassmateInfo } from '../api/user';
-import { alumniShopAPI, ShopResponse, SHOP_CATEGORIES, MAIN_CATEGORIES } from '../api/alumniShop';
+import { alumniShopAPI, ShopResponse, ShopReviewResponse, SHOP_CATEGORIES, MAIN_CATEGORIES, CATEGORY_ICONS } from '../api/alumniShop';
 import { CategoryIcon } from '../components/CategoryIcons';
 import { notificationAPI, NotificationResponse } from '../api/notification';
 import './Reunion.css';
@@ -203,8 +204,16 @@ function BfDateTimePicker({ value, onChange }: { value: {date: string, time: str
   );
 }
 
+function findShopFromLocation(location: string, shopList: ShopResponse[]): ShopResponse | null {
+  const match = location.match(/^(.+?)\s*\((.+)\)$/);
+  if (!match) return null;
+  const shopName = match[1];
+  return shopList.find(s => s.shopName === shopName) || null;
+}
+
 export default function Reunion() {
   const { user } = getAuthData();
+  const navigate = useNavigate();
 
   // View state
   const [view, setView] = useState<View>('dashboard');
@@ -273,6 +282,11 @@ export default function Reunion() {
   const [shopSubCategory, setShopSubCategory] = useState('전체');
   const [shopSearch, setShopSearch] = useState('');
   const [shopPickerIndex, setShopPickerIndex] = useState<number>(0);
+
+  // 동창가게 후기 작성
+  const [showReviewModal, setShowReviewModal] = useState<{ shop: ShopResponse; meetingTitle: string } | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewContent, setReviewContent] = useState('');
 
   // Create Fee form
   const [feeAmount, setFeeAmount] = useState('');
@@ -763,6 +777,21 @@ export default function Reunion() {
       showToast('회비가 등록되었습니다');
     } catch (e) {
       console.error('회비 생성 실패:', e);
+    }
+  };
+
+  // ========== 동창가게 후기 ==========
+  const handleSubmitReview = async () => {
+    if (!user || !showReviewModal) return;
+    try {
+      await alumniShopAPI.addReview(showReviewModal.shop.id, user.userId, reviewRating, reviewContent.trim());
+      setShowReviewModal(null);
+      setReviewRating(5);
+      setReviewContent('');
+      showToast('후기가 등록되었습니다!');
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || '후기 등록에 실패했습니다';
+      showToast(msg);
     }
   };
 
@@ -1260,7 +1289,12 @@ export default function Reunion() {
               <>
                 <div className="bf-meeting-header">
                   <h4>모임 목록</h4>
-                  <button className="bf-btn-primary" onClick={() => setShowCreateMeeting(true)}>+ 모임 만들기</button>
+                  <button className="bf-btn-primary" onClick={async () => {
+                    setShowCreateMeeting(true);
+                    if (user && shopList.length === 0) {
+                      try { const shops = await alumniShopAPI.getShops(user.userId); setShopList(shops); } catch {}
+                    }
+                  }}>+ 모임 만들기</button>
                 </div>
 
                 {meetings.filter(m => m.status !== 'CANCELLED').length === 0 && <div className="bf-meeting-empty">아직 등록된 모임이 없습니다</div>}
@@ -1273,13 +1307,140 @@ export default function Reunion() {
                     </div>
                     {mt.description && <div className="bf-meeting-desc">{mt.description}</div>}
 
-                    {mt.status === 'CONFIRMED' && (
+                    {mt.status === 'CONFIRMED' && (() => {
+                      const confirmedShop = mt.finalLocation ? findShopFromLocation(mt.finalLocation, shopList) : null;
+                      const confirmedDateOpt = mt.dateOptions.find(o => o.optionValue === mt.finalDate);
+                      const confirmedLocOpt = mt.locationOptions.find(o => o.optionValue === mt.finalLocation);
+                      const locVoterIds = new Set(confirmedLocOpt?.voters.map(v => v.userId) || []);
+                      const attendees = confirmedDateOpt && confirmedLocOpt
+                        ? (confirmedDateOpt.voters.filter(v => locVoterIds.has(v.userId)))
+                        : (confirmedDateOpt?.voters || confirmedLocOpt?.voters || []);
+                      const totalMembers = selected?.memberCount || 0;
+                      return (
                       <div className="bf-meeting-confirmed-info">
                         <strong>확정된 일정</strong>
                         <span>날짜: {mt.finalDate}</span>
-                        <span>장소: {mt.finalLocation}</span>
+                        {confirmedShop ? (
+                          <div className="bf-confirmed-shop-card" onClick={() => navigate(`/alumni-shop?shopId=${confirmedShop.id}`)}>
+                            {confirmedShop.imageUrl && (
+                              <img src={confirmedShop.imageUrl} alt={confirmedShop.shopName} className="bf-confirmed-shop-img" />
+                            )}
+                            <div className="bf-confirmed-shop-info">
+                              <div className="bf-confirmed-shop-name">
+                                <CategoryIcon category={confirmedShop.category} />
+                                {confirmedShop.shopName}
+                                {confirmedShop.averageRating != null && (
+                                  <span className="bf-confirmed-shop-rating">★ {confirmedShop.averageRating.toFixed(1)}</span>
+                                )}
+                              </div>
+                              <div className="bf-confirmed-shop-address">
+                                {confirmedShop.address}{confirmedShop.detailAddress ? ` ${confirmedShop.detailAddress}` : ''}
+                              </div>
+                              <div className="bf-confirmed-shop-meta">
+                                <span className="bf-confirmed-shop-owner">{confirmedShop.ownerName} 사장</span>
+                                {confirmedShop.phone && <span className="bf-confirmed-shop-phone">📞 {confirmedShop.phone}</span>}
+                                {confirmedShop.businessHours && <span className="bf-confirmed-shop-hours">🕐 {confirmedShop.businessHours}</span>}
+                              </div>
+                            </div>
+                            <div className="bf-confirmed-shop-badge">동창가게</div>
+                          </div>
+                        ) : (
+                          <span>장소: {mt.finalLocation}</span>
+                        )}
+
+                        {/* 투표 결과 요약 */}
+                        {(() => {
+                          const maxDateVotes = Math.max(1, ...mt.dateOptions.map(o => o.voteCount));
+                          const maxLocVotes = Math.max(1, ...mt.locationOptions.map(o => o.voteCount));
+                          return (
+                        <div className="bf-confirmed-vote-summary">
+                          <div className="bf-confirmed-vote-title">📊 투표 결과</div>
+                          {mt.dateOptions.length > 0 && (
+                            <div className="bf-confirmed-vote-group">
+                              <div className="bf-confirmed-vote-label">날짜</div>
+                              {mt.dateOptions.map(opt => {
+                                const isSelected = opt.optionValue === mt.finalDate;
+                                const pct = (opt.voteCount / maxDateVotes) * 100;
+                                return (
+                                <div key={opt.id} className={`bf-confirmed-vote-row ${isSelected ? 'selected' : ''}`}>
+                                  <div className="bf-confirmed-vote-row-top">
+                                    {isSelected && <span className="bf-confirmed-vote-check">✓</span>}
+                                    <span className="bf-confirmed-vote-text">{opt.optionValue}</span>
+                                    <span className={`bf-confirmed-vote-count ${opt.voteCount === 0 ? 'zero' : ''}`}>{opt.voteCount}표</span>
+                                  </div>
+                                  <div className="bf-confirmed-vote-bar">
+                                    <div className={`bf-confirmed-vote-bar-fill ${isSelected ? 'selected' : ''}`} style={{ width: `${pct}%` }} />
+                                  </div>
+                                  {opt.voters.length > 0 && (
+                                    <div className="bf-confirmed-vote-names">{opt.voters.map(v => v.name).join(', ')}</div>
+                                  )}
+                                </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {mt.locationOptions.length > 0 && (
+                            <div className="bf-confirmed-vote-group">
+                              <div className="bf-confirmed-vote-label">장소</div>
+                              {mt.locationOptions.map(opt => {
+                                const isSelected = opt.optionValue === mt.finalLocation;
+                                const pct = (opt.voteCount / maxLocVotes) * 100;
+                                const shop = findShopFromLocation(opt.optionValue, shopList);
+                                const displayName = shop ? shop.shopName : opt.optionValue;
+                                return (
+                                <div key={opt.id} className={`bf-confirmed-vote-row ${isSelected ? 'selected' : ''}`}>
+                                  <div className="bf-confirmed-vote-row-top">
+                                    {isSelected && <span className="bf-confirmed-vote-check">✓</span>}
+                                    <span className="bf-confirmed-vote-text">
+                                      {displayName}
+                                      {shop && <span className="bf-confirmed-vote-shop-badge">동창가게</span>}
+                                    </span>
+                                    <span className={`bf-confirmed-vote-count ${opt.voteCount === 0 ? 'zero' : ''}`}>{opt.voteCount}표</span>
+                                  </div>
+                                  <div className="bf-confirmed-vote-bar">
+                                    <div className={`bf-confirmed-vote-bar-fill ${isSelected ? 'selected' : ''}`} style={{ width: `${pct}%` }} />
+                                  </div>
+                                  {opt.voters.length > 0 && (
+                                    <div className="bf-confirmed-vote-names">{opt.voters.map(v => v.name).join(', ')}</div>
+                                  )}
+                                </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                          );
+                        })()}
+
+                        {/* 참석 예정 */}
+                        <div className="bf-confirmed-attendees">
+                          <div className="bf-confirmed-attendees-title">
+                            참석 예정 <span className="bf-confirmed-attendees-count">{attendees.length}/{totalMembers}명</span>
+                          </div>
+                          <div className="bf-confirmed-attendees-list">
+                            {attendees.map(v => (
+                              <span key={v.userId} className="bf-confirmed-attendee">{v.name}</span>
+                            ))}
+                            {attendees.length === 0 && <span className="bf-confirmed-attendees-none">투표 데이터 없음</span>}
+                          </div>
+                        </div>
+
+                        {confirmedShop && (
+                          <button
+                            className="bf-review-prompt-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowReviewModal({ shop: confirmedShop, meetingTitle: mt.title });
+                              setReviewRating(5);
+                              setReviewContent('');
+                            }}
+                          >
+                            이 가게에 후기 남기기
+                          </button>
+                        )}
                       </div>
-                    )}
+                      );
+                    })()}
 
                     {mt.status === 'VOTING' && (() => {
                       const isExpired = mt.voteDeadline ? new Date(mt.voteDeadline.replace(' ', 'T')) < new Date() : false;
@@ -1320,21 +1481,30 @@ export default function Reunion() {
                           <div className="bf-vote-section">
                             <div className="bf-vote-section-title">장소 투표</div>
                             {mt.locationOptions.map(opt => {
-                              const matchShop = opt.optionValue.match(/^(.+?)\s*\((.+)\)$/);
-                              const sName = matchShop ? matchShop[1] : null;
-                              const foundShop = sName ? shopList.find(s => s.shopName === sName) : null;
-                              const displayText = foundShop ? foundShop.shopName : opt.optionValue;
+                              const foundShop = findShopFromLocation(opt.optionValue, shopList);
                               return (
-                              <div key={opt.id} className={`bf-vote-option ${opt.myVote ? 'voted' : ''} ${isExpired ? 'expired' : ''}`} onClick={() => !isExpired && handleVote(opt.id)} title={isExpired ? '투표가 마감되었습니다' : opt.myVote ? '클릭하여 투표 취소' : '클릭하여 투표'}>
+                              <div key={opt.id} className={`bf-vote-option ${foundShop ? 'bf-vote-option-shop' : ''} ${opt.myVote ? 'voted' : ''} ${isExpired ? 'expired' : ''}`} onClick={() => !isExpired && handleVote(opt.id)} title={isExpired ? '투표가 마감되었습니다' : opt.myVote ? '클릭하여 투표 취소' : '클릭하여 투표'}>
                                 {opt.myVote && <span className="bf-vote-check">✓</span>}
-                                <span className="bf-vote-option-text">
-                                  {displayText}
-                                  {foundShop && (
-                                    <span style={{ marginLeft: '8px', fontSize: '11px', color: '#2563eb', background: '#eff6ff', padding: '1px 6px', borderRadius: '8px', fontWeight: 600 }}>
-                                      {foundShop.ownerName} · {(foundShop.ownerSchools || []).join(', ')}
-                                    </span>
-                                  )}
-                                </span>
+                                {foundShop ? (
+                                  <div className="bf-vote-shop-info">
+                                    {foundShop.imageUrl && <img src={foundShop.imageUrl} alt={foundShop.shopName} className="bf-vote-shop-thumb" />}
+                                    <div className="bf-vote-shop-detail">
+                                      <div className="bf-vote-shop-name-row">
+                                        <CategoryIcon category={foundShop.category} />
+                                        <span className="bf-vote-shop-name">{foundShop.shopName}</span>
+                                        {foundShop.averageRating != null && <span className="bf-vote-shop-rating">★ {foundShop.averageRating.toFixed(1)}</span>}
+                                        <span className="bf-vote-shop-badge">동창가게</span>
+                                      </div>
+                                      <div className="bf-vote-shop-address">{foundShop.address}</div>
+                                      <div className="bf-vote-shop-meta">
+                                        <span>{foundShop.ownerName} 사장</span>
+                                        {foundShop.phone && <span>📞 {foundShop.phone}</span>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="bf-vote-option-text">{opt.optionValue}</span>
+                                )}
                                 <div className="bf-vote-option-bar">
                                   <div className="bf-vote-option-bar-fill" style={{ width: `${(opt.voteCount / getMaxVotes(mt)) * 100}%` }} />
                                 </div>
@@ -1725,6 +1895,55 @@ export default function Reunion() {
                   ))}
                   <button className="bf-option-add" onClick={() => setLocationOptions([...locationOptions, ''])}>+ 장소 추가</button>
                 </div>
+                {/* 동창가게 추천 */}
+                {shopList.length > 0 && (
+                  <div className="bf-shop-recommend">
+                    <div className="bf-shop-recommend-title">🏪 동창가게 추천</div>
+                    <div className="bf-shop-recommend-list">
+                      {shopList.slice(0, 5).map(shop => {
+                        const label = `${shop.shopName} (${shop.address})`;
+                        const alreadyAdded = locationOptions.includes(label);
+                        return (
+                          <div
+                            key={shop.id}
+                            className={`bf-shop-recommend-item ${alreadyAdded ? 'added' : ''}`}
+                            onClick={() => {
+                              if (alreadyAdded) return;
+                              const emptyIdx = locationOptions.findIndex(l => !l.trim());
+                              if (emptyIdx >= 0) {
+                                const arr = [...locationOptions];
+                                arr[emptyIdx] = label;
+                                setLocationOptions(arr);
+                              } else {
+                                setLocationOptions([...locationOptions, label]);
+                              }
+                            }}
+                          >
+                            {shop.imageUrl ? (
+                              <img src={shop.imageUrl} alt={shop.shopName} className="bf-shop-recommend-img" />
+                            ) : (
+                              <div className="bf-shop-recommend-img-placeholder"><CategoryIcon category={shop.category} /></div>
+                            )}
+                            <div className="bf-shop-recommend-info">
+                              <div className="bf-shop-recommend-name">
+                                <CategoryIcon category={shop.category} />
+                                {shop.shopName}
+                                {shop.averageRating != null && <span className="bf-shop-recommend-rating">★ {shop.averageRating.toFixed(1)}</span>}
+                              </div>
+                              <div className="bf-shop-recommend-address">{shop.address}</div>
+                              <div className="bf-shop-recommend-meta">
+                                {shop.ownerName} 사장 · {shop.subCategory || shop.category}
+                              </div>
+                            </div>
+                            <div className="bf-shop-recommend-action">
+                              {alreadyAdded ? <span className="bf-shop-recommend-added">추가됨</span> : <span className="bf-shop-recommend-add">+ 추가</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="bf-modal-footer">
@@ -1971,6 +2190,59 @@ export default function Reunion() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="bf-modal-backdrop" onClick={() => setShowReviewModal(null)}>
+          <div className="bf-review-modal" onClick={e => e.stopPropagation()}>
+            <div className="bf-modal-header">
+              <h3>후기 작성</h3>
+              <button className="bf-modal-close" onClick={() => setShowReviewModal(null)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="bf-review-modal-shop">
+              {showReviewModal.shop.imageUrl && (
+                <img src={showReviewModal.shop.imageUrl} alt={showReviewModal.shop.shopName} className="bf-review-modal-shop-img" />
+              )}
+              <div className="bf-review-modal-shop-info">
+                <div className="bf-review-modal-shop-name">{showReviewModal.shop.shopName}</div>
+                <div className="bf-review-modal-shop-address">{showReviewModal.shop.address}</div>
+                <div className="bf-review-modal-shop-meeting">{showReviewModal.meetingTitle} 모임 후기</div>
+              </div>
+            </div>
+            <div className="bf-review-modal-body">
+              <div className="bf-review-rating-picker">
+                <label>별점</label>
+                <div className="bf-review-stars">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <span
+                      key={star}
+                      className={`bf-review-star ${star <= reviewRating ? 'active' : ''}`}
+                      onClick={() => setReviewRating(star)}
+                    >★</span>
+                  ))}
+                </div>
+              </div>
+              <div className="bf-review-textarea-wrap">
+                <textarea
+                  className="bf-review-textarea"
+                  placeholder="모임 장소로 어떠셨나요? 솔직한 후기를 남겨주세요."
+                  value={reviewContent}
+                  onChange={e => setReviewContent(e.target.value)}
+                  maxLength={500}
+                  rows={4}
+                />
+                <span className="bf-review-char-count">{reviewContent.length}/500</span>
+              </div>
+            </div>
+            <div className="bf-modal-footer">
+              <button className="bf-modal-cancel" onClick={() => setShowReviewModal(null)}>취소</button>
+              <button className="bf-modal-submit" onClick={handleSubmitReview} disabled={!reviewContent.trim()}>등록</button>
             </div>
           </div>
         </div>

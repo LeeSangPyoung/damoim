@@ -4,7 +4,7 @@ import { getAuthData } from '../utils/auth';
 import { userAPI } from '../api/user';
 import { chatAPI } from '../api/chat';
 import { friendAPI, FriendshipStatus } from '../api/friend';
-import { alumniShopAPI, ShopResponse, SHOP_CATEGORIES, MAIN_CATEGORIES } from '../api/alumniShop';
+import { alumniShopAPI, ShopResponse, ShopReviewResponse, SHOP_CATEGORIES, MAIN_CATEGORIES } from '../api/alumniShop';
 import { CategoryIcon } from '../components/CategoryIcons';
 import ComposeMessageModal from '../components/ComposeMessageModal';
 import './AlumniShop.css';
@@ -197,6 +197,9 @@ export default function AlumniShop() {
   const [messageTarget, setMessageTarget] = useState<{ userId: string; name: string } | null>(null);
   const [ownerFriendStatus, setOwnerFriendStatus] = useState<FriendshipStatus>({ status: 'NONE' });
 
+  // 후기 (보기 전용 - 작성은 찐모임에서만 가능)
+  const [reviews, setReviews] = useState<ShopReviewResponse[]>([]);
+
   // 등록 모달
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingShop, setEditingShop] = useState<ShopResponse | null>(null);
@@ -373,15 +376,19 @@ export default function AlumniShop() {
   const handleSelectShop = async (shop: ShopResponse) => {
     setSelectedShop(shop);
     setView('detail');
-    // 사장님 친구 상태 로드
+    setReviews([]);
+    // 사장님 친구 상태 + 후기 병렬 로드
+    const promises: Promise<void>[] = [
+      alumniShopAPI.getReviews(shop.id).then(r => setReviews(r)).catch(() => {}),
+    ];
     if (user && shop.ownerUserId !== user.userId) {
-      try {
-        const status = await friendAPI.getStatus(user.userId, shop.ownerUserId);
-        setOwnerFriendStatus(status);
-      } catch (e) {
-        setOwnerFriendStatus({ status: 'NONE' });
-      }
+      promises.push(
+        friendAPI.getStatus(user.userId, shop.ownerUserId)
+          .then(status => setOwnerFriendStatus(status))
+          .catch(() => setOwnerFriendStatus({ status: 'NONE' }))
+      );
     }
+    await Promise.all(promises);
   };
 
   // 사장님에게 채팅 시작
@@ -527,7 +534,12 @@ export default function AlumniShop() {
                 </div>
                 <div className="shop-card-body">
                   <span className="shop-card-category"><CategoryIcon category={shop.category} /> {shop.subCategory || shop.category}</span>
-                  <div className="shop-card-name">{shop.shopName}</div>
+                  <div className="shop-card-name">
+                    {shop.shopName}
+                    {shop.averageRating != null && (
+                      <span className="shop-card-rating">★ {shop.averageRating.toFixed(1)}<span className="shop-card-review-count">({shop.reviewCount})</span></span>
+                    )}
+                  </div>
                   <div className="shop-card-address">{shop.address}{shop.detailAddress ? ` ${shop.detailAddress}` : ''}</div>
                   <div className="shop-card-footer">
                     <div className="shop-card-owner">
@@ -812,6 +824,50 @@ export default function AlumniShop() {
               {selectedShop.description && (
                 <div className="shop-detail-description">{selectedShop.description}</div>
               )}
+
+              {/* 후기 섹션 (보기 전용 - 작성은 찐모임에서만 가능) */}
+              <div className="shop-review-section">
+                <div className="shop-review-header">
+                  <div className="shop-review-header-left">
+                    <h4>후기</h4>
+                    {selectedShop.averageRating != null && (
+                      <span className="shop-review-avg">
+                        <span className="shop-review-avg-star">★</span>
+                        {selectedShop.averageRating.toFixed(1)}
+                        <span className="shop-review-count">({selectedShop.reviewCount})</span>
+                      </span>
+                    )}
+                  </div>
+                  <span className="shop-review-notice">찐모임에서 모임 후 작성 가능</span>
+                </div>
+
+                {/* 후기 목록 */}
+                {reviews.length === 0 ? (
+                  <div className="shop-review-empty">아직 후기가 없습니다</div>
+                ) : (
+                  <div className="shop-review-list">
+                    {reviews.map(review => (
+                      <div key={review.id} className="shop-review-item">
+                        <div className="shop-review-item-header">
+                          <div className="shop-review-item-avatar">
+                            {review.reviewerProfileImageUrl ? (
+                              <img src={getImageSrc(review.reviewerProfileImageUrl)} alt="" />
+                            ) : review.reviewerName[0]}
+                          </div>
+                          <div className="shop-review-item-info">
+                            <span className="shop-review-item-name">{review.reviewerName}</span>
+                            <span className="shop-review-item-date">{new Date(review.createdAt).toLocaleDateString('ko-KR')}</span>
+                          </div>
+                          <div className="shop-review-item-rating">
+                            {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                          </div>
+                        </div>
+                        {review.content && <div className="shop-review-item-content">{review.content}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {isOwner && (
                 <div className="shop-detail-actions">
