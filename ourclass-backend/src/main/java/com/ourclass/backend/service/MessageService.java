@@ -122,6 +122,20 @@ public class MessageService {
         messageRepository.markAllAsRead(user, LocalDateTime.now());
     }
 
+    @Transactional
+    public void deleteAllReceived(String userId) {
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        messageRepository.deleteAllReceived(user);
+    }
+
+    @Transactional
+    public void deleteAllSent(String userId) {
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        messageRepository.deleteAllSent(user);
+    }
+
     @Transactional(readOnly = true)
     public long getUnreadCount(String userId) {
         User user = userRepository.findByUserId(userId)

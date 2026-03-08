@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -176,6 +177,15 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public ClassmateSearchResponse searchUsers(String currentUserId, UserSearchRequest request) {
+        // 현재 사용자의 학교 목록 조회
+        User currentUser = userRepository.findByUserId(currentUserId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+        // 내 학교 이름 목록 (졸업년도 무관하게 같은 학교 동창 포함)
+        Set<String> mySchoolNames = currentUser.getSchools().stream()
+                .map(UserSchool::getSchoolName)
+                .filter(n -> n != null && !n.isEmpty())
+                .collect(Collectors.toSet());
+
         // 빈 문자열을 null로 변환
         String name = (request.getName() != null && !request.getName().trim().isEmpty()) ? request.getName() : null;
         String schoolName = (request.getSchoolName() != null && !request.getSchoolName().trim().isEmpty()) ? request.getSchoolName() : null;
@@ -183,21 +193,30 @@ public class UserService {
         String grade = (request.getGrade() != null && !request.getGrade().trim().isEmpty()) ? request.getGrade() : null;
         String classNumber = (request.getClassNumber() != null && !request.getClassNumber().trim().isEmpty()) ? request.getClassNumber() : null;
 
-        log.info("검색 조건 - name: {}, schoolName: {}, graduationYear: {}, grade: {}, classNumber: {}",
-                name, schoolName, graduationYear, grade, classNumber);
+        log.info("검색 조건 - name: {}, schoolName: {}, graduationYear: {}, grade: {}, classNumber: {}, 내 학교: {}",
+                name, schoolName, graduationYear, grade, classNumber, mySchoolNames);
 
         // 검색 조건에 맞는 사용자 찾기
         List<User> users = userRepository.searchUsers(name, schoolName, graduationYear, grade, classNumber);
 
-        log.info("검색 결과: {} 명", users.size());
+        log.info("전체 검색 결과: {} 명", users.size());
 
         LocalDateTime fiveMinAgo = LocalDateTime.now().minusMinutes(5);
 
         List<ClassmateSearchResponse.ClassmateInfo> results = users.stream()
                 .filter(user -> !user.getUserId().equals(currentUserId)) // 본인 제외
+                .filter(user -> {
+                    // 나와 같은 학교(schoolName) 출신인 사람만 포함 (졸업년도 무관)
+                    if (mySchoolNames.isEmpty()) return true; // 내 학교 정보가 없으면 전체 허용
+                    return user.getSchools().stream()
+                            .anyMatch(s -> s.getSchoolName() != null && mySchoolNames.contains(s.getSchoolName()));
+                })
                 .map(user -> {
-                    // 첫 번째 학교 정보를 기본으로 사용
-                    UserSchool firstSchool = user.getSchools().isEmpty() ? null : user.getSchools().get(0);
+                    // 나와 공통된 학교 정보를 우선 표시
+                    UserSchool matchedSchool = user.getSchools().stream()
+                            .filter(s -> s.getSchoolName() != null && mySchoolNames.contains(s.getSchoolName()))
+                            .findFirst()
+                            .orElse(user.getSchools().isEmpty() ? null : user.getSchools().get(0));
                     boolean online = isUserOnline(user, fiveMinAgo);
 
                     return ClassmateSearchResponse.ClassmateInfo.builder()
@@ -208,17 +227,19 @@ public class UserService {
                             .bio(user.getBio())
                             .online(online)
                             .lastActiveTime(online ? null : getLastActiveTimeStr(user))
-                            .school(firstSchool != null ? ClassmateSearchResponse.SchoolInfo.builder()
-                                    .schoolCode(firstSchool.getSchoolCode())
-                                    .schoolType(firstSchool.getSchoolType())
-                                    .schoolName(firstSchool.getSchoolName())
-                                    .graduationYear(firstSchool.getGraduationYear())
-                                    .grade(firstSchool.getGrade())
-                                    .classNumber(firstSchool.getClassNumber())
+                            .school(matchedSchool != null ? ClassmateSearchResponse.SchoolInfo.builder()
+                                    .schoolCode(matchedSchool.getSchoolCode())
+                                    .schoolType(matchedSchool.getSchoolType())
+                                    .schoolName(matchedSchool.getSchoolName())
+                                    .graduationYear(matchedSchool.getGraduationYear())
+                                    .grade(matchedSchool.getGrade())
+                                    .classNumber(matchedSchool.getClassNumber())
                                     .build() : null)
                             .build();
                 })
                 .collect(Collectors.toList());
+
+        log.info("같은 학교 필터 후: {} 명", results.size());
 
         return ClassmateSearchResponse.builder()
                 .classmates(results)

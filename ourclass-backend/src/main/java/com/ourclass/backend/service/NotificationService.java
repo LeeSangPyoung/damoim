@@ -101,6 +101,15 @@ public class NotificationService {
         notificationRepository.markAllAsRead(user);
     }
 
+    @Transactional
+    public void deleteAllNotifications(String userId) {
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        notificationRepository.deleteAllByRecipient(user);
+        log.info("전체 알림 삭제: {}", userId);
+    }
+
     private NotificationResponse toResponse(Notification notification) {
         return NotificationResponse.builder()
                 .id(notification.getId())

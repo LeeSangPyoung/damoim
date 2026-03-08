@@ -157,8 +157,7 @@ export default function SchoolDashboard() {
   return (
     <div className="school-dashboard">
       <div className="school-dashboard-header">
-        <h2>내 학교</h2>
-        <p>등록된 학교를 선택하여 게시판을 확인하세요</p>
+        <p className="school-dashboard-guide"><strong>{schools.length}개의 모교</strong>가 등록되어 있어요 · 학교를 선택하면 게시글을 확인할 수 있어요</p>
       </div>
 
       {schools.length === 0 ? (

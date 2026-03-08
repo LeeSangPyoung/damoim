@@ -63,4 +63,15 @@ public class NotificationController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @DeleteMapping("/all")
+    public ResponseEntity<?> deleteAllNotifications(@RequestParam String userId) {
+        try {
+            notificationService.deleteAllNotifications(userId);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            log.error("전체 알림 삭제 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

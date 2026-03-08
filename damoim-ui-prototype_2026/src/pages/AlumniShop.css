@@ -1,4 +1,4 @@
-/* 동창 가게 페이지 */
+/* 동창이네 페이지 */
 .shop-container {
   min-height: calc(100vh - 130px);
   background: #f5f5f5;
@@ -1046,7 +1046,7 @@
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* 동창가게 선택 팝업 (찐모임용) */
+/* 동창이네 선택 팝업 (찐모임용) */
 .shop-picker-modal {
   max-width: 480px;
 }

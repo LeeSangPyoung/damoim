@@ -89,6 +89,28 @@ public class MessageController {
         }
     }
 
+    @DeleteMapping("/received/all")
+    public ResponseEntity<?> deleteAllReceived(@RequestParam String userId) {
+        try {
+            messageService.deleteAllReceived(userId);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            log.error("받은 쪽지 일괄 삭제 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/sent/all")
+    public ResponseEntity<?> deleteAllSent(@RequestParam String userId) {
+        try {
+            messageService.deleteAllSent(userId);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            log.error("보낸 쪽지 일괄 삭제 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @DeleteMapping("/{messageId}")
     public ResponseEntity<?> deleteMessage(
             @PathVariable Long messageId,

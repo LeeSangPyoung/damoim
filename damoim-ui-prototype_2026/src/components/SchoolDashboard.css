@@ -49,6 +49,11 @@
   margin: 0;
 }
 
+.school-dashboard-guide strong {
+  color: #3b82f6;
+  font-weight: 700;
+}
+
 /* === LOADING === */
 .school-dashboard-loading {
   display: flex;

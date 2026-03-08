@@ -27,4 +27,14 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Modifying
     @Query("UPDATE Message m SET m.readAt = :now WHERE m.receiver = :receiver AND m.readAt IS NULL AND m.deletedByReceiver = false")
     void markAllAsRead(@Param("receiver") User receiver, @Param("now") LocalDateTime now);
+
+    // 받은 쪽지 일괄 삭제
+    @Modifying
+    @Query("UPDATE Message m SET m.deletedByReceiver = true WHERE m.receiver = :receiver AND m.deletedByReceiver = false")
+    void deleteAllReceived(@Param("receiver") User receiver);
+
+    // 보낸 쪽지 일괄 삭제
+    @Modifying
+    @Query("UPDATE Message m SET m.deletedBySender = true WHERE m.sender = :sender AND m.deletedBySender = false")
+    void deleteAllSent(@Param("sender") User sender);
 }

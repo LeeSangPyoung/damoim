@@ -129,7 +129,7 @@ export const adminAPI = {
     await apiClient.delete(`/admin/comments/${commentId}`, { params: { adminId } });
   },
 
-  // 동창가게
+  // 동창이네
   getAllShops: async (adminId: string, keyword?: string): Promise<AdminShop[]> => {
     const response = await apiClient.get('/admin/shops', { params: { adminId, keyword } });
     return response.data;

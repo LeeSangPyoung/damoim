@@ -351,7 +351,7 @@ export default function Layout({ children }: LayoutProps) {
           } else if (newNotif.type === 'POST') {
             showBannerEvent('새 게시글이 작성되었어요! 확인해보세요.', '/board');
           } else if (newNotif.type === 'NEW_SHOP') {
-            showBannerEvent(`${newNotif.senderName}님이 동창가게에 새 가게를 등록했어요!`, '/alumni-shop');
+            showBannerEvent(`${newNotif.senderName}님이 동창이네에 새 가게를 등록했어요!`, '/alumni-shop');
           } else if (
             newNotif.type === 'REUNION_INVITE' ||
             newNotif.type === 'MEETING_CREATED' ||
@@ -902,7 +902,7 @@ export default function Layout({ children }: LayoutProps) {
             <h1>우리반</h1>
           </div>
           <nav className="dash-nav">
-            <a href="#" onClick={() => navigate('/dashboard')} className="dash-nav-link">내학교</a>
+            <a href="#" onClick={() => navigate('/dashboard')} className="dash-nav-link">우리학교</a>
             <a href="#" onClick={() => navigate('/search')} className="dash-nav-link">동창찾기</a>
             <a href="#" onClick={() => navigate('/messages')} className="dash-nav-link">
               쪽지{unreadMsgCount > 0 && <span className="nav-new-badge">N</span>}
@@ -917,7 +917,7 @@ export default function Layout({ children }: LayoutProps) {
                 return count > 0 ? <span className="nav-new-badge">N</span> : null;
               })()}
             </a>
-            <a href="#" onClick={() => navigate('/alumni-shop')} className="dash-nav-link">동창가게</a>
+            <a href="#" onClick={() => navigate('/alumni-shop')} className="dash-nav-link">동창이네</a>
             {user?.role === 'ADMIN' && (
               <a href="#" onClick={() => navigate('/admin')} className="dash-nav-link">관리자</a>
             )}

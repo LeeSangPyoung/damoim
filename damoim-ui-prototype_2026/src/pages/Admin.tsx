@@ -10,7 +10,7 @@ const MENU_ITEMS: { key: AdminMenu; label: string }[] = [
   { key: 'users', label: '사용자 관리' },
   { key: 'posts', label: '게시글 관리' },
   { key: 'comments', label: '댓글 관리' },
-  { key: 'shops', label: '동창가게 관리' },
+  { key: 'shops', label: '동창이네 관리' },
   { key: 'reunions', label: '찐모임 관리' },
   { key: 'announcements', label: '공지사항' },
 ];
@@ -305,9 +305,9 @@ export default function Admin() {
               )}
             </>)}
 
-            {/* ===== 동창가게 관리 ===== */}
+            {/* ===== 동창이네 관리 ===== */}
             {activeMenu === 'shops' && (<>
-              <div className="adm-section-title">동창가게 관리</div>
+              <div className="adm-section-title">동창이네 관리</div>
               {renderSearchBar('가게명, 사장님 이름/아이디, 주소 검색...')}
               {loading ? <div className="adm-loading">불러오는 중...</div> : shops.length === 0 ? <div className="adm-empty">등록된 가게가 없습니다.</div> : (
                 <div className="adm-list">

@@ -98,6 +98,21 @@ public class ChatController {
         }
     }
 
+    // 특정 채팅방 읽음 처리 (가볍게)
+    @PutMapping("/rooms/{roomId}/read")
+    public ResponseEntity<?> markRoomAsRead(
+            @PathVariable Long roomId,
+            @RequestParam String userId) {
+        try {
+            chatService.getMessages(roomId, userId); // 내부적으로 읽음 처리
+            messagingTemplate.convertAndSend("/topic/chat/" + roomId,
+                    Map.of("type", "READ", "userId", userId));
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // 모든 채팅방 메시지 일괄 읽음 처리
     @PutMapping("/mark-all-read")
     public ResponseEntity<?> markAllAsRead(@RequestParam String userId) {

@@ -252,12 +252,23 @@ public class AlumniShopService {
                 .distinct()
                 .collect(Collectors.toList());
 
+        // 정렬용 상세 학교 정보
+        List<ShopResponse.OwnerSchoolDetail> ownerSchoolDetails = shop.getOwner().getSchools().stream()
+                .map(s -> ShopResponse.OwnerSchoolDetail.builder()
+                        .schoolName(s.getSchoolName())
+                        .graduationYear(s.getGraduationYear())
+                        .grade(s.getGrade())
+                        .classNumber(s.getClassNumber())
+                        .build())
+                .collect(Collectors.toList());
+
         return ShopResponse.builder()
                 .id(shop.getId())
                 .ownerUserId(shop.getOwner().getUserId())
                 .ownerName(shop.getOwner().getName())
                 .ownerProfileImageUrl(shop.getOwner().getProfileImageUrl())
                 .ownerSchools(ownerSchools)
+                .ownerSchoolDetails(ownerSchoolDetails)
                 .shopName(shop.getShopName())
                 .category(shop.getCategory())
                 .subCategory(shop.getSubCategory())

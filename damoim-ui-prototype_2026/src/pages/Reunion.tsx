@@ -275,7 +275,7 @@ export default function Reunion() {
   const [locationOptions, setLocationOptions] = useState<string[]>(['']);
   const [voteDeadline, setVoteDeadline] = useState<{date: string, time: string}>({date: '', time: ''});
 
-  // 동창가게 선택 팝업
+  // 동창이네 선택 팝업
   const [showShopPicker, setShowShopPicker] = useState(false);
   const [shopList, setShopList] = useState<ShopResponse[]>([]);
   const [shopCategory, setShopCategory] = useState('전체');
@@ -283,7 +283,7 @@ export default function Reunion() {
   const [shopSearch, setShopSearch] = useState('');
   const [shopPickerIndex, setShopPickerIndex] = useState<number>(0);
 
-  // 동창가게 후기 작성
+  // 동창이네 후기 작성
   const [showReviewModal, setShowReviewModal] = useState<{ shop: ShopResponse; meetingTitle: string } | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewContent, setReviewContent] = useState('');
@@ -780,7 +780,7 @@ export default function Reunion() {
     }
   };
 
-  // ========== 동창가게 후기 ==========
+  // ========== 동창이네 후기 ==========
   const handleSubmitReview = async () => {
     if (!user || !showReviewModal) return;
     try {
@@ -1342,7 +1342,7 @@ export default function Reunion() {
                                 {confirmedShop.businessHours && <span className="bf-confirmed-shop-hours">🕐 {confirmedShop.businessHours}</span>}
                               </div>
                             </div>
-                            <div className="bf-confirmed-shop-badge">동창가게</div>
+                            <div className="bf-confirmed-shop-badge">동창이네</div>
                           </div>
                         ) : (
                           <span>장소: {mt.finalLocation}</span>
@@ -1393,7 +1393,7 @@ export default function Reunion() {
                                     {isSelected && <span className="bf-confirmed-vote-check">✓</span>}
                                     <span className="bf-confirmed-vote-text">
                                       {displayName}
-                                      {shop && <span className="bf-confirmed-vote-shop-badge">동창가게</span>}
+                                      {shop && <span className="bf-confirmed-vote-shop-badge">동창이네</span>}
                                     </span>
                                     <span className={`bf-confirmed-vote-count ${opt.voteCount === 0 ? 'zero' : ''}`}>{opt.voteCount}표</span>
                                   </div>
@@ -1493,7 +1493,7 @@ export default function Reunion() {
                                         <CategoryIcon category={foundShop.category} />
                                         <span className="bf-vote-shop-name">{foundShop.shopName}</span>
                                         {foundShop.averageRating != null && <span className="bf-vote-shop-rating">★ {foundShop.averageRating.toFixed(1)}</span>}
-                                        <span className="bf-vote-shop-badge">동창가게</span>
+                                        <span className="bf-vote-shop-badge">동창이네</span>
                                       </div>
                                       <div className="bf-vote-shop-address">{foundShop.address}</div>
                                       <div className="bf-vote-shop-meta">
@@ -1876,7 +1876,7 @@ export default function Reunion() {
                       <input value={l} onChange={e => { const arr = [...locationOptions]; arr[i] = e.target.value; setLocationOptions(arr); }} placeholder="예: 강남역 근처 한우집" />
                       <button
                         className="bf-shop-pick-btn"
-                        title="동창가게에서 선택"
+                        title="동창이네에서 선택"
                         onClick={async () => {
                           if (!user) return;
                           try {
@@ -1895,10 +1895,10 @@ export default function Reunion() {
                   ))}
                   <button className="bf-option-add" onClick={() => setLocationOptions([...locationOptions, ''])}>+ 장소 추가</button>
                 </div>
-                {/* 동창가게 추천 */}
+                {/* 동창이네 추천 */}
                 {shopList.length > 0 && (
                   <div className="bf-shop-recommend">
-                    <div className="bf-shop-recommend-title">🏪 동창가게 추천</div>
+                    <div className="bf-shop-recommend-title">🏪 동창이네 추천</div>
                     <div className="bf-shop-recommend-list">
                       {shopList.slice(0, 5).map(shop => {
                         const label = `${shop.shopName} (${shop.address})`;
@@ -1954,7 +1954,7 @@ export default function Reunion() {
         </div>
       )}
 
-      {/* 동창가게 선택 팝업 */}
+      {/* 동창이네 선택 팝업 */}
       {showShopPicker && (
         <div className="bf-modal-backdrop" style={{ zIndex: 2100 }} onClick={() => setShowShopPicker(false)}>
           <div className="bf-modal shop-picker-modal" onClick={e => e.stopPropagation()}>

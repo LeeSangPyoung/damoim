@@ -1,0 +1,46 @@
+export const Colors = {
+  primary: '#3b82f6',
+  primaryDark: '#2563eb',
+  primaryLight: '#eff6ff',
+
+  green: '#16a34a',
+  greenLight: '#f0fdf4',
+  greenBorder: '#86efac',
+
+  amber: '#f59e0b',
+  amberLight: '#fefce8',
+  amberBorder: '#fde68a',
+
+  red: '#ef4444',
+  redLight: '#fef2f2',
+
+  gray50: '#f9fafb',
+  gray100: '#f3f4f6',
+  gray200: '#e5e7eb',
+  gray300: '#d1d5db',
+  gray400: '#9ca3af',
+  gray500: '#6b7280',
+  gray600: '#4b5563',
+  gray700: '#374151',
+  gray800: '#1f2937',
+  gray900: '#111827',
+
+  slate50: '#f8fafc',
+  slate100: '#f1f5f9',
+  slate200: '#e2e8f0',
+  slate300: '#cbd5e1',
+  slate400: '#94a3b8',
+  slate500: '#64748b',
+  slate600: '#475569',
+  slate700: '#334155',
+  slate800: '#1e293b',
+
+  white: '#ffffff',
+  black: '#000000',
+  background: '#f1f5f9',
+  card: '#ffffff',
+  border: '#e2e8f0',
+  text: '#1e293b',
+  textSecondary: '#64748b',
+  textMuted: '#94a3b8',
+};

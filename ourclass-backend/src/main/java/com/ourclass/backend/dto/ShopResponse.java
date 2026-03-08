@@ -17,6 +17,18 @@ public class ShopResponse {
     private String ownerName;
     private String ownerProfileImageUrl;
     private List<String> ownerSchools; // "서울중(02졸)" 형태
+    private List<OwnerSchoolDetail> ownerSchoolDetails; // 정렬용 상세 학교 정보
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class OwnerSchoolDetail {
+        private String schoolName;
+        private String graduationYear;
+        private String grade;
+        private String classNumber;
+    }
     private String shopName;
     private String category;
     private String subCategory;
