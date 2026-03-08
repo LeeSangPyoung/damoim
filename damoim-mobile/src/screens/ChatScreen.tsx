@@ -12,6 +12,7 @@ import {
   SafeAreaView,
   Alert,
   Modal,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
@@ -755,13 +756,13 @@ export default function ChatScreen() {
 
       {/* Emoji Panel */}
       {showEmoji && (
-        <View style={styles.emojiPanel}>
+        <ScrollView style={styles.emojiPanel} contentContainerStyle={styles.emojiPanelContent}>
           {EMOJI_LIST.map((em, i) => (
             <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => setMessageText(prev => prev + em)}>
               <Text style={styles.emojiText}>{em}</Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       )}
 
       {/* Input */}
@@ -878,13 +879,13 @@ export default function ChatScreen() {
 
       {/* Emoji Panel */}
       {showEmoji && (
-        <View style={styles.emojiPanel}>
+        <ScrollView style={styles.emojiPanel} contentContainerStyle={styles.emojiPanelContent}>
           {EMOJI_LIST.map((em, i) => (
             <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => setMessageText(prev => prev + em)}>
               <Text style={styles.emojiText}>{em}</Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       )}
 
       {/* Input */}
@@ -1451,22 +1452,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emojiPanel: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     backgroundColor: Colors.white,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    maxHeight: 180,
+    height: 96,
+  },
+  emojiPanelContent: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
   emojiItem: {
-    width: '10%',
-    aspectRatio: 1,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
   emojiText: {
-    fontSize: 22,
+    fontSize: 24,
   },
 });
