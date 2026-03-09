@@ -408,6 +408,7 @@ export default function ChatScreen() {
       try {
         await chatAPI.leaveRoom(room.id, userId);
         setDmRooms(prev => prev.filter(r => r.id !== room.id));
+        if (view.kind === 'dm-chat') goBack();
       } catch {
         Alert.alert('오류', '채팅방 나가기에 실패했습니다.');
       }
@@ -427,6 +428,7 @@ export default function ChatScreen() {
       try {
         await groupChatAPI.leaveRoom(room.id, userId);
         setGroupRooms(prev => prev.filter(r => r.id !== room.id));
+        if (view.kind === 'group-chat') goBack();
       } catch {
         Alert.alert('오류', '그룹 채팅방 나가기에 실패했습니다.');
       }
@@ -437,38 +439,6 @@ export default function ChatScreen() {
       Alert.alert('채팅방 나가기', `"${room.name}" 그룹 채팅방을 나가시겠습니까?`, [
         { text: '취소', style: 'cancel' },
         { text: '나가기', style: 'destructive', onPress: doDelete },
-      ]);
-    }
-  };
-
-  const handleDeleteAllRooms = () => {
-    const rooms = tab === 'dm' ? dmRooms : groupRooms;
-    if (rooms.length === 0) {
-      Alert.alert('알림', '삭제할 채팅방이 없습니다.');
-      return;
-    }
-    const label = tab === 'dm' ? '1:1' : '그룹';
-    const doDeleteAll = async () => {
-      try {
-        if (tab === 'dm') {
-          await Promise.all(dmRooms.map(r => chatAPI.leaveRoom(r.id, userId)));
-          setDmRooms([]);
-        } else {
-          await Promise.all(groupRooms.map(r => groupChatAPI.leaveRoom(r.id, userId)));
-          setGroupRooms([]);
-        }
-      } catch {
-        Alert.alert('오류', '모두 나가기에 실패했습니다.');
-        if (tab === 'dm') fetchDmRooms();
-        else fetchGroupRooms();
-      }
-    };
-    if (Platform.OS === 'web') {
-      if (window.confirm(`${label} 채팅방 ${rooms.length}개를 모두 나가시겠습니까?`)) doDeleteAll();
-    } else {
-      Alert.alert('모두 나가기', `${label} 채팅방 ${rooms.length}개를 모두 나가시겠습니까?`, [
-        { text: '취소', style: 'cancel' },
-        { text: '나가기', style: 'destructive', onPress: doDeleteAll },
       ]);
     }
   };
@@ -736,7 +706,10 @@ export default function ChatScreen() {
           <Text style={styles.backBtnText}>{'<'}</Text>
         </TouchableOpacity>
         <Avatar uri={room.otherUser.profileImageUrl} name={room.otherUser.name} size={32} />
-        <Text style={styles.chatHeaderTitle}>{room.otherUser.name}</Text>
+        <Text style={[styles.chatHeaderTitle, { flex: 1 }]}>{room.otherUser.name}</Text>
+        <TouchableOpacity onPress={() => handleDeleteDmRoom(room)} style={styles.leaveRoomBtn}>
+          <Text style={styles.leaveRoomBtnText}>나가기</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Messages */}
@@ -856,10 +829,13 @@ export default function ChatScreen() {
         <TouchableOpacity onPress={goBack} style={styles.backBtn}>
           <Text style={styles.backBtnText}>{'<'}</Text>
         </TouchableOpacity>
-        <Text style={styles.chatHeaderTitle}>{room.name}</Text>
+        <Text style={[styles.chatHeaderTitle, { flex: 1 }]}>{room.name}</Text>
         <View style={styles.memberBadge}>
           <Text style={styles.memberBadgeText}>{room.memberCount}</Text>
         </View>
+        <TouchableOpacity onPress={() => handleDeleteGroupRoom(room)} style={styles.leaveRoomBtn}>
+          <Text style={styles.leaveRoomBtnText}>나가기</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Messages */}
@@ -944,14 +920,7 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screenHeader}>
         <Text style={styles.screenTitle}>채팅</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {(tab === 'dm' ? dmRooms : groupRooms).length > 0 && (
-            <TouchableOpacity style={styles.deleteAllBtn} onPress={handleDeleteAllRooms}>
-              <Text style={styles.deleteAllBtnText}>모두 나가기</Text>
-            </TouchableOpacity>
-          )}
-          <HeaderActions navigation={navigation} />
-        </View>
+        <HeaderActions navigation={navigation} />
       </View>
       <NoticeBanner />
       {renderTabs()}
@@ -1077,6 +1046,18 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: Colors.text,
+  },
+  leaveRoomBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginLeft: 8,
+    borderRadius: 12,
+    backgroundColor: '#fef2f2',
+  },
+  leaveRoomBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ef4444',
   },
   deleteAllBtn: {
     paddingHorizontal: 12,
