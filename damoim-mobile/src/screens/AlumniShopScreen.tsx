@@ -7,7 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors } from '../constants/colors';
+import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
 import { alumniShopAPI, ShopResponse, ShopReviewResponse, OwnerSchoolDetail, SHOP_CATEGORIES, MAIN_CATEGORIES, CATEGORY_ICONS } from '../api/alumniShop';
@@ -251,7 +251,7 @@ export default function AlumniShopScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setSelectedShop(null)} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color={Colors.text} />
+            <Ionicons name="chevron-back" size={24} color="#FFE156" />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>{selectedShop.shopName}</Text>
         </View>
@@ -360,9 +360,9 @@ export default function AlumniShopScreen() {
                 <View style={styles.searchRow}>
                   <TextInput style={styles.searchInput} placeholder="가게명, 주소 검색" value={search} onChangeText={(t) => { setSearch(t); setDisplayCount(10); }} />
                   <TouchableOpacity style={styles.sortBtn} onPress={() => setShowSortMenu(!showSortMenu)}>
-                    <Ionicons name="filter" size={16} color={Colors.primary} />
+                    <Ionicons name="filter" size={16} color={'#2D5016'} />
                     <Text style={styles.sortBtnText}>{SORT_OPTIONS.find(o => o.key === sortMode)?.label}</Text>
-                    <Ionicons name={showSortMenu ? 'chevron-up' : 'chevron-down'} size={14} color={Colors.primary} />
+                    <Ionicons name={showSortMenu ? 'chevron-up' : 'chevron-down'} size={14} color={'#2D5016'} />
                   </TouchableOpacity>
                 </View>
                 {showSortMenu && (
@@ -374,7 +374,7 @@ export default function AlumniShopScreen() {
                         onPress={() => { setSortMode(opt.key); setShowSortMenu(false); setDisplayCount(10); }}
                       >
                         <Text style={[styles.sortMenuText, sortMode === opt.key && styles.sortMenuTextActive]}>{opt.label}</Text>
-                        {sortMode === opt.key && <Ionicons name="checkmark" size={16} color={Colors.primary} />}
+                        {sortMode === opt.key && <Ionicons name="checkmark" size={16} color={'#2D5016'} />}
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -476,7 +476,7 @@ export default function AlumniShopScreen() {
                       <View style={styles.repBadge}><Text style={styles.repBadgeText}>대표</Text></View>
                     )}
                     <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => removeImage(idx)}>
-                      <Ionicons name="close-circle" size={22} color="#ef4444" />
+                      <Ionicons name="close-circle" size={22} color="#FF6B6B" />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -531,68 +531,68 @@ export default function AlumniShopScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  screenHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.white, paddingTop: HEADER_TOP_PADDING, paddingHorizontal: 20, paddingBottom: 12 },
-  screenHeaderTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 14, paddingTop: HEADER_TOP_PADDING, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border, gap: 10 },
+  container: { flex: 1, backgroundColor: '#FFF8E7' },
+  screenHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#2D5016', paddingTop: HEADER_TOP_PADDING, paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 3, borderBottomColor: '#C49A2A' },
+  screenHeaderTitle: { fontSize: 18, fontWeight: '800', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 14, paddingTop: HEADER_TOP_PADDING, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A', gap: 10 },
   backBtn: { flexDirection: 'row', alignItems: 'center' },
-  backBtnText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
-  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: Colors.text },
+  backBtnText: { fontSize: 13, color: '#FFE156', fontWeight: '600' },
+  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold },
 
-  headerTabs: { flexDirection: 'row', backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  headerTabs: { flexDirection: 'row', backgroundColor: '#FFF8E7', borderBottomWidth: 1, borderBottomColor: '#F0E0B0' },
   headerTab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
-  headerTabActive: { borderBottomWidth: 2, borderBottomColor: Colors.primary },
-  headerTabText: { fontSize: 14, fontWeight: '600', color: Colors.gray400 },
-  headerTabTextActive: { color: Colors.primary },
+  headerTabActive: { borderBottomWidth: 2, borderBottomColor: '#2D5016' },
+  headerTabText: { fontSize: 14, fontWeight: '600', color: Colors.gray400, fontFamily: Fonts.bold },
+  headerTabTextActive: { color: '#2D5016' },
 
-  searchRow: { flexDirection: 'row', padding: 12, backgroundColor: Colors.white, gap: 8, alignItems: 'center' },
+  searchRow: { flexDirection: 'row', padding: 12, backgroundColor: '#FFF8E7', gap: 8, alignItems: 'center' },
   searchInput: { flex: 1, backgroundColor: Colors.gray50, borderRadius: 8, padding: 10, fontSize: 14, borderWidth: 1, borderColor: Colors.gray200 },
-  sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: Colors.primary + '40', backgroundColor: Colors.primary + '08' },
-  sortBtnText: { fontSize: 12, fontWeight: '600', color: Colors.primary },
+  sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: '#2D5016' + '40', backgroundColor: '#2D5016' + '08' },
+  sortBtnText: { fontSize: 12, fontWeight: '600', color: '#2D5016' },
   sortMenu: { backgroundColor: Colors.white, marginHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: Colors.gray200, marginBottom: 4 },
   sortMenuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 11 },
-  sortMenuItemActive: { backgroundColor: Colors.primary + '08' },
-  sortMenuText: { fontSize: 13, fontWeight: '500', color: Colors.text },
-  sortMenuTextActive: { fontWeight: '700', color: Colors.primary },
-  categoryWrap: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 12, backgroundColor: Colors.white, gap: 8 },
+  sortMenuItemActive: { backgroundColor: '#2D5016' + '08' },
+  sortMenuText: { fontSize: 13, fontWeight: '500', color: '#5D4037' },
+  sortMenuTextActive: { fontWeight: '700', color: '#2D5016' },
+  categoryWrap: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 12, backgroundColor: '#FFF8E7', gap: 8 },
   categoryChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.gray100 },
-  categoryChipActive: { backgroundColor: Colors.primary },
+  categoryChipActive: { backgroundColor: '#2D5016' },
   categoryChipText: { fontSize: 12, fontWeight: '600', color: Colors.gray600 },
   categoryChipTextActive: { color: Colors.white },
 
-  shopCard: { flexDirection: 'row', backgroundColor: Colors.white, marginHorizontal: 12, marginTop: 8, borderRadius: 12, overflow: 'hidden', position: 'relative' },
+  shopCard: { flexDirection: 'row', backgroundColor: '#ffffff', marginHorizontal: 12, marginTop: 8, borderRadius: 12, overflow: 'hidden', position: 'relative', borderWidth: 1, borderColor: '#F0E0B0' },
   shopCardImg: { width: 80, height: 80 },
   shopCardInfo: { flex: 1, padding: 10, justifyContent: 'center' },
-  shopCardName: { fontSize: 15, fontWeight: '700', color: Colors.text },
+  shopCardName: { fontSize: 15, fontWeight: '700', color: '#5D4037', fontFamily: Fonts.bold },
   shopCardRating: { fontSize: 12, fontWeight: '600', color: Colors.amber },
   shopCardReviews: { fontSize: 11, color: Colors.textMuted },
   shopCardAddr: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  shopCardOwner: { fontSize: 11, color: Colors.green, fontWeight: '600', marginTop: 2 },
+  shopCardOwner: { fontSize: 11, color: '#2D5016', fontWeight: '600', marginTop: 2 },
   shopCardSchool: { fontSize: 10, color: Colors.gray400, marginTop: 1 },
-  shopCardBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: Colors.green, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  shopCardBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: '#2D5016', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
   shopCardBadgeText: { color: Colors.white, fontSize: 9, fontWeight: '700' },
 
   // Detail
-  detailBox: { padding: 16, backgroundColor: Colors.white },
-  detailName: { fontSize: 20, fontWeight: '800', color: Colors.text },
+  detailBox: { padding: 16, backgroundColor: '#ffffff' },
+  detailName: { fontSize: 20, fontWeight: '800', color: '#5D4037', fontFamily: Fonts.bold },
   detailRating: { fontSize: 16, fontWeight: '700', color: Colors.amber },
   detailCategory: { fontSize: 12, color: Colors.textMuted, marginBottom: 8 },
-  detailAddress: { fontSize: 14, color: Colors.text, marginBottom: 4 },
+  detailAddress: { fontSize: 14, color: Colors.text, marginBottom: 4, fontFamily: Fonts.regular },
   detailPhone: { fontSize: 14, color: Colors.text, marginBottom: 4 },
   detailHours: { fontSize: 14, color: Colors.text, marginBottom: 4 },
-  detailDesc: { fontSize: 14, color: Colors.textSecondary, marginTop: 8 },
+  detailDesc: { fontSize: 14, color: Colors.textSecondary, marginTop: 8, fontFamily: Fonts.regular },
   ownerInfo: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.gray100 },
   ownerLabel: { fontSize: 12, color: Colors.textMuted },
-  ownerName: { fontSize: 14, fontWeight: '700', color: Colors.green },
+  ownerName: { fontSize: 14, fontWeight: '700', color: '#2D5016', fontFamily: Fonts.bold },
   ownerSchool: { fontSize: 12, color: Colors.textSecondary },
 
   // Reviews
   reviewSection: { padding: 16 },
-  reviewTitle: { fontSize: 16, fontWeight: '700', color: Colors.text },
+  reviewTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, fontFamily: Fonts.bold },
   writeReviewBtn: { backgroundColor: Colors.amberLight, borderWidth: 1, borderColor: Colors.amberBorder, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   writeReviewText: { fontSize: 12, fontWeight: '600', color: '#92400e' },
   noReviews: { fontSize: 13, color: Colors.textMuted, textAlign: 'center', paddingVertical: 20 },
-  reviewCard: { backgroundColor: Colors.white, borderRadius: 10, padding: 12, marginBottom: 8 },
+  reviewCard: { backgroundColor: '#ffffff', borderRadius: 10, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#F0E0B0' },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   reviewerName: { fontSize: 13, fontWeight: '600', color: Colors.text },
   reviewTime: { fontSize: 11, color: Colors.textMuted },
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 20 },
   modalContent: { backgroundColor: Colors.white, borderRadius: 16, padding: 20 },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.text, marginBottom: 16 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.text, marginBottom: 16, fontFamily: Fonts.bold },
   inputLabel: { fontSize: 13, fontWeight: '600', color: Colors.gray700, marginBottom: 4, marginTop: 10 },
   input: { borderWidth: 1, borderColor: Colors.gray300, borderRadius: 8, padding: 12, fontSize: 14, marginBottom: 4 },
   textArea: { borderWidth: 1, borderColor: Colors.gray300, borderRadius: 8, padding: 12, fontSize: 14, minHeight: 100, marginBottom: 4 },
@@ -613,11 +613,11 @@ const styles = StyleSheet.create({
   modalBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
   cancelBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: Colors.gray100 },
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: Colors.gray600 },
-  submitBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: Colors.primary },
-  submitBtnText: { fontSize: 14, fontWeight: '600', color: Colors.white },
+  submitBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: '#2D5016' },
+  submitBtnText: { fontSize: 14, fontWeight: '600', color: Colors.white, fontFamily: Fonts.bold },
   imageThumbWrap: { width: 100, height: 100, borderRadius: 10, overflow: 'hidden', position: 'relative' },
   imageThumb: { width: 100, height: 100, resizeMode: 'cover' },
-  repBadge: { position: 'absolute', top: 4, left: 4, backgroundColor: Colors.primary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  repBadge: { position: 'absolute', top: 4, left: 4, backgroundColor: '#2D5016', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   repBadgeText: { fontSize: 10, fontWeight: '700', color: Colors.white },
   imageRemoveBtn: { position: 'absolute', top: 2, right: 2 },
   imageAddBtn: { width: 100, height: 100, borderRadius: 10, borderWidth: 1, borderColor: Colors.gray200, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.gray50, gap: 4 },
@@ -626,11 +626,11 @@ const styles = StyleSheet.create({
   galleryImage: { width: SCREEN_WIDTH, height: 220, resizeMode: 'cover' },
   galleryDots: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingVertical: 8 },
   galleryDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.gray300 },
-  galleryDotActive: { backgroundColor: Colors.primary, width: 18 },
+  galleryDotActive: { backgroundColor: '#2D5016', width: 18 },
   galleryCounter: { position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   galleryCounterText: { fontSize: 11, color: '#fff', fontWeight: '600' },
-  registerBtn: { backgroundColor: Colors.primary, padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 16, marginBottom: 40, marginHorizontal: 16 },
-  registerBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700' },
+  registerBtn: { backgroundColor: '#2D5016', padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 16, marginBottom: 40, marginHorizontal: 16 },
+  registerBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700', fontFamily: Fonts.bold },
   loadMoreBtn: { margin: 16, padding: 14, backgroundColor: Colors.white, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: Colors.gray200 },
-  loadMoreText: { fontSize: 14, fontWeight: '600', color: Colors.primary },
+  loadMoreText: { fontSize: 14, fontWeight: '600', color: '#2D5016' },
 });

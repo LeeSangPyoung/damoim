@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { userAPI, SchoolInfo } from '../api/user';
 import { postAPI } from '../api/post';
-import { Colors } from '../constants/colors';
+import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import HeaderActions from '../components/HeaderActions';
 import NoticeBanner from '../components/NoticeBanner';
@@ -45,21 +45,21 @@ function groupSchools(schools: SchoolInfo[]): (SchoolInfo & { gradeClasses: Grad
 
 function getSchoolTypeIcon(type: string): keyof typeof Ionicons.glyphMap {
   switch (type) {
-    case '초등학교': return 'leaf';
-    case '중학교': return 'book';
-    case '고등학교': return 'school';
-    case '대학교': return 'business';
-    default: return 'school';
+    case '초등학교': return 'leaf-outline';
+    case '중학교': return 'book-outline';
+    case '고등학교': return 'home-outline';
+    case '대학교': return 'school-outline';
+    default: return 'home-outline';
   }
 }
 
 function getSchoolTypeColor(type: string): string {
   switch (type) {
-    case '초등학교': return '#10b981';
-    case '중학교': return '#3b82f6';
-    case '고등학교': return '#8b5cf6';
-    case '대학교': return '#f59e0b';
-    default: return Colors.primary;
+    case '초등학교': return '#5D8A3C';
+    case '중학교': return '#2D5016';
+    case '고등학교': return '#8B6914';
+    case '대학교': return '#5D4037';
+    default: return '#2D5016';
   }
 }
 
@@ -133,20 +133,17 @@ export default function MySchoolScreen({ navigation }: any) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={'#2D5016'} />
         <Text style={styles.loadingText}>학교 정보를 불러오는 중...</Text>
       </View>
     );
   }
 
-  const totalClassmates = schools.reduce((acc, s) => acc + s.classmateCount, 0);
-  const totalNewPosts = schools.reduce((acc, s) => acc + s.newPostCount, 0);
-
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>우리학교</Text>
+        <Text style={styles.headerTitle}>✎ 우리학교</Text>
         <HeaderActions navigation={navigation} />
       </View>
 
@@ -157,29 +154,6 @@ export default function MySchoolScreen({ navigation }: any) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Summary Cards */}
-        <View style={styles.summaryRow}>
-          <View style={[styles.summaryCard, { backgroundColor: '#eff6ff' }]}>
-            <Ionicons name="school-outline" size={24} color="#3b82f6" />
-            <Text style={[styles.summaryValue, { color: '#3b82f6' }]}>{schools.length}</Text>
-            <Text style={styles.summaryLabel}>등록 학교</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.summaryCard, { backgroundColor: '#f0fdf4' }]}
-            activeOpacity={0.7}
-            onPress={() => navigation.getParent()?.navigate('Friends', { initialTab: 'search', autoSearch: true })}
-          >
-            <Ionicons name="people-outline" size={24} color="#10b981" />
-            <Text style={[styles.summaryValue, { color: '#10b981' }]}>{totalClassmates}</Text>
-            <Text style={styles.summaryLabel}>전체 동창</Text>
-          </TouchableOpacity>
-          <View style={[styles.summaryCard, { backgroundColor: '#fef3c7' }]}>
-            <Ionicons name="document-text-outline" size={24} color="#f59e0b" />
-            <Text style={[styles.summaryValue, { color: '#f59e0b' }]}>{totalNewPosts}</Text>
-            <Text style={styles.summaryLabel}>새 글</Text>
-          </View>
-        </View>
-
         {/* Section Title */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionGuide}>
@@ -209,7 +183,7 @@ export default function MySchoolScreen({ navigation }: any) {
                 {/* Card Top: Icon + Info */}
                 <View style={styles.cardTop}>
                   <View style={[styles.iconCircle, { backgroundColor: typeColor }]}>
-                    <Ionicons name={typeIcon} size={24} color="#fff" />
+                    <Ionicons name={typeIcon} size={26} color="#FFE156" />
                   </View>
                   <View style={styles.cardInfo}>
                     <View style={styles.cardTitleRow}>
@@ -250,16 +224,9 @@ export default function MySchoolScreen({ navigation }: any) {
                   </View>
                 )}
 
-                {/* Stats Row */}
+                {/* Bottom Arrow */}
                 <View style={styles.statsRow}>
-                  <View style={styles.statItem}>
-                    <Ionicons name="people" size={14} color={Colors.textSecondary} />
-                    <Text style={styles.statText}>동창 {school.classmateCount}명</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Ionicons name="document-text" size={14} color={Colors.textSecondary} />
-                    <Text style={styles.statText}>새 글 {school.newPostCount}개</Text>
-                  </View>
+                  <View style={{ flex: 1 }} />
                   <View style={styles.cardArrow}>
                     <Text style={[styles.cardArrowText, { color: typeColor }]}>게시판 보기</Text>
                     <Ionicons name="chevron-forward" size={16} color={typeColor} />
@@ -279,13 +246,13 @@ export default function MySchoolScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#FFF8E7',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#FFF8E7',
   },
   loadingText: {
     marginTop: 12,
@@ -299,15 +266,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: HEADER_TOP_PADDING,
     paddingBottom: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: '#2D5016',
+    borderBottomWidth: 4,
+    borderBottomColor: '#C49A2A',
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.text,
-    letterSpacing: -0.5,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 2,
+    fontFamily: Fonts.bold,
   },
   headerActions: {
     flexDirection: 'row',
@@ -317,7 +285,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#FFF8E7',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -337,13 +305,22 @@ const styles = StyleSheet.create({
     padding: 14,
     alignItems: 'center',
     gap: 6,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#F0E0B0',
+    shadowColor: '#8B6914',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   summaryValue: {
     fontSize: 22,
     fontWeight: '800',
+    fontFamily: Fonts.bold,
   },
   summaryLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: Colors.textSecondary,
     fontWeight: '600',
   },
@@ -357,6 +334,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: Colors.text,
+    fontFamily: Fonts.bold,
   },
   sectionSubtitle: {
     fontSize: 13,
@@ -370,7 +348,7 @@ const styles = StyleSheet.create({
   },
   sectionGuideHighlight: {
     fontWeight: '700',
-    color: Colors.primary,
+    color: '#2D5016',
   },
   sectionGuideLight: {
     fontSize: 12,
@@ -395,12 +373,14 @@ const styles = StyleSheet.create({
   schoolCard: {
     marginHorizontal: 16,
     marginBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
+    borderWidth: 1,
+    borderColor: '#F0E0B0',
+    shadowColor: '#8B6914',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
   },
@@ -431,7 +411,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   newBadge: {
-    backgroundColor: '#ef4444',
+    backgroundColor: '#FF6B6B',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
@@ -457,7 +437,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   gradYear: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textSecondary,
   },
   // Grades
@@ -468,18 +448,18 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: '#F0E0B0',
   },
   gradeChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#FFF8E7',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#F0E0B0',
   },
   gradeChipText: {
     fontSize: 12,
@@ -492,7 +472,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: '#F0E0B0',
     gap: 16,
   },
   statItem: {
@@ -501,7 +481,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statText: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textSecondary,
     fontWeight: '500',
   },
@@ -512,7 +492,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   cardArrowText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
 });

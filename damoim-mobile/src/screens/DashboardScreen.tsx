@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView } from 'react-native';
-import { Colors } from '../constants/colors';
+import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
 import { postAPI, PostResponse, CommentResponse } from '../api/post';
@@ -443,8 +443,8 @@ export default function DashboardScreen({ navigation, route }: any) {
             onPress={() => navigation.goBack()}
             style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}
           >
-            <Ionicons name="chevron-back" size={18} color={Colors.primary} />
-            <Text style={{ fontSize: 13, color: Colors.primary, fontWeight: '600' }}>우리학교</Text>
+            <Ionicons name="chevron-back" size={18} color="#FFE156" />
+            <Text style={{ fontSize: 13, color: '#FFE156', fontWeight: '600' }}>우리학교</Text>
           </TouchableOpacity>
         )}
         <Text style={styles.schoolInfo}>
@@ -648,11 +648,11 @@ export default function DashboardScreen({ navigation, route }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFF8E7',
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFF8E7',
   },
   header: {
     flexDirection: 'row',
@@ -661,7 +661,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: HEADER_TOP_PADDING,
     paddingBottom: 12,
-    backgroundColor: Colors.white,
+    backgroundColor: '#2D5016',
+    borderBottomWidth: 3,
+    borderBottomColor: '#C49A2A',
   },
   headerLeft: {
     flex: 1,
@@ -676,39 +678,42 @@ const styles = StyleSheet.create({
   },
   schoolInfo: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: '#fff',
     marginTop: 2,
+    fontFamily: Fonts.bold,
+    letterSpacing: 2,
   },
   filterContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: Colors.white,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: '#F0E0B0',
     gap: 8,
   },
   filterTab: {
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: Colors.gray100,
+    backgroundColor: '#FFF8E7',
   },
   filterTabActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2D5016',
   },
   filterTabText: {
     fontSize: 13,
     fontWeight: '600',
     color: Colors.gray500,
+    fontFamily: Fonts.bold,
   },
   filterTabTextActive: {
     color: Colors.white,
   },
   classChipContainer: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: '#F0E0B0',
     maxHeight: 48,
   },
   classChipContent: {
@@ -722,21 +727,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 14,
-    backgroundColor: Colors.gray100,
+    backgroundColor: '#FFF8E7',
     borderWidth: 1,
-    borderColor: Colors.gray100,
+    borderColor: '#F0E0B0',
   },
   classChipActive: {
-    backgroundColor: Colors.primaryLight,
-    borderColor: Colors.primary,
+    backgroundColor: '#E8F0E0',
+    borderColor: '#2D5016',
   },
   classChipText: {
     fontSize: 12,
     fontWeight: '500',
-    color: Colors.gray500,
+    color: '#8D6E63',
   },
   classChipTextActive: {
-    color: Colors.primary,
+    color: '#2D5016',
     fontWeight: '600',
   },
   listContent: {
@@ -749,8 +754,10 @@ const styles = StyleSheet.create({
     height: 8,
   },
   postCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#fff',
     paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#F0E0B0',
   },
   postHeader: {
     flexDirection: 'row',
@@ -772,6 +779,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: Colors.text,
+    fontFamily: Fonts.bold,
   },
   metaRow: {
     flexDirection: 'row',
@@ -810,6 +818,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
     paddingHorizontal: 16,
     marginBottom: 10,
+    fontFamily: Fonts.regular,
   },
   singleImage: {
     width: '100%',
@@ -854,6 +863,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: Colors.gray500,
+    fontFamily: Fonts.bold,
   },
   actionTextLiked: {
     color: Colors.red,
@@ -867,10 +877,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     color: Colors.textSecondary,
+    fontFamily: Fonts.regular,
   },
   retryButton: {
     marginTop: 16,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2D5016',
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 8,
@@ -887,10 +898,10 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2D5016',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.black,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -922,6 +933,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: Colors.text,
+    fontFamily: Fonts.bold,
   },
   commentEmpty: {
     flex: 1,
@@ -962,6 +974,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: Colors.text,
+    fontFamily: Fonts.regular,
   },
   commentMeta: {
     flexDirection: 'row',
@@ -1024,7 +1037,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2D5016',
     justifyContent: 'center',
     alignItems: 'center',
   },

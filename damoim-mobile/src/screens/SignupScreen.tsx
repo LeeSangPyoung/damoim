@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
-import { Colors } from '../constants/colors';
+import { Colors, Fonts } from '../constants/colors';
 import { authAPI, SchoolInfo } from '../api/auth';
 
 interface SignupScreenProps {
@@ -348,7 +348,7 @@ export default function SignupScreen({ navigation }: SignupScreenProps) {
           activeOpacity={0.8}
         >
           {loading ? (
-            <ActivityIndicator color={Colors.white} size="small" />
+            <ActivityIndicator color="#FFE156" size="small" />
           ) : (
             <Text style={styles.signupButtonText}>가입하기</Text>
           )}
@@ -370,7 +370,7 @@ export default function SignupScreen({ navigation }: SignupScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFF8E7',
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -384,12 +384,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '800',
-    color: Colors.text,
+    color: '#2D5016',
+    fontFamily: Fonts.bold,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: '#8D6E63',
     marginTop: 6,
+    fontFamily: Fonts.regular,
   },
   section: {
     backgroundColor: Colors.card,
@@ -407,6 +409,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
     marginBottom: 4,
+    fontFamily: Fonts.bold,
   },
   sectionDesc: {
     fontSize: 13,
@@ -430,9 +433,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: Colors.gray50,
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#F0E0B0',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 11,
@@ -445,12 +448,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   schoolCard: {
-    backgroundColor: Colors.slate50,
+    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#F0E0B0',
   },
   schoolCardHeader: {
     flexDirection: 'row',
@@ -462,6 +465,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: Colors.gray700,
+    fontFamily: Fonts.bold,
   },
   removeButton: {
     fontSize: 13,
@@ -483,8 +487,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   schoolTypeChipActive: {
-    backgroundColor: Colors.primaryLight,
-    borderColor: Colors.primary,
+    backgroundColor: '#E8F0E0',
+    borderColor: '#2D5016',
   },
   schoolTypeChipText: {
     fontSize: 13,
@@ -492,7 +496,7 @@ const styles = StyleSheet.create({
     color: Colors.gray500,
   },
   schoolTypeChipTextActive: {
-    color: Colors.primary,
+    color: '#2D5016',
   },
   optionalRow: {
     flexDirection: 'row',
@@ -504,7 +508,7 @@ const styles = StyleSheet.create({
   },
   addSchoolButton: {
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: '#2D5016',
     borderStyle: 'dashed',
     borderRadius: 10,
     paddingVertical: 12,
@@ -514,17 +518,18 @@ const styles = StyleSheet.create({
   addSchoolButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
+    color: '#2D5016',
+    fontFamily: Fonts.bold,
   },
   signupButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2D5016',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
     minHeight: 50,
-    shadowColor: Colors.primary,
+    shadowColor: '#2D5016',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -535,9 +540,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
   signupButtonText: {
-    color: Colors.white,
+    color: '#FFE156',
     fontSize: 17,
     fontWeight: '700',
+    fontFamily: Fonts.bold,
   },
   backToLogin: {
     alignItems: 'center',
@@ -546,6 +552,7 @@ const styles = StyleSheet.create({
   },
   backToLoginText: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: '#8D6E63',
+    fontFamily: Fonts.regular,
   },
 });

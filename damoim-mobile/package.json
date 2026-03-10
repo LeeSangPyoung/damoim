@@ -9,6 +9,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo-google-fonts/gaegu": "^0.4.1",
     "@expo/metro-runtime": "^55.0.6",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "^3.0.1",
@@ -18,7 +19,7 @@
     "@stomp/stompjs": "^7.3.0",
     "axios": "^1.13.6",
     "expo": "~55.0.5",
-    "expo-font": "^55.0.4",
+    "expo-font": "~55.0.4",
     "expo-image-picker": "^55.0.11",
     "expo-status-bar": "~55.0.4",
     "react": "19.2.0",

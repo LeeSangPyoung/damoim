@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { adminAPI, AnnouncementItem } from '../api/admin';
 import { userAPI } from '../api/user';
 import { useAuth } from '../hooks/useAuth';
+import { Fonts } from '../constants/colors';
 
 // 웹 Layout.tsx와 동일한 구조:
 // - 기본 메시지 레이어 (idle일 때 active)
@@ -155,7 +156,7 @@ export default function NoticeBanner() {
       <Ionicons
         name={isAnnouncement && bannerAnimState === 'slide-in' ? 'megaphone-outline' : 'happy-outline'}
         size={14}
-        color={isAnnouncement && bannerAnimState === 'slide-in' ? '#b45309' : '#1d4ed8'}
+        color={isAnnouncement && bannerAnimState === 'slide-in' ? '#b45309' : '#8B6914'}
       />
       <View style={styles.roller}>
         {/* 기본 메시지 레이어 */}
@@ -193,16 +194,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#FFF3D0',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#dbeafe',
+    borderBottomWidth: 1.5,
+    borderStyle: 'dashed',
+    borderBottomColor: '#E8C84A',
     overflow: 'hidden',
   },
   containerAnnouncement: {
-    backgroundColor: '#fffbeb',
-    borderBottomColor: '#fde68a',
+    backgroundColor: '#FFF3D0',
+    borderBottomColor: '#E8C84A',
   },
   roller: {
     flex: 1,
@@ -218,9 +220,9 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1e40af',
+    color: '#8B6914',
   },
   textAnnouncement: {
-    color: '#92400e',
+    color: '#5D4037',
   },
 });

@@ -33,12 +33,14 @@ const styles = StyleSheet.create({
   container: { position: 'relative' },
   image: { resizeMode: 'cover' },
   placeholder: {
-    backgroundColor: Colors.gray200,
+    backgroundColor: '#FFE99A',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#5D4037',
   },
   initial: {
-    color: Colors.gray500,
+    color: '#5D4037',
     fontWeight: '700',
   },
   onlineDot: {

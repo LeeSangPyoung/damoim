@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { userAPI, ClassmateInfo, UserSearchParams } from '../api/user';
 import { friendAPI, FriendResponse, FriendshipStatus } from '../api/friend';
 import { chatAPI } from '../api/chat';
-import { Colors } from '../constants/colors';
+import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import { useRoute } from '@react-navigation/native';
 import Avatar from '../components/Avatar';
@@ -269,7 +269,7 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
     if (isFriend) {
       return (
         <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => handleStartChat(userId)}>
-          <Ionicons name="chatbox-outline" size={14} color="#fff" />
+          <Ionicons name="chatbox-outline" size={16} color="#2D5016" />
         </TouchableOpacity>
       );
     }
@@ -289,7 +289,7 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
     }
     return (
       <TouchableOpacity style={styles.actionBtnOutline} onPress={() => onAction(userId, name)}>
-        <Ionicons name="person-add" size={14} color={Colors.primary} />
+        <Ionicons name="person-add" size={16} color="#2D5016" />
       </TouchableOpacity>
     );
   };
@@ -344,20 +344,6 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
       {/* ================================================================= */}
       {mainTab === 'friends' && (
         <>
-          {/* Stats bar */}
-          <View style={styles.statsBar}>
-            <View style={styles.onlineBadge}>
-              <View style={styles.onlineDotSmall} />
-              <Text style={styles.onlineBadgeText}>접속 {onlineClassmates.length}</Text>
-            </View>
-            <Text style={styles.headerStatText}>친구 {friends.length}</Text>
-            {pendingRequests.length > 0 && (
-              <TouchableOpacity onPress={() => setSubTab('requests')} style={styles.requestBadge}>
-                <Text style={styles.requestBadgeText}>요청 {pendingRequests.length}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
           {/* Sub Tabs */}
           <View style={styles.subTabBar}>
             {([
@@ -441,10 +427,10 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                           {isFriend ? (
                             <>
                               <TouchableOpacity style={styles.actionBtnSecondary} onPress={() => handleSendMessage(cm.userId, cm.name)}>
-                                <Ionicons name="mail" size={14} color={Colors.primary} />
+                                <Ionicons name="mail" size={16} color="#2D5016" />
                               </TouchableOpacity>
                               <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => handleStartChat(cm.userId)}>
-                                <Ionicons name="chatbox-outline" size={14} color="#fff" />
+                                <Ionicons name="chatbox-outline" size={16} color="#2D5016" />
                               </TouchableOpacity>
                             </>
                           ) : isSent ? (
@@ -453,7 +439,7 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                             </View>
                           ) : (
                             <TouchableOpacity style={styles.actionBtnOutline} onPress={() => handleSendFriendRequest(cm.userId)}>
-                              <Ionicons name="person-add" size={14} color={Colors.primary} />
+                              <Ionicons name="person-add" size={16} color="#2D5016" />
                             </TouchableOpacity>
                           )}
                         </View>
@@ -487,10 +473,10 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                         </TouchableOpacity>
                         <View style={styles.personActions}>
                           <TouchableOpacity style={styles.actionBtnSecondary} onPress={() => handleSendMessage(friend.userId, friend.name)}>
-                            <Ionicons name="mail" size={14} color={Colors.primary} />
+                            <Ionicons name="mail" size={16} color="#2D5016" />
                           </TouchableOpacity>
                           <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => handleStartChat(friend.userId)}>
-                            <Ionicons name="chatbox-outline" size={14} color="#fff" />
+                            <Ionicons name="chatbox-outline" size={16} color="#2D5016" />
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -517,7 +503,7 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                     </TouchableOpacity>
                     <View style={styles.personActions}>
                       <TouchableOpacity style={styles.actionBtnSecondary} onPress={() => handleSendMessage(friend.userId, friend.name)}>
-                        <Ionicons name="mail-outline" size={14} color={Colors.primary} />
+                        <Ionicons name="mail-outline" size={16} color="#2D5016" />
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionBtnPrimary, { backgroundColor: Colors.gray200 }]}
@@ -704,11 +690,11 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                       </TouchableOpacity>
                       <View style={styles.personActions}>
                         <TouchableOpacity style={styles.actionBtnSecondary} onPress={() => handleSendMessage(cm.userId, cm.name)}>
-                          <Ionicons name="mail-outline" size={14} color={Colors.primary} />
+                          <Ionicons name="mail-outline" size={16} color="#2D5016" />
                         </TouchableOpacity>
                         {isFriend ? (
                           <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => handleStartChat(cm.userId)}>
-                            <Ionicons name="chatbox-outline" size={14} color="#fff" />
+                            <Ionicons name="chatbox-outline" size={16} color="#2D5016" />
                           </TouchableOpacity>
                         ) : isReceived ? (
                           <TouchableOpacity style={styles.acceptBtn} onPress={() => handleSearchFriendAction(cm.userId, cm.name)}>
@@ -720,7 +706,7 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                           </View>
                         ) : (
                           <TouchableOpacity style={styles.actionBtnOutline} onPress={() => handleSearchFriendAction(cm.userId, cm.name)}>
-                            <Ionicons name="person-add" size={14} color={Colors.primary} />
+                            <Ionicons name="person-add" size={16} color="#2D5016" />
                           </TouchableOpacity>
                         )}
                       </View>
@@ -746,61 +732,63 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' },
-  loadingText: { marginTop: 12, fontSize: 14, color: Colors.textSecondary },
+  container: { flex: 1, backgroundColor: '#FFF8E7' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF8E7' },
+  loadingText: { marginTop: 12, fontSize: 14, color: Colors.textSecondary, fontFamily: Fonts.regular },
 
   // Screen header
   screenHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#2D5016',
     paddingTop: HEADER_TOP_PADDING,
     paddingHorizontal: 20,
     paddingBottom: 12,
+    borderBottomWidth: 3,
+    borderBottomColor: '#C49A2A',
   },
-  screenHeaderTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
+  screenHeaderTitle: { fontSize: 18, fontWeight: '800', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
 
   // Main tabs (동창이네 스타일)
   mainTabBar: {
-    flexDirection: 'row', backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
+    flexDirection: 'row', backgroundColor: '#FFF8E7',
+    borderBottomWidth: 1, borderBottomColor: '#F0E0B0',
   },
   mainTab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
   mainTabActive: { borderBottomWidth: 2, borderBottomColor: Colors.primary },
-  mainTabText: { fontSize: 14, fontWeight: '600', color: Colors.gray400 },
+  mainTabText: { fontSize: 14, fontWeight: '600', color: Colors.gray400, fontFamily: Fonts.bold },
   mainTabTextActive: { color: Colors.primary },
 
   // Stats bar
   statsBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
+    paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#FFF8E7',
+    borderBottomWidth: 1, borderBottomColor: '#F0E0B0',
   },
   onlineBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#dcfce7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10,
   },
   onlineDotSmall: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22c55e' },
-  onlineBadgeText: { fontSize: 11, fontWeight: '600', color: '#16a34a' },
+  onlineBadgeText: { fontSize: 11, fontWeight: '600', color: '#2D5016' },
   headerStatText: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
   requestBadge: {
     backgroundColor: '#fef2f2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10,
   },
-  requestBadgeText: { fontSize: 11, fontWeight: '600', color: '#ef4444' },
+  requestBadgeText: { fontSize: 11, fontWeight: '600', color: '#FF6B6B' },
 
   // Sub tabs
   subTabBar: {
-    flexDirection: 'row', backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: Colors.border, paddingHorizontal: 16,
+    flexDirection: 'row', backgroundColor: '#FFF8E7',
+    borderBottomWidth: 1, borderBottomColor: '#F0E0B0', paddingHorizontal: 16,
   },
   subTabItem: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingVertical: 10, paddingHorizontal: 14, borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
   subTabItemActive: { borderBottomColor: Colors.primary },
-  subTabText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  subTabText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, fontFamily: Fonts.bold },
   subTabTextActive: { color: Colors.primary },
   tabCount: {
     backgroundColor: Colors.gray200, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8,
@@ -813,8 +801,8 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 16, marginTop: 12, marginBottom: 4,
-    backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
-    borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: '#FFF8E7', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
+    borderWidth: 1, borderColor: '#F0E0B0',
   },
   searchInput: { flex: 1, fontSize: 14, color: Colors.text, padding: 0 },
 
@@ -822,7 +810,8 @@ const styles = StyleSheet.create({
 
   // Search form (동창검색 tab)
   searchForm: {
-    margin: 16, padding: 16, backgroundColor: '#fff', borderRadius: 12, gap: 10,
+    margin: 16, padding: 16, backgroundColor: '#ffffff', borderRadius: 12, gap: 10,
+    borderWidth: 1, borderColor: '#F0E0B0',
   },
   searchFormRow: { flexDirection: 'row', gap: 10 },
   searchFormInput: {
@@ -834,7 +823,7 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: Colors.primary, borderRadius: 8, paddingVertical: 12,
   },
-  searchBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  searchBtnText: { color: '#fff', fontSize: 14, fontWeight: '600', fontFamily: Fonts.bold },
   resetBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
     backgroundColor: Colors.gray100, borderRadius: 8, paddingVertical: 12, paddingHorizontal: 16,
@@ -847,7 +836,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 10,
   },
-  searchResultsTitle: { fontSize: 15, fontWeight: '700', color: Colors.text },
+  searchResultsTitle: { fontSize: 15, fontWeight: '700', color: Colors.text, fontFamily: Fonts.bold },
   searchResultsCount: { fontSize: 13, fontWeight: '600', color: Colors.primary },
   searchNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   friendBadge: {
@@ -867,8 +856,9 @@ const styles = StyleSheet.create({
   // Person row
   personRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    marginHorizontal: 16, backgroundColor: '#fff', borderRadius: 12,
+    marginHorizontal: 16, backgroundColor: '#ffffff', borderRadius: 12,
     padding: 12, marginBottom: 6,
+    borderWidth: 1, borderColor: '#F0E0B0',
   },
   avatarWrap: { position: 'relative' },
   onlineDot: {
@@ -877,24 +867,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#22c55e', borderWidth: 2, borderColor: '#fff',
   },
   personInfo: { flex: 1, gap: 2 },
-  personName: { fontSize: 15, fontWeight: '600', color: Colors.text },
+  personName: { fontSize: 15, fontWeight: '600', color: Colors.text, fontFamily: Fonts.bold },
   personSchool: { fontSize: 12, color: Colors.textSecondary },
   personActions: { flexDirection: 'row', gap: 8 },
 
   // Action buttons
   actionBtnPrimary: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center',
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#FFF8E7', justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1.5, borderColor: '#F0E0B0',
   },
   actionBtnSecondary: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#eff6ff', justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: Colors.primary + '30',
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#FFF8E7', justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1.5, borderColor: '#F0E0B0',
   },
   actionBtnOutline: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#eff6ff', justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: Colors.primary + '30',
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#FFF8E7', justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1.5, borderColor: '#F0E0B0',
   },
   actionBtnDisabled: {
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12,
@@ -918,13 +909,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
     backgroundColor: '#fef2f2',
   },
-  cancelBtnText: { fontSize: 12, fontWeight: '600', color: '#ef4444' },
+  cancelBtnText: { fontSize: 12, fontWeight: '600', color: '#FF6B6B' },
 
   // Empty
   emptyCard: {
-    marginHorizontal: 16, backgroundColor: '#fff', borderRadius: 12,
+    marginHorizontal: 16, backgroundColor: '#ffffff', borderRadius: 12,
     padding: 32, alignItems: 'center', gap: 8,
+    borderWidth: 1, borderColor: '#F0E0B0',
   },
-  emptyText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
+  emptyText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500', fontFamily: Fonts.regular },
   emptySubText: { fontSize: 12, color: Colors.gray400 },
 });

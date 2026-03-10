@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
-import { Colors } from '../constants/colors';
+import { Colors, Fonts } from '../constants/colors';
 import { useAuth } from '../hooks/useAuth';
 import { authAPI } from '../api/auth';
 
@@ -109,7 +109,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             activeOpacity={0.8}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.white} size="small" />
+              <ActivityIndicator color="#FFE156" size="small" />
             ) : (
               <Text style={styles.loginButtonText}>로그인</Text>
             )}
@@ -152,7 +152,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFF8E7',
   },
   scrollContent: {
     flexGrow: 1,
@@ -167,13 +167,15 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 36,
     fontWeight: '800',
-    color: Colors.primary,
+    color: '#2D5016',
     letterSpacing: 2,
+    fontFamily: Fonts.bold,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: '#8D6E63',
     marginTop: 8,
+    fontFamily: Fonts.regular,
   },
   form: {
     backgroundColor: Colors.card,
@@ -193,11 +195,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.gray700,
     marginBottom: 6,
+    fontFamily: Fonts.regular,
   },
   input: {
-    backgroundColor: Colors.gray50,
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#F0E0B0',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -205,7 +208,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   loginButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2D5016',
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
@@ -217,9 +220,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray400,
   },
   loginButtonText: {
-    color: Colors.white,
+    color: '#FFE156',
     fontSize: 16,
     fontWeight: '700',
+    fontFamily: Fonts.bold,
   },
   links: {
     flexDirection: 'row',
@@ -229,7 +233,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: '#8D6E63',
   },
   linkDivider: {
     width: 1,
@@ -246,11 +250,12 @@ const styles = StyleSheet.create({
   },
   signupPrompt: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: '#8D6E63',
   },
   signupLink: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.primary,
+    color: '#2D5016',
+    fontFamily: Fonts.bold,
   },
 });

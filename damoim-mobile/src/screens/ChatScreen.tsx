@@ -15,7 +15,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
+import { Colors, Fonts } from '../constants/colors';
 import { useAuth } from '../hooks/useAuth';
 import { chatAPI, ChatRoomResponse, ChatMessageResponse } from '../api/chat';
 import { groupChatAPI, GroupChatRoomResponse, GroupChatMessageResponse } from '../api/groupChat';
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFF8E7',
   },
 
   // Screen header
@@ -1026,7 +1026,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: HEADER_TOP_PADDING,
     paddingBottom: 12,
-    backgroundColor: Colors.white,
+    backgroundColor: '#2D5016',
+    borderBottomWidth: 3,
+    borderBottomColor: '#C49A2A',
   },
   newChatBtn: {
     padding: 4,
@@ -1045,19 +1047,21 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: Colors.text,
+    color: '#fff',
+    fontFamily: Fonts.bold,
+    letterSpacing: 2,
   },
   leaveRoomBtn: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginLeft: 8,
     borderRadius: 12,
-    backgroundColor: '#fef2f2',
+    backgroundColor: 'rgba(255,107,107,0.15)',
   },
   leaveRoomBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#ef4444',
+    color: '#FF6B6B',
   },
   deleteAllBtn: {
     paddingHorizontal: 12,
@@ -1068,13 +1072,13 @@ const styles = StyleSheet.create({
   deleteAllBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#ef4444',
+    color: '#FF6B6B',
   },
 
   // Tabs
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFF8E7',
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
@@ -1086,15 +1090,16 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: Colors.primary,
+    borderBottomColor: '#2D5016',
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
     color: Colors.textMuted,
+    fontFamily: Fonts.bold,
   },
   tabTextActive: {
-    color: Colors.primary,
+    color: '#2D5016',
   },
 
   // Room list
@@ -1125,6 +1130,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
     flex: 1,
     marginRight: 8,
+    fontFamily: Fonts.bold,
   },
   roomTime: {
     fontSize: 12,
@@ -1181,9 +1187,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: '#2D5016',
+    borderBottomWidth: 3,
+    borderBottomColor: '#C49A2A',
   },
   backBtn: {
     paddingRight: 12,
@@ -1192,13 +1198,14 @@ const styles = StyleSheet.create({
   backBtnText: {
     fontSize: 22,
     fontWeight: '600',
-    color: Colors.text,
+    color: '#FFE156',
   },
   chatHeaderTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.text,
+    color: '#fff',
     marginLeft: 8,
+    fontFamily: Fonts.bold,
   },
 
   // Messages
@@ -1241,17 +1248,20 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   msgBubbleMine: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2D5016',
     borderBottomRightRadius: 4,
   },
   msgBubbleOther: {
-    backgroundColor: Colors.gray100,
+    backgroundColor: '#fff',
     borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: '#F0E0B0',
   },
   msgText: {
     fontSize: 14,
     color: Colors.text,
     lineHeight: 20,
+    fontFamily: Fonts.regular,
   },
   msgTextMine: {
     color: Colors.white,
@@ -1301,26 +1311,26 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: Colors.white,
+    backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: '#F0E0B0',
   },
   input: {
     flex: 1,
     minHeight: 40,
     maxHeight: 100,
-    backgroundColor: Colors.gray50,
+    backgroundColor: '#fff',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 14,
     color: Colors.text,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#F0E0B0',
   },
   sendBtn: {
     marginLeft: 8,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2D5016',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -1332,9 +1342,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray300,
   },
   sendBtnText: {
-    color: Colors.white,
+    color: '#FFE156',
     fontSize: 14,
     fontWeight: '700',
+    fontFamily: Fonts.bold,
   },
 
   // Loader
@@ -1369,6 +1380,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: Colors.text,
+    fontFamily: Fonts.bold,
   },
   modalSubtitle: {
     fontSize: 13,
@@ -1410,6 +1422,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: Colors.text,
+    fontFamily: Fonts.bold,
   },
   createChatBtn: {
     marginHorizontal: 16,
@@ -1426,6 +1439,7 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 15,
     fontWeight: '700',
+    fontFamily: Fonts.bold,
   },
   emojiBtn: {
     paddingHorizontal: 4,
@@ -1433,9 +1447,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emojiPanel: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFF3D0',
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: '#E8C84A',
     height: 96,
   },
   emojiPanelContent: {

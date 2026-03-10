@@ -4,7 +4,7 @@ import {
   RefreshControl, Alert, Modal, ScrollView, Image, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors } from '../constants/colors';
+import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -302,7 +302,7 @@ export default function ReunionScreen() {
             renderItem={({ item: mt }) => {
               const isConfirmed = mt.status === 'CONFIRMED';
               const isCancelled = mt.status === 'CANCELLED';
-              const statusColor = isConfirmed ? Colors.green : isCancelled ? Colors.red : Colors.primary;
+              const statusColor = isConfirmed ? Colors.green : isCancelled ? Colors.red : '#2D5016';
               const statusLabel = isConfirmed ? '확정' : isCancelled ? '취소됨' : '투표 중';
 
               // Find shop from confirmed location
@@ -710,7 +710,7 @@ export default function ReunionScreen() {
         <TouchableOpacity style={styles.headerBtn} onPress={() => setShowJoinModal(true)}>
           <Text style={styles.headerBtnText}>코드 가입</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.headerBtn, { backgroundColor: Colors.primary }]} onPress={() => setShowCreateModal(true)}>
+        <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#2D5016' }]} onPress={() => setShowCreateModal(true)}>
           <Text style={[styles.headerBtnText, { color: Colors.white }]}>+ 만들기</Text>
         </TouchableOpacity>
       </View>
@@ -776,50 +776,50 @@ export default function ReunionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: '#FFF8E7' },
 
   // List
-  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: HEADER_TOP_PADDING, paddingBottom: 12, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  screenTitle: { fontSize: 20, fontWeight: '800', color: Colors.text },
+  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: HEADER_TOP_PADDING, paddingBottom: 12, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A' },
+  screenTitle: { fontSize: 20, fontWeight: '800', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
   headerBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: Colors.gray100 },
   headerBtnText: { fontSize: 13, fontWeight: '600', color: Colors.gray700 },
 
-  reunionCard: { flexDirection: 'row', backgroundColor: Colors.white, marginHorizontal: 12, marginTop: 10, borderRadius: 12, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+  reunionCard: { flexDirection: 'row', backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#F0E0B0', marginHorizontal: 12, marginTop: 10, borderRadius: 12, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
   reunionCover: { width: 80, height: 80 },
   reunionInfo: { flex: 1, padding: 12, justifyContent: 'center' },
-  reunionName: { fontSize: 15, fontWeight: '700', color: Colors.text },
+  reunionName: { fontSize: 15, fontWeight: '700', color: Colors.text, fontFamily: Fonts.bold },
   reunionDesc: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   reunionMeta: { flexDirection: 'row', gap: 8, marginTop: 4 },
   reunionMetaText: { fontSize: 11, color: Colors.textMuted },
 
   // Detail
-  detailHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border, gap: 10 },
-  backBtn: { fontSize: 15, color: Colors.primary, fontWeight: '600' },
-  detailTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: Colors.text },
-  memberCount: { fontSize: 13, color: Colors.textMuted },
+  detailHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A', gap: 10 },
+  backBtn: { fontSize: 15, color: '#FFE156', fontWeight: '600' },
+  detailTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#FFE156', fontFamily: Fonts.bold },
+  memberCount: { fontSize: 13, color: '#FFE156' },
 
   tabRow: { flexDirection: 'row', backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: Colors.primary },
-  tabText: { fontSize: 13, fontWeight: '600', color: Colors.gray400 },
-  tabTextActive: { color: Colors.primary },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: '#2D5016' },
+  tabText: { fontSize: 13, fontWeight: '600', color: Colors.gray400, fontFamily: Fonts.bold },
+  tabTextActive: { color: '#2D5016' },
 
   // Post
   createPostBtn: { margin: 12, padding: 14, backgroundColor: Colors.white, borderRadius: 10, borderWidth: 1, borderColor: Colors.border },
   createPostText: { fontSize: 14, color: Colors.textMuted },
-  postCard: { marginHorizontal: 12, marginTop: 10, padding: 14, backgroundColor: Colors.white, borderRadius: 12 },
+  postCard: { marginHorizontal: 12, marginTop: 10, padding: 14, backgroundColor: '#ffffff', borderRadius: 12, borderWidth: 1, borderColor: '#F0E0B0' },
   postHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  postAuthor: { fontSize: 14, fontWeight: '600', color: Colors.text },
+  postAuthor: { fontSize: 14, fontWeight: '600', color: Colors.text, fontFamily: Fonts.bold },
   postTime: { fontSize: 11, color: Colors.textMuted },
-  postContent: { fontSize: 14, color: Colors.text, lineHeight: 20 },
+  postContent: { fontSize: 14, color: Colors.text, lineHeight: 20, fontFamily: Fonts.regular },
   postImage: { width: 160, height: 120, borderRadius: 8, marginRight: 8 },
   postActions: { flexDirection: 'row', gap: 16, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.gray100 },
   postAction: { fontSize: 13, color: Colors.textSecondary },
 
   // Meeting
-  meetingCard: { marginHorizontal: 12, marginTop: 10, padding: 14, backgroundColor: Colors.white, borderRadius: 12 },
+  meetingCard: { marginHorizontal: 12, marginTop: 10, padding: 14, backgroundColor: '#ffffff', borderRadius: 12, borderWidth: 1, borderColor: '#F0E0B0' },
   meetingHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  meetingTitle: { fontSize: 15, fontWeight: '700', color: Colors.text, flex: 1 },
+  meetingTitle: { fontSize: 15, fontWeight: '700', color: Colors.text, flex: 1, fontFamily: Fonts.bold },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   statusText: { color: Colors.white, fontSize: 11, fontWeight: '700' },
 
@@ -855,7 +855,7 @@ const styles = StyleSheet.create({
   voteText: { flex: 1, fontSize: 13, fontWeight: '600', color: Colors.slate700 },
   voteBadge: { minWidth: 36, alignItems: 'center', backgroundColor: Colors.primaryLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   voteBadgeZero: { backgroundColor: Colors.gray100 },
-  voteBadgeText: { fontSize: 12, fontWeight: '800', color: Colors.primary },
+  voteBadgeText: { fontSize: 12, fontWeight: '800', color: '#2D5016' },
   voteBar: { height: 6, backgroundColor: Colors.slate100, borderRadius: 3, overflow: 'hidden', marginBottom: 4 },
   voteBarFill: { height: 6, backgroundColor: '#93c5fd', borderRadius: 3 },
   voteBarSelected: { backgroundColor: '#4ade80' },
@@ -864,21 +864,21 @@ const styles = StyleSheet.create({
   miniShopBadgeText: { color: Colors.white, fontSize: 8, fontWeight: '700' },
 
   // Attendees
-  attendeesBox: { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe', borderRadius: 8, padding: 10, marginBottom: 10 },
-  attendeesTitle: { fontSize: 12, fontWeight: '700', color: '#1e40af', marginBottom: 6 },
+  attendeesBox: { backgroundColor: '#E8F0E0', borderWidth: 1, borderColor: '#F0E0B0', borderRadius: 8, padding: 10, marginBottom: 10 },
+  attendeesTitle: { fontSize: 12, fontWeight: '700', color: '#2D5016', marginBottom: 6 },
   attendeesList: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   attendeeChip: { backgroundColor: Colors.white, borderWidth: 1, borderColor: '#93c5fd', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 3 },
-  attendeeText: { fontSize: 12, color: '#1e40af', fontWeight: '500' },
+  attendeeText: { fontSize: 12, color: '#2D5016', fontWeight: '500' },
   noAttendees: { fontSize: 12, color: Colors.slate400 },
 
   // Vote Section (voting state)
   voteSection: { marginBottom: 12 },
   voteSectionTitle: { fontSize: 13, fontWeight: '700', color: Colors.slate600, marginBottom: 6 },
   voteOption: { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: Colors.gray50, borderRadius: 8, marginBottom: 4, borderWidth: 1, borderColor: Colors.gray200 },
-  voteOptionVoted: { backgroundColor: Colors.primaryLight, borderColor: Colors.primary },
-  voteOptCheck: { color: Colors.primary, fontWeight: '700', marginRight: 6 },
+  voteOptionVoted: { backgroundColor: Colors.primaryLight, borderColor: '#2D5016' },
+  voteOptCheck: { color: '#2D5016', fontWeight: '700', marginRight: 6 },
   voteOptText: { flex: 1, fontSize: 13, color: Colors.text },
-  voteOptCount: { fontSize: 13, fontWeight: '700', color: Colors.primary, marginLeft: 8 },
+  voteOptCount: { fontSize: 13, fontWeight: '700', color: '#2D5016', marginLeft: 8 },
   voteShopInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 },
   voteShopThumb: { width: 48, height: 48, borderRadius: 6 },
   voteShopName: { fontSize: 13, fontWeight: '700', color: Colors.slate800 },
@@ -895,7 +895,7 @@ const styles = StyleSheet.create({
   feeGroupCard: { marginHorizontal: 12, marginBottom: 10, padding: 14, backgroundColor: Colors.white, borderRadius: 12 },
   feeGroupHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   feeGroupDesc: { fontSize: 14, fontWeight: '700', color: Colors.text },
-  feeGroupAmount: { fontSize: 13, fontWeight: '600', color: Colors.primary },
+  feeGroupAmount: { fontSize: 13, fontWeight: '600', color: '#2D5016' },
   feeGroupProgress: { fontSize: 12, color: Colors.textMuted, marginBottom: 8 },
   feeItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderTopWidth: 1, borderTopColor: Colors.gray100 },
   feeName: { fontSize: 13, color: Colors.text },
@@ -904,9 +904,9 @@ const styles = StyleSheet.create({
   // Members
   inviteCodeBox: { margin: 12, padding: 14, backgroundColor: Colors.amberLight, borderWidth: 1, borderColor: Colors.amberBorder, borderRadius: 10, alignItems: 'center' },
   inviteCodeLabel: { fontSize: 12, color: Colors.gray600, marginBottom: 4 },
-  inviteCode: { fontSize: 24, fontWeight: '800', color: Colors.text, letterSpacing: 3 },
+  inviteCode: { fontSize: 24, fontWeight: '800', color: Colors.text, letterSpacing: 3, fontFamily: Fonts.bold },
   sectionBox: { margin: 12, padding: 14, backgroundColor: Colors.white, borderRadius: 12 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.text, marginBottom: 10 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.text, marginBottom: 10, fontFamily: Fonts.bold },
   requestRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 8 },
   requestName: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.text },
   approveBtn: { backgroundColor: Colors.green, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
@@ -914,26 +914,26 @@ const styles = StyleSheet.create({
   rejectBtn: { backgroundColor: Colors.gray200, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
   rejectBtnText: { color: Colors.gray600, fontSize: 12, fontWeight: '600' },
   memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.gray100 },
-  memberName: { fontSize: 14, fontWeight: '600', color: Colors.text },
+  memberName: { fontSize: 14, fontWeight: '600', color: Colors.text, fontFamily: Fonts.bold },
   memberRole: { fontSize: 11, color: Colors.textMuted },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 20 },
   modalContent: { backgroundColor: Colors.white, borderRadius: 16, padding: 20, maxHeight: '85%' },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.text, marginBottom: 16 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.text, marginBottom: 16, fontFamily: Fonts.bold },
   inputLabel: { fontSize: 13, fontWeight: '600', color: Colors.gray700, marginBottom: 4, marginTop: 10 },
   input: { borderWidth: 1, borderColor: Colors.gray300, borderRadius: 8, padding: 12, fontSize: 14, marginBottom: 4 },
   textArea: { borderWidth: 1, borderColor: Colors.gray300, borderRadius: 8, padding: 12, fontSize: 14, minHeight: 100, marginBottom: 4 },
   modalBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
   cancelBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: Colors.gray100 },
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: Colors.gray600 },
-  submitBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: Colors.primary },
-  submitBtnText: { fontSize: 14, fontWeight: '600', color: Colors.white },
-  primaryBtn: { margin: 12, padding: 12, backgroundColor: Colors.primary, borderRadius: 10, alignItems: 'center' },
-  primaryBtnText: { color: Colors.white, fontSize: 14, fontWeight: '700' },
+  submitBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: '#2D5016' },
+  submitBtnText: { fontSize: 14, fontWeight: '600', color: Colors.white, fontFamily: Fonts.bold },
+  primaryBtn: { margin: 12, padding: 12, backgroundColor: '#2D5016', borderRadius: 10, alignItems: 'center' },
+  primaryBtnText: { color: Colors.white, fontSize: 14, fontWeight: '700', fontFamily: Fonts.bold },
   optionRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   removeOption: { fontSize: 18, color: Colors.red, padding: 6 },
-  addOption: { color: Colors.primary, fontSize: 13, fontWeight: '600', marginTop: 4, marginBottom: 8 },
+  addOption: { color: '#2D5016', fontSize: 13, fontWeight: '600', marginTop: 4, marginBottom: 8 },
 
   // Shop Recommend
   shopRecommend: { marginTop: 12, backgroundColor: Colors.amberLight, borderWidth: 1, borderColor: Colors.amberBorder, borderRadius: 10, padding: 12 },

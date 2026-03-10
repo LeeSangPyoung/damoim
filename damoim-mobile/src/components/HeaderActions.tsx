@@ -25,21 +25,21 @@ export default function HeaderActions({ navigation }: { navigation?: any }) {
         onPress={() => rootNav.navigate('Notifications')}
         activeOpacity={0.7}
       >
-        <Ionicons name="notifications-outline" size={22} color={Colors.text} />
+        <Ionicons name="notifications-outline" size={18} color={'rgba(255,255,255,0.8)'} />
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.btn}
         onPress={() => rootNav.navigate('Messages')}
         activeOpacity={0.7}
       >
-        <Ionicons name="mail-outline" size={22} color={Colors.text} />
+        <Ionicons name="mail-outline" size={18} color={'rgba(255,255,255,0.8)'} />
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.btn}
         onPress={() => rootNav.navigate('Profile')}
         activeOpacity={0.7}
       >
-        <Ionicons name="person-circle-outline" size={22} color={Colors.text} />
+        <Ionicons name="person-outline" size={18} color={'rgba(255,255,255,0.8)'} />
       </TouchableOpacity>
     </View>
   );
@@ -48,13 +48,15 @@ export default function HeaderActions({ navigation }: { navigation?: any }) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   btn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f1f5f9',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.25)',
     justifyContent: 'center',
     alignItems: 'center',
   },

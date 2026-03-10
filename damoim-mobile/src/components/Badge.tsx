@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Fonts } from '../constants/colors';
 
 interface BadgeProps {
   count: number;
@@ -18,7 +19,7 @@ export default function Badge({ count, size = 18 }: BadgeProps) {
 
 const styles = StyleSheet.create({
   badge: {
-    backgroundColor: '#ef4444',
+    backgroundColor: '#FF6B6B',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,

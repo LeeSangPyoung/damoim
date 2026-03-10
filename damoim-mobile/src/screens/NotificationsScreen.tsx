@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Platform, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
+import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
 import { notificationAPI, NotificationResponse } from '../api/notification';
-import EmptyState from '../components/EmptyState';
 import HeaderActions from '../components/HeaderActions';
 
 function timeAgo(dateStr: string): string {
@@ -19,14 +18,29 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(h / 24)}일 전`;
 }
 
-const typeIcon: Record<string, string> = {
-  MESSAGE: '✉️', FRIEND_REQUEST: '👋', FRIEND_ACCEPTED: '🤝', COMMENT: '💬', LIKE: '❤️',
-  CHAT: '💬', GROUP_CHAT: '👥', POST: '📝', NEW_SHOP: '🏪',
-  REUNION_INVITE: '📨', MEETING_CREATED: '📅', MEETING_CONFIRMED: '✅', MEETING_CANCELLED: '❌',
-  FEE_CREATED: '💰', FEE_UPDATED: '💳',
-  REUNION_JOIN_REQUEST: '🙋', REUNION_JOIN_APPROVED: '✅', REUNION_JOIN_REJECTED: '❌',
-  REUNION_POST: '📝', REUNION_TREASURER_ASSIGNED: '👑',
+const typeIconMap: Record<string, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
+  MESSAGE: { name: 'mail-outline', color: '#2D5016' },
+  FRIEND_REQUEST: { name: 'person-add-outline', color: '#8b5cf6' },
+  FRIEND_ACCEPTED: { name: 'people-outline', color: '#22c55e' },
+  COMMENT: { name: 'chatbox-outline', color: '#6366f1' },
+  LIKE: { name: 'heart-outline', color: '#FF6B6B' },
+  CHAT: { name: 'chatbox-outline', color: '#2D5016' },
+  GROUP_CHAT: { name: 'people-outline', color: '#6366f1' },
+  POST: { name: 'document-text-outline', color: '#8B6914' },
+  NEW_SHOP: { name: 'storefront-outline', color: '#5D8A3C' },
+  REUNION_INVITE: { name: 'mail-open-outline', color: '#8b5cf6' },
+  MEETING_CREATED: { name: 'calendar-outline', color: '#2D5016' },
+  MEETING_CONFIRMED: { name: 'checkmark-circle-outline', color: '#22c55e' },
+  MEETING_CANCELLED: { name: 'close-circle-outline', color: '#FF6B6B' },
+  FEE_CREATED: { name: 'cash-outline', color: '#8B6914' },
+  FEE_UPDATED: { name: 'card-outline', color: '#6366f1' },
+  REUNION_JOIN_REQUEST: { name: 'hand-left-outline', color: '#8b5cf6' },
+  REUNION_JOIN_APPROVED: { name: 'checkmark-circle-outline', color: '#22c55e' },
+  REUNION_JOIN_REJECTED: { name: 'close-circle-outline', color: '#FF6B6B' },
+  REUNION_POST: { name: 'document-text-outline', color: '#8B6914' },
+  REUNION_TREASURER_ASSIGNED: { name: 'ribbon-outline', color: '#8B6914' },
 };
+const defaultIcon = { name: 'notifications-outline' as keyof typeof Ionicons.glyphMap, color: Colors.gray500 };
 
 export default function NotificationsScreen() {
   const navigation = useNavigation<any>();
@@ -87,7 +101,7 @@ export default function NotificationsScreen() {
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text} />
+            <Ionicons name="arrow-back" size={24} color="#FFE156" />
           </TouchableOpacity>
           <Text style={styles.title}>알림</Text>
         </View>
@@ -100,10 +114,21 @@ export default function NotificationsScreen() {
         data={notifications}
         keyExtractor={item => String(item.id)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadNotifications(); }} />}
-        ListEmptyComponent={<EmptyState icon="🔔" title="알림이 없습니다" />}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="notifications-outline" size={48} color={Colors.gray300} />
+            <Text style={styles.emptyTitle}>알림이 없습니다</Text>
+          </View>
+        }
         renderItem={({ item }) => (
           <TouchableOpacity style={[styles.notifRow, !item.read && styles.notifUnread]} onPress={() => handleMarkRead(item)}>
-            <Text style={styles.notifIcon}>{typeIcon[item.type] || '🔔'}</Text>
+            <View style={styles.notifIconWrap}>
+              <Ionicons
+                name={(typeIconMap[item.type] || defaultIcon).name}
+                size={20}
+                color={(typeIconMap[item.type] || defaultIcon).color}
+              />
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.notifContent}>{item.content}</Text>
               <Text style={styles.notifTime}>{item.senderName} · {timeAgo(item.createdAt)}</Text>
@@ -117,15 +142,17 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: HEADER_TOP_PADDING, paddingBottom: 12, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  title: { fontSize: 20, fontWeight: '800', color: Colors.text },
-  markAllRead: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
-  deleteAll: { fontSize: 13, color: '#e74c3c', fontWeight: '600' },
-  notifRow: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.gray100, gap: 10 },
-  notifUnread: { backgroundColor: Colors.primaryLight },
-  notifIcon: { fontSize: 20 },
-  notifContent: { fontSize: 14, color: Colors.text, lineHeight: 18 },
+  container: { flex: 1, backgroundColor: '#FFF8E7' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: HEADER_TOP_PADDING, paddingBottom: 12, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A' },
+  title: { fontSize: 20, fontWeight: '800', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
+  markAllRead: { fontSize: 13, color: '#FFE156', fontWeight: '600' },
+  deleteAll: { fontSize: 13, color: '#FFE156', fontWeight: '600' },
+  notifRow: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#F0E0B0', gap: 10 },
+  notifUnread: { backgroundColor: '#FFF8E7' },
+  notifIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.gray100, justifyContent: 'center', alignItems: 'center' },
+  notifContent: { fontSize: 14, color: '#5D4037', lineHeight: 18, fontFamily: Fonts.regular },
   notifTime: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2D5016' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: Colors.gray500, marginTop: 12, fontFamily: Fonts.regular },
 });

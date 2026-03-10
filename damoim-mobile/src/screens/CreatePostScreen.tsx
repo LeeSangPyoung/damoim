@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
+import { Colors, Fonts } from '../constants/colors';
 import { useAuth } from '../hooks/useAuth';
 import { postAPI } from '../api/post';
 import { userAPI, ProfileResponse } from '../api/user';
@@ -136,7 +136,7 @@ export default function CreatePostScreen({ navigation, route }: any) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation?.goBack?.()} activeOpacity={0.7}>
-          <Ionicons name="close" size={26} color={Colors.gray700} />
+          <Ionicons name="close" size={26} color="#FFE156" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>글 작성</Text>
         <TouchableOpacity
@@ -146,7 +146,7 @@ export default function CreatePostScreen({ navigation, route }: any) {
           activeOpacity={0.7}
         >
           {submitting ? (
-            <ActivityIndicator size="small" color={Colors.white} />
+            <ActivityIndicator size="small" color="#2D5016" />
           ) : (
             <Text style={[styles.submitText, !canSubmit && styles.submitTextDisabled]}>
               게시
@@ -173,7 +173,7 @@ export default function CreatePostScreen({ navigation, route }: any) {
                 <Ionicons
                   name={opt.icon as any}
                   size={14}
-                  color={visibility === opt.key ? Colors.white : Colors.gray500}
+                  color={visibility === opt.key ? '#FFE156' : '#8D6E63'}
                 />
                 <Text
                   style={[
@@ -266,7 +266,7 @@ export default function CreatePostScreen({ navigation, route }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFF8E7',
   },
   header: {
     flexDirection: 'row',
@@ -274,16 +274,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: '#2D5016',
+    borderBottomWidth: 3,
+    borderBottomColor: '#C49A2A',
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.text,
+    color: '#fff',
+    fontFamily: Fonts.bold,
+    letterSpacing: 2,
   },
   submitButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#FFE156',
     paddingHorizontal: 18,
     paddingVertical: 7,
     borderRadius: 18,
@@ -294,9 +297,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray200,
   },
   submitText: {
-    color: Colors.white,
+    color: '#2D5016',
     fontSize: 14,
     fontWeight: '700',
+    fontFamily: Fonts.bold,
   },
   submitTextDisabled: {
     color: Colors.gray400,
@@ -325,19 +329,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 18,
-    backgroundColor: Colors.gray100,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#F0E0B0',
     gap: 5,
   },
   visibilityChipActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2D5016',
+    borderColor: '#2D5016',
   },
   visibilityChipText: {
     fontSize: 13,
     fontWeight: '600',
     color: Colors.gray500,
+    fontFamily: Fonts.bold,
   },
   visibilityChipTextActive: {
-    color: Colors.white,
+    color: '#FFE156',
   },
   contentInput: {
     paddingHorizontal: 16,
@@ -346,6 +354,13 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: Colors.text,
     minHeight: 200,
+    backgroundColor: '#fff',
+    margin: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F0E0B0',
+    paddingBottom: 12,
+    fontFamily: Fonts.regular,
   },
   imageSection: {
     marginTop: 12,
@@ -389,8 +404,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.white,
+    borderTopColor: '#F0E0B0',
+    backgroundColor: '#fff',
   },
   toolbarButton: {
     flexDirection: 'row',

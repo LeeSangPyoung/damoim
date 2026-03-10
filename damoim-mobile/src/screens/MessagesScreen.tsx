@@ -16,7 +16,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
-import { Colors } from '../constants/colors';
+import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
 import { messageAPI, MessageResponse } from '../api/message';
@@ -440,7 +440,7 @@ export default function MessagesScreen() {
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text} />
+            <Ionicons name="arrow-back" size={24} color="#FFE156" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>쪽지</Text>
         </View>
@@ -490,7 +490,7 @@ export default function MessagesScreen() {
           />
         }
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} tintColor={Colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2D5016']} tintColor={'#2D5016'} />
         }
         showsVerticalScrollIndicator={false}
       />
@@ -602,18 +602,19 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFF8E7',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFF8E7',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 14,
     color: Colors.gray500,
+    fontFamily: Fonts.regular,
   },
 
   // Header
@@ -624,42 +625,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: HEADER_TOP_PADDING,
     paddingBottom: 12,
-    backgroundColor: Colors.white,
+    backgroundColor: '#2D5016',
+    borderBottomWidth: 3,
+    borderBottomColor: '#C49A2A',
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: Colors.text,
+    color: '#fff',
+    fontFamily: Fonts.bold,
+    letterSpacing: 2,
   },
   markAllBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: 'rgba(255,225,86,0.2)',
   },
   markAllBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.primary,
+    color: '#FFE156',
   },
   deleteAllBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#fef2f2',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   deleteAllBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#ef4444',
+    color: '#FFE156',
   },
 
   // Tabs
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFF8E7',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: '#F0E0B0',
     position: 'relative',
   },
   tab: {
@@ -671,16 +676,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: Colors.gray400,
+    fontFamily: Fonts.bold,
   },
   tabTextActive: {
-    color: Colors.primary,
+    color: '#2D5016',
     fontWeight: '700',
   },
   tabIndicator: {
     position: 'absolute',
     bottom: 0,
     height: 2,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2D5016',
   },
   badge: {
     fontSize: 13,
@@ -698,11 +704,13 @@ const styles = StyleSheet.create({
 
   // Message card
   messageCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#ffffff',
     marginHorizontal: 12,
     marginVertical: 4,
     borderRadius: 12,
     padding: 14,
+    borderWidth: 1,
+    borderColor: '#F0E0B0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -710,9 +718,9 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   messageCardUnread: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: '#FFF8E7',
     borderLeftWidth: 3,
-    borderLeftColor: Colors.primary,
+    borderLeftColor: '#2D5016',
   },
   messageRow: {
     flexDirection: 'row',
@@ -735,7 +743,8 @@ const styles = StyleSheet.create({
   messageName: {
     fontSize: 15,
     fontWeight: '500',
-    color: Colors.text,
+    color: '#5D4037',
+    fontFamily: Fonts.bold,
   },
   messageNameUnread: {
     fontWeight: '700',
@@ -744,7 +753,7 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2D5016',
     marginLeft: 6,
   },
   messageTime: {
@@ -755,6 +764,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     lineHeight: 20,
+    fontFamily: Fonts.regular,
   },
   messagePreviewUnread: {
     color: Colors.text,
@@ -792,10 +802,10 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2D5016',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.primary,
+    shadowColor: '#2D5016',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 8,
@@ -831,11 +841,13 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: Colors.text,
+    fontFamily: Fonts.bold,
   },
   modalSend: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.primary,
+    color: '#2D5016',
+    fontFamily: Fonts.bold,
   },
   modalSendDisabled: {
     color: Colors.gray300,
@@ -857,6 +869,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
     marginRight: 8,
+    fontFamily: Fonts.bold,
   },
   searchInput: {
     flex: 1,
@@ -868,7 +881,7 @@ const styles = StyleSheet.create({
   selectedChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: '#FFF8E7',
     borderRadius: 16,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -877,7 +890,7 @@ const styles = StyleSheet.create({
   selectedChipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
+    color: '#2D5016',
   },
   selectedChipRemove: {
     fontSize: 14,
@@ -908,6 +921,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: Colors.text,
+    fontFamily: Fonts.bold,
   },
   searchResultSchool: {
     fontSize: 12,

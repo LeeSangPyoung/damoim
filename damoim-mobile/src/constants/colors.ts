@@ -1,46 +1,73 @@
 export const Colors = {
-  primary: '#3b82f6',
-  primaryDark: '#2563eb',
-  primaryLight: '#eff6ff',
+  // 칠판 녹색 (좀 더 부드러운 톤)
+  primary: '#2D5016',
+  primaryDark: '#2D5016',
+  primaryLight: '#E8F0E0',
 
-  green: '#16a34a',
-  greenLight: '#f0fdf4',
-  greenBorder: '#86efac',
+  // 따뜻한 노란 배경
+  background: '#FFF8E7',
+  backgroundDeep: '#FFF3D0',
+  card: '#ffffff',
 
-  amber: '#f59e0b',
-  amberLight: '#fefce8',
-  amberBorder: '#fde68a',
+  // 골드/나무 프레임
+  gold: '#C49A2A',
+  goldLight: '#F0E0B0',
+  goldBorder: '#E8C84A',
 
-  red: '#ef4444',
-  redLight: '#fef2f2',
+  // 분필 느낌
+  chalkWhite: '#FFFFFF',
+  chalkYellow: '#FFE156',
 
-  gray50: '#f9fafb',
-  gray100: '#f3f4f6',
-  gray200: '#e5e7eb',
-  gray300: '#d1d5db',
-  gray400: '#9ca3af',
-  gray500: '#6b7280',
-  gray600: '#4b5563',
-  gray700: '#374151',
-  gray800: '#1f2937',
-  gray900: '#111827',
+  // 갈색 (만화 라인, 텍스트)
+  brown: '#5D4037',
+  brownLight: '#8D6E63',
+  brownDark: '#3E2723',
 
-  slate50: '#f8fafc',
-  slate100: '#f1f5f9',
-  slate200: '#e2e8f0',
-  slate300: '#cbd5e1',
-  slate400: '#94a3b8',
-  slate500: '#64748b',
-  slate600: '#475569',
-  slate700: '#334155',
-  slate800: '#1e293b',
+  // 감정 컬러
+  red: '#FF6B6B',
+  redLight: '#FFF0F0',
+
+  green: '#3B6B24',
+  greenLight: '#E8F0E0',
+  greenBorder: '#A5D6A7',
+
+  amber: '#8B6914',
+  amberLight: '#FFF3D0',
+  amberBorder: '#E8C84A',
+
+  // 그레이 (최소한으로 사용)
+  gray50: '#FDFBF5',
+  gray100: '#FFF8E7',
+  gray200: '#F0E0B0',
+  gray300: '#DDD0A8',
+  gray400: '#B8A88A',
+  gray500: '#8D6E63',
+  gray600: '#6D4C41',
+  gray700: '#5D4037',
+  gray800: '#3E2723',
+  gray900: '#2C1A12',
+
+  slate50: '#FDFBF5',
+  slate100: '#FFF8E7',
+  slate200: '#F0E0B0',
+  slate300: '#DDD0A8',
+  slate400: '#B8A88A',
+  slate500: '#8D6E63',
+  slate600: '#6D4C41',
+  slate700: '#5D4037',
+  slate800: '#3E2723',
 
   white: '#ffffff',
   black: '#000000',
-  background: '#f1f5f9',
-  card: '#ffffff',
-  border: '#e2e8f0',
-  text: '#1e293b',
-  textSecondary: '#64748b',
-  textMuted: '#94a3b8',
+  border: '#F0E0B0',
+  text: '#3E2723',
+  textSecondary: '#8D6E63',
+  textMuted: '#B8A88A',
+};
+
+// 폰트 패밀리 상수
+export const Fonts = {
+  light: 'Gaegu_300Light',
+  regular: 'Gaegu_400Regular',
+  bold: 'Gaegu_700Bold',
 };

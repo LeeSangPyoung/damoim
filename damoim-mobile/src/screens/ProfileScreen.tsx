@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Colors } from '../constants/colors';
+import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
 import { userAPI, ProfileResponse, ClassmateInfo, SchoolUpdateInfo } from '../api/user';
@@ -325,7 +325,7 @@ export default function ProfileScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={Colors.text} />
+          <Ionicons name="chevron-back" size={24} color="#FFE156" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isOwnProfile ? '프로필' : profile?.name || '프로필'}</Text>
         <View style={{ width: 32 }} />
@@ -660,45 +660,45 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: HEADER_TOP_PADDING, paddingBottom: 12, backgroundColor: Colors.white },
+  container: { flex: 1, backgroundColor: '#FFF8E7' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: HEADER_TOP_PADDING, paddingBottom: 12, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A' },
   backBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
-  tabRow: { flexDirection: 'row', backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
+  tabRow: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F0E0B0' },
   tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: Colors.primary },
-  tabText: { fontSize: 14, fontWeight: '600', color: Colors.gray400 },
-  tabTextActive: { color: Colors.primary },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: '#2D5016' },
+  tabText: { fontSize: 14, fontWeight: '600', color: '#B8A88A', fontFamily: Fonts.bold },
+  tabTextActive: { color: '#2D5016' },
 
-  profileCard: { flexDirection: 'row', padding: 20, backgroundColor: Colors.white, margin: 12, borderRadius: 12 },
-  profileName: { fontSize: 20, fontWeight: '800', color: Colors.text },
+  profileCard: { flexDirection: 'row', padding: 20, backgroundColor: '#fff', margin: 12, borderRadius: 12, borderWidth: 1, borderColor: '#F0E0B0' },
+  profileName: { fontSize: 20, fontWeight: '800', color: Colors.text, fontFamily: Fonts.bold },
   profileId: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
-  profileBio: { fontSize: 14, color: Colors.textSecondary, marginTop: 6 },
+  profileBio: { fontSize: 14, color: Colors.textSecondary, marginTop: 6, fontFamily: Fonts.regular },
   editBtn: { marginTop: 8, backgroundColor: Colors.gray100, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, alignSelf: 'flex-start' },
   editBtnText: { fontSize: 12, fontWeight: '600', color: Colors.gray600 },
 
-  section: { margin: 12, padding: 14, backgroundColor: Colors.white, borderRadius: 12 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.text, marginBottom: 10 },
+  section: { margin: 12, padding: 14, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#F0E0B0' },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.text, marginBottom: 10, fontFamily: Fonts.bold },
   schoolRow: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.gray100 },
-  schoolName: { fontSize: 14, fontWeight: '600', color: Colors.text },
+  schoolName: { fontSize: 14, fontWeight: '600', color: Colors.text, fontFamily: Fonts.bold },
   schoolDetail: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
   gradeChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
-  gradeChip: { backgroundColor: Colors.primaryLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  gradeChipText: { fontSize: 11, fontWeight: '600', color: Colors.primary },
+  gradeChip: { backgroundColor: '#E8F0E0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  gradeChipText: { fontSize: 11, fontWeight: '600', color: '#2D5016' },
 
   logoutBtn: { margin: 12, padding: 14, backgroundColor: Colors.redLight, borderRadius: 10, alignItems: 'center' },
-  logoutText: { color: Colors.red, fontSize: 14, fontWeight: '700' },
+  logoutText: { color: Colors.red, fontSize: 14, fontWeight: '700', fontFamily: Fonts.bold },
 
   searchRow: { flexDirection: 'row', padding: 12, gap: 8, backgroundColor: Colors.white },
   searchInput: { flex: 1, backgroundColor: Colors.gray50, borderRadius: 8, padding: 10, fontSize: 14, borderWidth: 1, borderColor: Colors.gray200 },
-  searchBtn: { backgroundColor: Colors.primary, paddingHorizontal: 16, borderRadius: 8, justifyContent: 'center' },
-  searchBtnText: { color: Colors.white, fontSize: 13, fontWeight: '600' },
+  searchBtn: { backgroundColor: '#2D5016', paddingHorizontal: 16, borderRadius: 8, justifyContent: 'center' },
+  searchBtnText: { color: '#FFE156', fontSize: 13, fontWeight: '600' },
 
   classmateRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: Colors.gray100 },
-  classmateName: { fontSize: 14, fontWeight: '600', color: Colors.text },
+  classmateName: { fontSize: 14, fontWeight: '600', color: Colors.text, fontFamily: Fonts.bold },
   classmateSchool: { fontSize: 12, color: Colors.textMuted, marginTop: 1 },
-  friendReqBtn: { backgroundColor: Colors.primary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
-  friendReqText: { color: Colors.white, fontSize: 11, fontWeight: '600' },
+  friendReqBtn: { backgroundColor: '#2D5016', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
+  friendReqText: { color: '#FFE156', fontSize: 11, fontWeight: '600' },
   acceptBtn: { backgroundColor: Colors.green, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
   acceptBtnText: { color: Colors.white, fontSize: 11, fontWeight: '600' },
   emptyText: { fontSize: 13, color: Colors.textMuted, textAlign: 'center', paddingVertical: 20 },
@@ -711,12 +711,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
   editModalCancel: { fontSize: 15, color: Colors.textSecondary, fontWeight: '600' },
-  editModalTitle: { fontSize: 17, fontWeight: '800', color: Colors.text },
+  editModalTitle: { fontSize: 17, fontWeight: '800', color: Colors.text, fontFamily: Fonts.bold },
   editModalSave: { fontSize: 15, color: Colors.primary, fontWeight: '700' },
   editModalBody: { flex: 1, padding: 16 },
 
   editField: { marginBottom: 20 },
-  editLabel: { fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 8 },
+  editLabel: { fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 8, fontFamily: Fonts.bold },
   editInput: {
     backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.gray200,
     borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: Colors.text,
