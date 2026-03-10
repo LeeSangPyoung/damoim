@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#C49A2A',
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: '#fff',
     fontFamily: Fonts.bold,

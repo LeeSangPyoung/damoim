@@ -780,7 +780,7 @@ const styles = StyleSheet.create({
 
   // List
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: HEADER_TOP_PADDING, paddingBottom: 12, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A' },
-  screenTitle: { fontSize: 20, fontWeight: '800', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
+  screenTitle: { fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
   headerBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: Colors.gray100 },
   headerBtnText: { fontSize: 13, fontWeight: '600', color: Colors.gray700 },
 

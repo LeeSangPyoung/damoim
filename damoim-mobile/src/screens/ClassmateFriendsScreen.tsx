@@ -427,7 +427,7 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                           {isFriend ? (
                             <>
                               <TouchableOpacity style={styles.actionBtnSecondary} onPress={() => handleSendMessage(cm.userId, cm.name)}>
-                                <Ionicons name="mail" size={16} color="#2D5016" />
+                                <Ionicons name="mail-outline" size={16} color="#2D5016" />
                               </TouchableOpacity>
                               <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => handleStartChat(cm.userId)}>
                                 <Ionicons name="chatbox-outline" size={16} color="#2D5016" />
@@ -473,7 +473,7 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                         </TouchableOpacity>
                         <View style={styles.personActions}>
                           <TouchableOpacity style={styles.actionBtnSecondary} onPress={() => handleSendMessage(friend.userId, friend.name)}>
-                            <Ionicons name="mail" size={16} color="#2D5016" />
+                            <Ionicons name="mail-outline" size={16} color="#2D5016" />
                           </TouchableOpacity>
                           <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => handleStartChat(friend.userId)}>
                             <Ionicons name="chatbox-outline" size={16} color="#2D5016" />
@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: '#C49A2A',
   },
-  screenHeaderTitle: { fontSize: 18, fontWeight: '800', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
+  screenHeaderTitle: { fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
 
   // Main tabs (동창이네 스타일)
   mainTabBar: {

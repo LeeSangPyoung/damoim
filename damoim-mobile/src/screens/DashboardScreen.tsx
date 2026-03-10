@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   schoolInfo: {
-    fontSize: 13,
+    fontSize: 24,
     color: '#fff',
     marginTop: 2,
     fontFamily: Fonts.bold,

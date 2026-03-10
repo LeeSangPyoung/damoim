@@ -144,7 +144,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF8E7' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: HEADER_TOP_PADDING, paddingBottom: 12, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A' },
-  title: { fontSize: 20, fontWeight: '800', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
+  title: { fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
   markAllRead: { fontSize: 13, color: '#FFE156', fontWeight: '600' },
   deleteAll: { fontSize: 13, color: '#FFE156', fontWeight: '600' },
   notifRow: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#F0E0B0', gap: 10 },

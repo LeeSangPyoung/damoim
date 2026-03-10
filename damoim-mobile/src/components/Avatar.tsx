@@ -9,16 +9,38 @@ interface AvatarProps {
   online?: boolean;
 }
 
+// 디자인 샘플처럼 다양한 파스텔 색상
+const AVATAR_COLORS = [
+  '#FFE99A', // 노랑
+  '#B8E6B8', // 연두
+  '#FFD0D0', // 핑크
+  '#C5CAE9', // 보라
+  '#F8BBD0', // 장미
+  '#B3D4FC', // 하늘
+  '#FFCCBC', // 살구
+  '#D1C4E9', // 라벤더
+];
+
+function getAvatarColor(name?: string): string {
+  if (!name) return AVATAR_COLORS[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
 export default function Avatar({ uri, name, size = 40, online }: AvatarProps) {
   const initial = name ? name.charAt(0) : '?';
   const fontSize = size * 0.4;
+  const bgColor = getAvatarColor(name);
 
   return (
     <View style={[styles.container, { width: size, height: size, borderRadius: size / 2 }]}>
       {uri ? (
         <Image source={{ uri }} style={[styles.image, { width: size, height: size, borderRadius: size / 2 }]} />
       ) : (
-        <View style={[styles.placeholder, { width: size, height: size, borderRadius: size / 2 }]}>
+        <View style={[styles.placeholder, { width: size, height: size, borderRadius: size / 2, backgroundColor: bgColor }]}>
           <Text style={[styles.initial, { fontSize }]}>{initial}</Text>
         </View>
       )}

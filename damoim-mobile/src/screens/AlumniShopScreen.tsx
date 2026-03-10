@@ -10,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
-import { alumniShopAPI, ShopResponse, ShopReviewResponse, OwnerSchoolDetail, SHOP_CATEGORIES, MAIN_CATEGORIES, CATEGORY_ICONS } from '../api/alumniShop';
+import { alumniShopAPI, ShopResponse, ShopReviewResponse, OwnerSchoolDetail, SHOP_CATEGORIES, MAIN_CATEGORIES, CATEGORY_ICONS, CATEGORY_COLORS } from '../api/alumniShop';
 import { userAPI, ProfileResponse } from '../api/user';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
@@ -82,6 +82,13 @@ export default function AlumniShopScreen() {
   const [myShops, setMyShops] = useState<ShopResponse[]>([]);
   const [selectedShop, setSelectedShop] = useState<ShopResponse | null>(null);
   const [reviews, setReviews] = useState<ShopReviewResponse[]>([]);
+
+  // 낙서 스타일 Ionicons 매핑
+  const CATEGORY_ICON_NAMES: Record<string, string> = {
+    '음식점': 'restaurant-outline', '카페/디저트': 'cafe-outline', '주점/바': 'beer-outline', '뷰티/미용': 'cut-outline',
+    '건강/의료': 'medkit-outline', '교육': 'pencil-outline', '생활서비스': 'hammer-outline', '쇼핑/유통': 'cart-outline',
+    '자동차': 'car-outline', 'IT/전자': 'laptop-outline', '기타': 'bag-outline',
+  };
 
   // Filters & Sort
   const [category, setCategory] = useState('전체');
@@ -382,13 +389,22 @@ export default function AlumniShopScreen() {
                 {/* Category Filter */}
                 <View style={styles.categoryWrap}>
                   <TouchableOpacity style={[styles.categoryChip, category === '전체' && styles.categoryChipActive]} onPress={() => { setCategory('전체'); setDisplayCount(10); }}>
+                    <View style={[styles.categoryIconCircle, category === '전체' && styles.categoryIconCircleActive]}>
+                      <Ionicons name="grid-outline" size={20} color={category === '전체' ? '#fff' : '#5D4037'} />
+                    </View>
                     <Text style={[styles.categoryChipText, category === '전체' && styles.categoryChipTextActive]}>전체</Text>
                   </TouchableOpacity>
-                  {MAIN_CATEGORIES.map(c => (
-                    <TouchableOpacity key={c} style={[styles.categoryChip, category === c && styles.categoryChipActive]} onPress={() => { setCategory(c); setDisplayCount(10); }}>
-                      <Text style={[styles.categoryChipText, category === c && styles.categoryChipTextActive]}>{CATEGORY_ICONS[c]} {c}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {MAIN_CATEGORIES.map(c => {
+                    const icon = CATEGORY_ICON_NAMES[c] || 'storefront-outline';
+                    return (
+                      <TouchableOpacity key={c} style={[styles.categoryChip, category === c && styles.categoryChipActive]} onPress={() => { setCategory(c); setDisplayCount(10); }}>
+                        <View style={[styles.categoryIconCircle, category === c && styles.categoryIconCircleActive]}>
+                          <Ionicons name={icon as any} size={20} color={category === c ? '#fff' : '#5D4037'} />
+                        </View>
+                        <Text style={[styles.categoryChipText, category === c && styles.categoryChipTextActive]}>{c}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </>
             }
@@ -493,7 +509,10 @@ export default function AlumniShopScreen() {
               <View style={[styles.categoryWrap, { paddingHorizontal: 0, marginBottom: 8 }]}>
                 {MAIN_CATEGORIES.map(c => (
                   <TouchableOpacity key={c} style={[styles.categoryChip, shopCategory === c && styles.categoryChipActive]} onPress={() => { setShopCategory(c); setShopSubCategory(''); }}>
-                    <Text style={[styles.categoryChipText, shopCategory === c && styles.categoryChipTextActive]}>{CATEGORY_ICONS[c]} {c}</Text>
+                    <View style={[styles.categoryIconCircle, { backgroundColor: CATEGORY_COLORS[c] || '#F0E0B0' }, shopCategory === c && { backgroundColor: '#2D5016' }]}>
+                      <Text style={{ fontSize: 16 }}>{CATEGORY_ICONS[c]}</Text>
+                    </View>
+                    <Text style={[styles.categoryChipText, shopCategory === c && styles.categoryChipTextActive]}>{c}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -533,7 +552,7 @@ export default function AlumniShopScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF8E7' },
   screenHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#2D5016', paddingTop: HEADER_TOP_PADDING, paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 3, borderBottomColor: '#C49A2A' },
-  screenHeaderTitle: { fontSize: 18, fontWeight: '800', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
+  screenHeaderTitle: { fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
   header: { flexDirection: 'row', alignItems: 'center', padding: 14, paddingTop: HEADER_TOP_PADDING, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A', gap: 10 },
   backBtn: { flexDirection: 'row', alignItems: 'center' },
   backBtnText: { fontSize: 13, color: '#FFE156', fontWeight: '600' },
@@ -555,10 +574,12 @@ const styles = StyleSheet.create({
   sortMenuText: { fontSize: 13, fontWeight: '500', color: '#5D4037' },
   sortMenuTextActive: { fontWeight: '700', color: '#2D5016' },
   categoryWrap: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 12, backgroundColor: '#FFF8E7', gap: 8 },
-  categoryChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.gray100 },
-  categoryChipActive: { backgroundColor: '#2D5016' },
-  categoryChipText: { fontSize: 12, fontWeight: '600', color: Colors.gray600 },
-  categoryChipTextActive: { color: Colors.white },
+  categoryChip: { alignItems: 'center', gap: 4, paddingHorizontal: 6, paddingVertical: 6 },
+  categoryChipActive: {},
+  categoryIconCircle: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#F0E0B0', backgroundColor: '#FFF8E7' },
+  categoryIconCircleActive: { backgroundColor: '#2D5016', borderColor: '#2D5016' },
+  categoryChipText: { fontSize: 11, fontWeight: '600', color: '#5D4037' },
+  categoryChipTextActive: { color: '#2D5016', fontWeight: '700' },
 
   shopCard: { flexDirection: 'row', backgroundColor: '#ffffff', marginHorizontal: 12, marginTop: 8, borderRadius: 12, overflow: 'hidden', position: 'relative', borderWidth: 1, borderColor: '#F0E0B0' },
   shopCardImg: { width: 80, height: 80 },

@@ -20,6 +20,7 @@ import { useAuth } from '../hooks/useAuth';
 import { chatAPI, ChatRoomResponse, ChatMessageResponse } from '../api/chat';
 import { groupChatAPI, GroupChatRoomResponse, GroupChatMessageResponse } from '../api/groupChat';
 import { friendAPI, FriendResponse } from '../api/friend';
+import { userAPI } from '../api/user';
 import Avatar from '../components/Avatar';
 import Badge from '../components/Badge';
 import EmptyState from '../components/EmptyState';
@@ -108,6 +109,9 @@ export default function ChatScreen() {
   const [selectedFriends, setSelectedFriends] = useState<FriendResponse[]>([]);
   const [groupName, setGroupName] = useState('');
 
+  // ---- User school info cache ----
+  const [userSchools, setUserSchools] = useState<Record<string, string>>({});
+
   // ---- WebSocket ----
   const stompClientRef = useRef<Client | null>(null);
   const subscriptionsRef = useRef<{ id: string; unsubscribe: () => void }[]>([]);
@@ -126,6 +130,25 @@ export default function ChatScreen() {
     try {
       const rooms = await chatAPI.getMyChatRooms(userId);
       setDmRooms(rooms);
+      // 학교 정보 로드
+      const schoolMap: Record<string, string> = {};
+      await Promise.all(rooms.map(async (r) => {
+        try {
+          const profile = await userAPI.getProfile(r.otherUser.userId);
+          if (profile.schools?.length > 0) {
+            const s = profile.schools[0];
+            const shortName = s.schoolName.replace(/(초등학교|중학교|고등학교|대학교)/, (m: string) => {
+              if (m === '초등학교') return '초';
+              if (m === '중학교') return '중';
+              if (m === '고등학교') return '고';
+              return '대';
+            });
+            const cls = s.grade && s.classNumber ? ` ${s.grade}-${s.classNumber}반` : '';
+            schoolMap[r.otherUser.userId] = `${shortName}${cls}`;
+          }
+        } catch {}
+      }));
+      setUserSchools(prev => ({ ...prev, ...schoolMap }));
     } catch (e) {
       console.warn('[ChatScreen] fetchDmRooms error', e);
     } finally {
@@ -533,26 +556,19 @@ export default function ChatScreen() {
 
   const renderDmRoomItem = ({ item }: { item: ChatRoomResponse }) => (
     <TouchableOpacity style={styles.roomRow} onPress={() => openDmRoom(item)} activeOpacity={0.6}>
-      <Avatar uri={item.otherUser.profileImageUrl} name={item.otherUser.name} size={48} />
+      <Avatar uri={item.otherUser.profileImageUrl} name={item.otherUser.name} size={50} />
       <View style={styles.roomInfo}>
-        <View style={styles.roomHeader}>
-          <Text style={styles.roomName} numberOfLines={1}>{item.otherUser.name}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={styles.roomTime}>{formatTime(item.lastMessageAt)}</Text>
-            <TouchableOpacity
-              onPress={() => handleDeleteDmRoom(item)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="close" size={16} color={Colors.gray400} />
-            </TouchableOpacity>
-          </View>
-        </View>
-        <View style={styles.roomFooter}>
-          <Text style={styles.roomLastMsg} numberOfLines={1}>
-            {item.lastMessage ?? ''}
-          </Text>
-          {item.unreadCount > 0 && <Badge count={item.unreadCount} />}
-        </View>
+        <Text style={styles.roomName} numberOfLines={1}>{item.otherUser.name}</Text>
+        {userSchools[item.otherUser.userId] && (
+          <Text style={styles.roomSchool} numberOfLines={1}>✎ {userSchools[item.otherUser.userId]}</Text>
+        )}
+        <Text style={styles.roomLastMsg} numberOfLines={1}>
+          {item.lastMessage ?? ''}
+        </Text>
+      </View>
+      <View style={styles.roomMeta}>
+        <Text style={styles.roomTime}>{formatTime(item.lastMessageAt)}</Text>
+        {item.unreadCount > 0 && <Badge count={item.unreadCount} />}
       </View>
     </TouchableOpacity>
   );
@@ -605,15 +621,7 @@ export default function ChatScreen() {
               <Text style={styles.memberBadgeText}>{item.memberCount}</Text>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={styles.roomTime}>{formatTime(item.lastMessageAt)}</Text>
-            <TouchableOpacity
-              onPress={() => handleDeleteGroupRoom(item)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="close" size={16} color={Colors.gray400} />
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.roomTime}>{formatTime(item.lastMessageAt)}</Text>
         </View>
         <Text style={styles.roomLastMsg} numberOfLines={1}>
           {item.lastMessage ?? ''}
@@ -1036,16 +1044,18 @@ const styles = StyleSheet.create({
   newChatInlineBtn: {
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: Colors.primary,
+    borderRadius: 20,
+    backgroundColor: '#FFF8E7',
+    borderWidth: 1.5,
+    borderColor: '#F0E0B0',
   },
   newChatInlineBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.white,
+    color: '#5D4037',
   },
   screenTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: '#fff',
     fontFamily: Fonts.bold,
@@ -1079,40 +1089,50 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     backgroundColor: '#FFF8E7',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomWidth: 2,
+    borderBottomColor: '#F0E0B0',
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 13,
     alignItems: 'center',
-    borderBottomWidth: 2,
+    borderBottomWidth: 3,
     borderBottomColor: 'transparent',
+    marginBottom: -2,
   },
   tabActive: {
     borderBottomColor: '#2D5016',
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textMuted,
-    fontFamily: Fonts.bold,
+    fontSize: 16,
+    fontWeight: '400',
+    color: '#C4A96A',
   },
   tabTextActive: {
     color: '#2D5016',
+    fontWeight: '700',
   },
 
   // Room list
   listContent: {
     paddingBottom: 20,
+    paddingTop: 2,
   },
   roomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
+    padding: 14,
+    marginHorizontal: 12,
+    marginTop: 10,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#F0E0B0',
+    shadowColor: '#8B6914',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   roomInfo: {
     flex: 1,
@@ -1125,16 +1145,22 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   roomName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#3E2723',
     flex: 1,
     marginRight: 8,
-    fontFamily: Fonts.bold,
   },
   roomTime: {
     fontSize: 12,
-    color: Colors.textMuted,
+    color: '#8D6E63',
+    fontWeight: '500',
+  },
+  roomSchool: {
+    fontSize: 12,
+    color: '#2D5016',
+    opacity: 0.7,
+    marginTop: 1,
   },
   roomFooter: {
     flexDirection: 'row',
@@ -1142,10 +1168,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   roomLastMsg: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    flex: 1,
-    marginRight: 8,
+    fontSize: 14,
+    color: '#8D6E63',
+    marginTop: 3,
+  },
+  roomMeta: {
+    alignItems: 'flex-end',
+    marginLeft: 8,
+    gap: 5,
+    flexShrink: 0,
   },
 
   // Group avatar placeholder
@@ -1450,7 +1481,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF3D0',
     borderTopWidth: 1,
     borderTopColor: '#E8C84A',
-    height: 96,
+    maxHeight: 100,
   },
   emojiPanelContent: {
     flexDirection: 'row',

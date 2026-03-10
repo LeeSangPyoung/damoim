@@ -17,9 +17,16 @@ export const SHOP_CATEGORIES: Record<string, string[]> = {
 export const MAIN_CATEGORIES = Object.keys(SHOP_CATEGORIES);
 
 export const CATEGORY_ICONS: Record<string, string> = {
-  '음식점': '🍽️', '카페/디저트': '☕', '주점/바': '🍺', '뷰티/미용': '✂️',
-  '건강/의료': '🏥', '교육': '📚', '생활서비스': '🔧', '쇼핑/유통': '🛒',
-  '자동차': '🚗', 'IT/전자': '💻', '기타': '🏪',
+  '음식점': '🍳', '카페/디저트': '🧁', '주점/바': '🍻', '뷰티/미용': '💇',
+  '건강/의료': '💊', '교육': '✏️', '생활서비스': '🔨', '쇼핑/유통': '🛍️',
+  '자동차': '🚙', 'IT/전자': '🖥️', '기타': '🎒',
+};
+
+// 만화 스타일 카테고리: 파스텔 배경색
+export const CATEGORY_COLORS: Record<string, string> = {
+  '음식점': '#FFE99A', '카페/디저트': '#FFD0D0', '주점/바': '#C5CAE9', '뷰티/미용': '#F8BBD0',
+  '건강/의료': '#B8E6B8', '교육': '#FFF3D0', '생활서비스': '#FFE0B2', '쇼핑/유통': '#B3D4FC',
+  '자동차': '#FFCCBC', 'IT/전자': '#D1C4E9', '기타': '#F0E0B0',
 };
 
 export interface OwnerSchoolDetail {
