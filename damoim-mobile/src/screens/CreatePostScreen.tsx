@@ -16,6 +16,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../constants/colors';
+import { HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
 import { postAPI } from '../api/post';
 import { userAPI, ProfileResponse } from '../api/user';
@@ -61,6 +62,28 @@ export default function CreatePostScreen({ navigation, route }: any) {
   const pickImages = async () => {
     if (images.length >= MAX_IMAGES) {
       Alert.alert('알림', `이미지는 최대 ${MAX_IMAGES}장까지 첨부할 수 있습니다.`);
+      return;
+    }
+
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.multiple = true;
+      input.onchange = (e: any) => {
+        const files = Array.from(e.target?.files || []) as File[];
+        const remaining = MAX_IMAGES - images.length;
+        files.slice(0, remaining).forEach(file => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              setImages(prev => [...prev, reader.result as string].slice(0, MAX_IMAGES));
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      };
+      input.click();
       return;
     }
 
@@ -272,8 +295,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingTop: HEADER_TOP_PADDING,
+    paddingBottom: 12,
     backgroundColor: '#2D5016',
     borderBottomWidth: 3,
     borderBottomColor: '#C49A2A',

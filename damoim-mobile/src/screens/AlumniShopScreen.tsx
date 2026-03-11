@@ -10,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
-import { alumniShopAPI, ShopResponse, ShopReviewResponse, OwnerSchoolDetail, SHOP_CATEGORIES, MAIN_CATEGORIES, CATEGORY_ICONS, CATEGORY_COLORS } from '../api/alumniShop';
+import { alumniShopAPI, ShopResponse, ShopReviewResponse, SHOP_CATEGORIES, MAIN_CATEGORIES, CATEGORY_ICONS } from '../api/alumniShop';
 import { userAPI, ProfileResponse } from '../api/user';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
@@ -110,6 +110,9 @@ export default function AlumniShopScreen() {
   const [shopImageUris, setShopImageUris] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
+  // Edit mode (reuse register form fields)
+  const [editingShopId, setEditingShopId] = useState<number | null>(null);
+
   // Review
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
@@ -166,14 +169,34 @@ export default function AlumniShopScreen() {
   };
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setShopImageUris(prev => [...prev, result.assets[0].uri]);
+    if (Platform.OS === 'web') {
+      // 웹: input[type=file]로 이미지 선택
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e: any) => {
+        const file = e.target?.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              setShopImageUris(prev => [...prev, reader.result as string]);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
+    } else {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setShopImageUris(prev => [...prev, result.assets[0].uri]);
+      }
     }
   };
 
@@ -182,18 +205,30 @@ export default function AlumniShopScreen() {
   };
 
   const handleRegister = async () => {
-    if (!user || !shopName.trim() || !shopAddress.trim()) {
-      Alert.alert('오류', '가게 이름과 주소는 필수입니다');
+    if (!user) {
+      Alert.alert('오류', '로그인이 필요합니다');
+      return;
+    }
+    if (!shopName.trim()) {
+      Alert.alert('오류', '가게 이름을 입력해주세요');
+      return;
+    }
+    if (!shopAddress.trim()) {
+      Alert.alert('오류', '주소를 입력해주세요');
       return;
     }
     try {
       setUploading(true);
       let imageUrl: string | undefined;
       if (shopImageUris.length > 0) {
-        const urls = await Promise.all(shopImageUris.map(uri => alumniShopAPI.uploadImage(uri)));
-        imageUrl = urls.join(',');
+        try {
+          const urls = await Promise.all(shopImageUris.map(uri => alumniShopAPI.uploadImage(uri)));
+          imageUrl = urls.join(',');
+        } catch (imgErr: any) {
+          console.warn('이미지 업로드 실패, 이미지 없이 등록합니다:', imgErr?.message);
+        }
       }
-      await alumniShopAPI.createShop(user.userId, {
+      const result = await alumniShopAPI.createShop(user.userId, {
         shopName: shopName.trim(),
         category: shopCategory,
         subCategory: shopSubCategory || undefined,
@@ -203,16 +238,94 @@ export default function AlumniShopScreen() {
         businessHours: shopHours.trim() || undefined,
         imageUrl,
       });
+      console.log('가게 등록 성공:', result);
       Alert.alert('완료', '가게가 등록되었습니다!');
       setShopName(''); setShopDesc(''); setShopAddress(''); setShopPhone(''); setShopHours('');
+      setShopSubCategory('');
       setShopImageUris([]);
       setShowRegisterForm(false);
       loadShops();
     } catch (e: any) {
-      Alert.alert('오류', e?.response?.data?.error || '등록 실패');
+      console.error('가게 등록 실패:', e?.response?.status, e?.response?.data, e?.message);
+      Alert.alert('등록 실패', e?.response?.data?.error || e?.message || '서버 오류가 발생했습니다');
     } finally {
       setUploading(false);
     }
+  };
+
+  const startEdit = (shop: ShopResponse) => {
+    setEditingShopId(shop.id);
+    setShopName(shop.shopName);
+    setShopCategory(shop.category);
+    setShopSubCategory(shop.subCategory || '');
+    setShopDesc(shop.description || '');
+    setShopAddress(shop.address);
+    setShopPhone(shop.phone || '');
+    setShopHours(shop.businessHours || '');
+    setShopImageUris(parseImageUrls(shop.imageUrl));
+  };
+
+  const cancelEdit = () => {
+    setEditingShopId(null);
+    setShopName(''); setShopDesc(''); setShopAddress(''); setShopPhone(''); setShopHours('');
+    setShopSubCategory(''); setShopCategory('음식점');
+    setShopImageUris([]);
+  };
+
+  const handleUpdate = async () => {
+    if (!user || !editingShopId) return;
+    if (!shopName.trim()) { Alert.alert('오류', '가게 이름을 입력해주세요'); return; }
+    if (!shopAddress.trim()) { Alert.alert('오류', '주소를 입력해주세요'); return; }
+    try {
+      setUploading(true);
+      // 새 로컬 이미지만 업로드, 기존 URL은 유지
+      const finalUrls: string[] = [];
+      for (const uri of shopImageUris) {
+        if (uri.startsWith('http')) {
+          finalUrls.push(uri);
+        } else {
+          try {
+            const uploaded = await alumniShopAPI.uploadImage(uri);
+            finalUrls.push(uploaded);
+          } catch { /* skip failed */ }
+        }
+      }
+      const imageUrl = finalUrls.length > 0 ? finalUrls.join(',') : undefined;
+      await alumniShopAPI.updateShop(editingShopId, user.userId, {
+        shopName: shopName.trim(),
+        category: shopCategory,
+        subCategory: shopSubCategory || undefined,
+        description: shopDesc.trim() || undefined,
+        address: shopAddress.trim(),
+        phone: shopPhone.trim() || undefined,
+        businessHours: shopHours.trim() || undefined,
+        imageUrl,
+      });
+      Alert.alert('완료', '가게 정보가 수정되었습니다!');
+      cancelEdit();
+      setSelectedShop(null);
+      loadShops();
+    } catch (e: any) {
+      Alert.alert('수정 실패', e?.response?.data?.error || e?.message || '서버 오류가 발생했습니다');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteShop = (shopId: number) => {
+    Alert.alert('가게 삭제', '정말 이 가게를 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      { text: '삭제', style: 'destructive', onPress: async () => {
+        try {
+          await alumniShopAPI.deleteShop(shopId, user!.userId);
+          Alert.alert('완료', '가게가 삭제되었습니다');
+          setSelectedShop(null);
+          loadShops();
+        } catch (e: any) {
+          Alert.alert('오류', e?.response?.data?.error || '삭제 실패');
+        }
+      }},
+    ]);
   };
 
   const handleAddReview = async () => {
@@ -254,64 +367,151 @@ export default function AlumniShopScreen() {
   // Shop Detail
   if (selectedShop) {
     const detailImages = parseImageUrls(selectedShop.imageUrl);
+    const isOwner = user && selectedShop.ownerUserId === user.userId;
+    const isEditing = editingShopId === selectedShop.id;
+
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setSelectedShop(null)} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => { setSelectedShop(null); cancelEdit(); }} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={24} color="#FFE156" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1}>{selectedShop.shopName}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{isEditing ? '가게 수정' : selectedShop.shopName}</Text>
         </View>
-        <ScrollView>
-          {detailImages.length > 0 && (
-            <ImageGallery images={detailImages} />
-          )}
-          <View style={styles.detailBox}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <Text style={{ fontSize: 20 }}>{CATEGORY_ICONS[selectedShop.category] || '🏪'}</Text>
-              <Text style={styles.detailName}>{selectedShop.shopName}</Text>
-              {selectedShop.averageRating != null && (
-                <Text style={styles.detailRating}>★ {selectedShop.averageRating.toFixed(1)}</Text>
-              )}
-            </View>
-            <Text style={styles.detailCategory}>{selectedShop.category} {selectedShop.subCategory ? `> ${selectedShop.subCategory}` : ''}</Text>
-            <Text style={styles.detailAddress}>📍 {selectedShop.address}{selectedShop.detailAddress ? ` ${selectedShop.detailAddress}` : ''}</Text>
-            {selectedShop.phone && <Text style={styles.detailPhone}>📞 {selectedShop.phone}</Text>}
-            {selectedShop.businessHours && <Text style={styles.detailHours}>🕐 {selectedShop.businessHours}</Text>}
-            {selectedShop.description && <Text style={styles.detailDesc}>{selectedShop.description}</Text>}
-            <View style={styles.ownerInfo}>
-              <Text style={styles.ownerLabel}>사장</Text>
-              <Text style={styles.ownerName}>{selectedShop.ownerName}</Text>
-              {selectedShop.ownerSchools.length > 0 && (
-                <Text style={styles.ownerSchool}>{selectedShop.ownerSchools.join(', ')}</Text>
-              )}
-            </View>
-          </View>
 
-          {/* Reviews */}
-          <View style={styles.reviewSection}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <Text style={styles.reviewTitle}>후기 ({reviews.length})</Text>
-              <TouchableOpacity style={styles.writeReviewBtn} onPress={() => setShowReviewModal(true)}>
-                <Text style={styles.writeReviewText}>후기 작성</Text>
+        {isEditing ? (
+          /* ── 수정 폼 ── */
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+            <Text style={styles.inputLabel}>사진 (첫 번째가 대표 사진)</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
+              {shopImageUris.map((uri, idx) => (
+                <View key={idx} style={styles.imageThumbWrap}>
+                  <Image source={{ uri }} style={styles.imageThumb} />
+                  {idx === 0 && <View style={styles.repBadge}><Text style={styles.repBadgeText}>대표</Text></View>}
+                  <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => removeImage(idx)}>
+                    <Ionicons name="close-circle" size={22} color="#FF6B6B" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity style={styles.imageAddBtn} onPress={pickImage}>
+                <Ionicons name="camera-outline" size={28} color={Colors.gray400} />
+                <Text style={styles.imagePickerText}>추가</Text>
+              </TouchableOpacity>
+            </ScrollView>
+
+            <Text style={styles.inputLabel}>가게 이름 *</Text>
+            <TextInput style={styles.input} placeholder="가게 이름" value={shopName} onChangeText={setShopName} />
+
+            <Text style={styles.inputLabel}>업종 *</Text>
+            <View style={[styles.categoryWrap, { paddingHorizontal: 0, marginBottom: 8 }]}>
+              {MAIN_CATEGORIES.map(c => {
+                const icon = CATEGORY_ICON_NAMES[c] || 'storefront-outline';
+                return (
+                  <TouchableOpacity key={c} style={[styles.categoryChip, shopCategory === c && styles.categoryChipActive]} onPress={() => { setShopCategory(c); setShopSubCategory(''); }}>
+                    <View style={[styles.categoryIconCircle, shopCategory === c && styles.categoryIconCircleActive]}>
+                      <Ionicons name={icon as any} size={20} color={shopCategory === c ? '#fff' : '#5D4037'} />
+                    </View>
+                    <Text style={[styles.categoryChipText, shopCategory === c && styles.categoryChipTextActive]}>{c}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {SHOP_CATEGORIES[shopCategory] && (
+              <View style={[styles.categoryWrap, { paddingHorizontal: 0, marginBottom: 8 }]}>
+                {SHOP_CATEGORIES[shopCategory].map(sc => (
+                  <TouchableOpacity key={sc} style={[styles.categoryChip, shopSubCategory === sc && styles.categoryChipActive]} onPress={() => setShopSubCategory(sc)}>
+                    <Text style={[styles.categoryChipText, shopSubCategory === sc && styles.categoryChipTextActive]}>{sc}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <Text style={styles.inputLabel}>주소 *</Text>
+            <TextInput style={styles.input} placeholder="서울시 강남구..." value={shopAddress} onChangeText={setShopAddress} />
+
+            <Text style={styles.inputLabel}>전화번호</Text>
+            <TextInput style={styles.input} placeholder="02-1234-5678" value={shopPhone} onChangeText={setShopPhone} keyboardType="phone-pad" />
+
+            <Text style={styles.inputLabel}>영업시간</Text>
+            <TextInput style={styles.input} placeholder="매일 09:00~22:00" value={shopHours} onChangeText={setShopHours} />
+
+            <Text style={styles.inputLabel}>설명</Text>
+            <TextInput style={styles.textArea} placeholder="가게 소개" value={shopDesc} onChangeText={setShopDesc} multiline textAlignVertical="top" />
+
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+              <TouchableOpacity style={[styles.registerBtn, { flex: 1, backgroundColor: Colors.gray200, marginHorizontal: 0, marginBottom: 0, marginTop: 0 }]} onPress={cancelEdit}>
+                <Text style={[styles.registerBtnText, { color: '#5D4037' }]}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.registerBtn, { flex: 2, marginHorizontal: 0, marginBottom: 0, marginTop: 0, opacity: uploading ? 0.6 : 1 }]} onPress={handleUpdate} disabled={uploading}>
+                <Text style={styles.registerBtnText}>{uploading ? '수정 중...' : '수정 완료'}</Text>
               </TouchableOpacity>
             </View>
-            {reviews.length === 0 && <Text style={styles.noReviews}>아직 후기가 없습니다</Text>}
-            {reviews.map(r => (
-              <View key={r.id} style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <Avatar uri={r.reviewerProfileImageUrl} name={r.reviewerName} size={32} />
-                  <View style={{ marginLeft: 8, flex: 1 }}>
-                    <Text style={styles.reviewerName}>{r.reviewerName}</Text>
-                    <Text style={styles.reviewTime}>{timeAgo(r.createdAt)}</Text>
-                  </View>
-                  <Text style={styles.reviewStars}>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</Text>
-                </View>
-                {r.content && <Text style={styles.reviewContent}>{r.content}</Text>}
+          </ScrollView>
+        ) : (
+          /* ── 상세 보기 ── */
+          <ScrollView>
+            {detailImages.length > 0 && (
+              <ImageGallery images={detailImages} />
+            )}
+            <View style={styles.detailBox}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <Text style={{ fontSize: 20 }}>{CATEGORY_ICONS[selectedShop.category] || '🏪'}</Text>
+                <Text style={styles.detailName}>{selectedShop.shopName}</Text>
+                {selectedShop.averageRating != null && (
+                  <Text style={styles.detailRating}>★ {selectedShop.averageRating.toFixed(1)}</Text>
+                )}
               </View>
-            ))}
-          </View>
-        </ScrollView>
+              <Text style={styles.detailCategory}>{selectedShop.category} {selectedShop.subCategory ? `> ${selectedShop.subCategory}` : ''}</Text>
+              <Text style={styles.detailAddress}>📍 {selectedShop.address}{selectedShop.detailAddress ? ` ${selectedShop.detailAddress}` : ''}</Text>
+              {selectedShop.phone && <Text style={styles.detailPhone}>📞 {selectedShop.phone}</Text>}
+              {selectedShop.businessHours && <Text style={styles.detailHours}>🕐 {selectedShop.businessHours}</Text>}
+              {selectedShop.description && <Text style={styles.detailDesc}>{selectedShop.description}</Text>}
+              <View style={styles.ownerInfo}>
+                <Text style={styles.ownerLabel}>사장</Text>
+                <Text style={styles.ownerName}>{selectedShop.ownerName}</Text>
+                {selectedShop.ownerSchools.length > 0 && (
+                  <Text style={styles.ownerSchool}>{selectedShop.ownerSchools.join(', ')}</Text>
+                )}
+              </View>
+
+              {/* 내 가게일 때 수정/삭제 버튼 */}
+              {isOwner && (
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F0E0B0' }}>
+                  <TouchableOpacity style={[styles.registerBtn, { flex: 1, marginHorizontal: 0, marginBottom: 0, marginTop: 0, paddingVertical: 10 }]} onPress={() => startEdit(selectedShop)}>
+                    <Text style={[styles.registerBtnText, { fontSize: 14 }]}>수정</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.registerBtn, { flex: 1, marginHorizontal: 0, marginBottom: 0, marginTop: 0, paddingVertical: 10, backgroundColor: '#DC2626' }]} onPress={() => handleDeleteShop(selectedShop.id)}>
+                    <Text style={[styles.registerBtnText, { fontSize: 14 }]}>삭제</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Reviews */}
+            <View style={styles.reviewSection}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={styles.reviewTitle}>후기 ({reviews.length})</Text>
+                <TouchableOpacity style={styles.writeReviewBtn} onPress={() => setShowReviewModal(true)}>
+                  <Text style={styles.writeReviewText}>후기 작성</Text>
+                </TouchableOpacity>
+              </View>
+              {reviews.length === 0 && <Text style={styles.noReviews}>아직 후기가 없습니다</Text>}
+              {reviews.map(r => (
+                <View key={r.id} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <Avatar uri={r.reviewerProfileImageUrl} name={r.reviewerName} size={32} />
+                    <View style={{ marginLeft: 8, flex: 1 }}>
+                      <Text style={styles.reviewerName}>{r.reviewerName}</Text>
+                      <Text style={styles.reviewTime}>{timeAgo(r.createdAt)}</Text>
+                    </View>
+                    <Text style={styles.reviewStars}>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</Text>
+                  </View>
+                  {r.content && <Text style={styles.reviewContent}>{r.content}</Text>}
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        )}
 
         {/* Review Modal */}
         <Modal visible={showReviewModal} animationType="slide" transparent>
@@ -507,14 +707,17 @@ export default function AlumniShopScreen() {
 
               <Text style={styles.inputLabel}>업종 *</Text>
               <View style={[styles.categoryWrap, { paddingHorizontal: 0, marginBottom: 8 }]}>
-                {MAIN_CATEGORIES.map(c => (
-                  <TouchableOpacity key={c} style={[styles.categoryChip, shopCategory === c && styles.categoryChipActive]} onPress={() => { setShopCategory(c); setShopSubCategory(''); }}>
-                    <View style={[styles.categoryIconCircle, { backgroundColor: CATEGORY_COLORS[c] || '#F0E0B0' }, shopCategory === c && { backgroundColor: '#2D5016' }]}>
-                      <Text style={{ fontSize: 16 }}>{CATEGORY_ICONS[c]}</Text>
-                    </View>
-                    <Text style={[styles.categoryChipText, shopCategory === c && styles.categoryChipTextActive]}>{c}</Text>
-                  </TouchableOpacity>
-                ))}
+                {MAIN_CATEGORIES.map(c => {
+                  const icon = CATEGORY_ICON_NAMES[c] || 'storefront-outline';
+                  return (
+                    <TouchableOpacity key={c} style={[styles.categoryChip, shopCategory === c && styles.categoryChipActive]} onPress={() => { setShopCategory(c); setShopSubCategory(''); }}>
+                      <View style={[styles.categoryIconCircle, shopCategory === c && styles.categoryIconCircleActive]}>
+                        <Ionicons name={icon as any} size={20} color={shopCategory === c ? '#fff' : '#5D4037'} />
+                      </View>
+                      <Text style={[styles.categoryChipText, shopCategory === c && styles.categoryChipTextActive]}>{c}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
               {SHOP_CATEGORIES[shopCategory] && (
                 <View style={[styles.categoryWrap, { paddingHorizontal: 0, marginBottom: 8 }]}>
@@ -553,10 +756,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF8E7' },
   screenHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#2D5016', paddingTop: HEADER_TOP_PADDING, paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 3, borderBottomColor: '#C49A2A' },
   screenHeaderTitle: { fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 14, paddingTop: HEADER_TOP_PADDING, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A', gap: 10 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, paddingTop: HEADER_TOP_PADDING, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A', gap: 10 },
   backBtn: { flexDirection: 'row', alignItems: 'center' },
   backBtnText: { fontSize: 13, color: '#FFE156', fontWeight: '600' },
-  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold },
+  headerTitle: { flex: 1, fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
 
   headerTabs: { flexDirection: 'row', backgroundColor: '#FFF8E7', borderBottomWidth: 1, borderBottomColor: '#F0E0B0' },
   headerTab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
@@ -625,8 +828,8 @@ const styles = StyleSheet.create({
   modalContent: { backgroundColor: Colors.white, borderRadius: 16, padding: 20 },
   modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.text, marginBottom: 16, fontFamily: Fonts.bold },
   inputLabel: { fontSize: 13, fontWeight: '600', color: Colors.gray700, marginBottom: 4, marginTop: 10 },
-  input: { borderWidth: 1, borderColor: Colors.gray300, borderRadius: 8, padding: 12, fontSize: 14, marginBottom: 4 },
-  textArea: { borderWidth: 1, borderColor: Colors.gray300, borderRadius: 8, padding: 12, fontSize: 14, minHeight: 100, marginBottom: 4 },
+  input: { borderWidth: 1, borderColor: '#F0E0B0', borderRadius: 8, padding: 12, fontSize: 14, marginBottom: 4, backgroundColor: '#ffffff' },
+  textArea: { borderWidth: 1, borderColor: '#F0E0B0', borderRadius: 8, padding: 12, fontSize: 14, minHeight: 100, marginBottom: 4, backgroundColor: '#ffffff' },
   charCount: { fontSize: 11, color: Colors.textMuted, textAlign: 'right' },
   starPicker: { flexDirection: 'row', gap: 6, marginBottom: 8 },
   star: { fontSize: 30, color: Colors.gray300 },

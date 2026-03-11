@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import apiClient from './axios';
 
 export const SHOP_CATEGORIES: Record<string, string[]> = {
@@ -121,10 +122,21 @@ export const alumniShopAPI = {
 
   uploadImage: async (uri: string): Promise<string> => {
     const formData = new FormData();
-    const filename = uri.split('/').pop() || 'photo.jpg';
-    const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1]}` : 'image/jpeg';
-    formData.append('file', { uri, name: filename, type } as any);
+
+    if (Platform.OS === 'web') {
+      // 웹: data URI 또는 blob URL → Blob 변환
+      const resp = await fetch(uri);
+      const blob = await resp.blob();
+      const ext = blob.type?.split('/')?.[1] || 'jpeg';
+      const filename = `photo_${Date.now()}.${ext}`;
+      formData.append('file', blob, filename);
+    } else {
+      const filename = uri.split('/').pop() || 'photo.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      formData.append('file', { uri, name: filename, type } as any);
+    }
+
     const response = await apiClient.post('/posts/upload-image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

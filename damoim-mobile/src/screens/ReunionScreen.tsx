@@ -793,9 +793,9 @@ const styles = StyleSheet.create({
   reunionMetaText: { fontSize: 11, color: Colors.textMuted },
 
   // Detail
-  detailHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A', gap: 10 },
+  detailHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, paddingTop: HEADER_TOP_PADDING, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A', gap: 10 },
   backBtn: { fontSize: 15, color: '#FFE156', fontWeight: '600' },
-  detailTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#FFE156', fontFamily: Fonts.bold },
+  detailTitle: { flex: 1, fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
   memberCount: { fontSize: 13, color: '#FFE156' },
 
   tabRow: { flexDirection: 'row', backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },

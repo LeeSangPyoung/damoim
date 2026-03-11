@@ -406,13 +406,36 @@ export default function MessagesScreen() {
                       ? '읽음'
                       : '안읽음'}
                 </Text>
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() => handleDelete(item)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.deleteBtnText}>삭제</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {isReceived && (
+                    <TouchableOpacity
+                      style={styles.replyBtn}
+                      onPress={() => {
+                        setSelectedUser({
+                          id: 0,
+                          userId: item.sender.userId,
+                          name: item.sender.name,
+                          school: { schoolType: '', schoolName: '', graduationYear: '' },
+                        } as ClassmateInfo);
+                        setSearchQuery(item.sender.name);
+                        setSearchResults([]);
+                        setComposeContent('');
+                        setFromExternal(false);
+                        setComposeVisible(true);
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.replyBtnText}>회신</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => handleDelete(item)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.deleteBtnText}>삭제</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </View>
@@ -781,6 +804,17 @@ const styles = StyleSheet.create({
   readStatus: {
     fontSize: 12,
     color: Colors.textMuted,
+  },
+  replyBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#FFF3D0',
+  },
+  replyBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#C49A2A',
   },
   deleteBtn: {
     paddingHorizontal: 12,

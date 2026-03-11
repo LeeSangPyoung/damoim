@@ -1216,14 +1216,16 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    paddingTop: HEADER_TOP_PADDING,
     backgroundColor: '#2D5016',
     borderBottomWidth: 3,
     borderBottomColor: '#C49A2A',
+    gap: 10,
   },
   backBtn: {
-    paddingRight: 12,
+    paddingRight: 4,
     paddingVertical: 4,
   },
   backBtnText: {
@@ -1232,11 +1234,11 @@ const styles = StyleSheet.create({
     color: '#FFE156',
   },
   chatHeaderTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#fff',
-    marginLeft: 8,
     fontFamily: Fonts.bold,
+    letterSpacing: 2,
   },
 
   // Messages
