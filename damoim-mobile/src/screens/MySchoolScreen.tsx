@@ -143,7 +143,10 @@ export default function MySchoolScreen({ navigation }: any) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>✎ 우리학교</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="school" size={33} color="#fff" style={{ marginTop: -3 }} />
+          <Text style={styles.headerTitle}>우리학교</Text>
+        </View>
         <HeaderActions navigation={navigation} />
       </View>
 

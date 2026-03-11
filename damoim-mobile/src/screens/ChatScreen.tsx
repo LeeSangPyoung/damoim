@@ -927,7 +927,10 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screenHeader}>
-        <Text style={styles.screenTitle}>채팅</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="chatbubbles" size={33} color="#fff" style={{ marginTop: -3 }} />
+          <Text style={styles.screenTitle}>채팅</Text>
+        </View>
         <HeaderActions navigation={navigation} />
       </View>
       <NoticeBanner />

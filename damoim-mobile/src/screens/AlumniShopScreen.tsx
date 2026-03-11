@@ -544,7 +544,10 @@ export default function AlumniShopScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.screenHeader}>
-        <Text style={styles.screenHeaderTitle}>동창이네</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="storefront" size={33} color="#fff" style={{ marginTop: -3 }} />
+          <Text style={styles.screenHeaderTitle}>동창이네</Text>
+        </View>
         <HeaderActions navigation={navigation} />
       </View>
       <NoticeBanner />

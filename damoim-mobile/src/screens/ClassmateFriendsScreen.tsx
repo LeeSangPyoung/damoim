@@ -158,20 +158,16 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
     if (!user) return;
     try {
       const { roomId } = await chatAPI.createOrGetRoom(user.userId, targetUserId);
-      navigation.navigate('Chat', { openRoomId: roomId });
+      navigation.navigate('Chat', { screen: 'ChatHome', params: { openRoomId: roomId } });
     } catch { Alert.alert('실패', '채팅방 생성에 실패했습니다'); }
   };
 
   const handleSendMessage = (targetUserId: string, targetName: string) => {
-    let nav = navigation;
-    while (nav.getParent?.()) nav = nav.getParent();
-    nav.navigate('Messages', { composeToId: targetUserId, composeToName: targetName });
+    navigation.navigate('Messages', { composeToId: targetUserId, composeToName: targetName });
   };
 
   const handleViewProfile = (targetUserId: string) => {
-    let nav = navigation;
-    while (nav.getParent?.()) nav = nav.getParent();
-    nav.navigate('Profile', { userId: targetUserId });
+    navigation.navigate('Profile', { userId: targetUserId });
   };
 
   // ==========================================================================
@@ -315,7 +311,10 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
     <View style={styles.container}>
       {/* Screen Header */}
       <View style={styles.screenHeader}>
-        <Text style={styles.screenHeaderTitle}>내동창친구</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="person-add" size={33} color="#fff" style={{ marginTop: -3 }} />
+          <Text style={styles.screenHeaderTitle}>내동창친구</Text>
+        </View>
         <HeaderActions navigation={navigation} />
       </View>
 

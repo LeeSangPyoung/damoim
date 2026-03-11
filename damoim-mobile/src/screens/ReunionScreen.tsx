@@ -4,6 +4,7 @@ import {
   RefreshControl, Alert, Modal, ScrollView, Image, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
@@ -700,7 +701,10 @@ export default function ReunionScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.listHeader}>
-        <Text style={styles.screenTitle}>찐모임</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="people" size={33} color="#fff" style={{ marginTop: -3 }} />
+          <Text style={styles.screenTitle}>찐모임</Text>
+        </View>
         <HeaderActions navigation={navigation} />
       </View>
 
