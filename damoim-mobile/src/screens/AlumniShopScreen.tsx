@@ -516,7 +516,7 @@ export default function AlumniShopScreen() {
         {/* Review Modal */}
         <Modal visible={showReviewModal} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalContent}>
+            <KeyboardAvoidingView behavior="padding" style={styles.modalContent}>
               <Text style={styles.modalTitle}>후기 작성</Text>
               <Text style={styles.inputLabel}>별점</Text>
               <View style={styles.starPicker}>

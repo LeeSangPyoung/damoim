@@ -261,7 +261,7 @@ export default function PostDetailScreen({ navigation, route }: any) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
     >
       {/* Header */}
       <View style={styles.header}>

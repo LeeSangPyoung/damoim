@@ -930,7 +930,7 @@ export default function ChatScreen() {
   const renderDmChat = (room: ChatRoomResponse) => (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       {/* Header */}
@@ -1138,7 +1138,7 @@ export default function ChatScreen() {
   const renderGroupChat = (room: GroupChatRoomResponse) => (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       {/* Header */}

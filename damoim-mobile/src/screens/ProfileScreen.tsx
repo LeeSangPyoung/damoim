@@ -410,7 +410,7 @@ export default function ProfileScreen() {
 
       {/* ===== Profile Edit Modal ===== */}
       <Modal visible={showEditModal} animationType="slide" presentationStyle="pageSheet">
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           <View style={styles.editContainer}>
             <View style={styles.editHeader}>
               <TouchableOpacity onPress={() => setShowEditModal(false)}>

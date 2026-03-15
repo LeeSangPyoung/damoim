@@ -522,7 +522,7 @@ export default function ReunionScreen() {
             <Modal visible={!!editPost} animationType="slide">
               <KeyboardAvoidingView
                 style={{ flex: 1, backgroundColor: '#FFF8E7' }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior="padding"
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
               >
                 <View style={styles.createPostHeader}>
@@ -927,7 +927,7 @@ export default function ReunionScreen() {
         <Modal visible={showCreatePost} animationType="slide">
           <KeyboardAvoidingView
             style={{ flex: 1, backgroundColor: '#FFF8E7' }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior="padding"
             keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
           >
             {/* Header */}
@@ -1009,7 +1009,7 @@ export default function ReunionScreen() {
         {/* Create Meeting Modal */}
         <Modal visible={showCreateMeeting} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalContent}>
+            <KeyboardAvoidingView behavior="padding" style={styles.modalContent}>
               <ScrollView>
                 <Text style={styles.modalTitle}>모임 만들기</Text>
                 <Text style={styles.inputLabel}>제목 *</Text>

@@ -484,7 +484,7 @@ export default function MessagesScreen() {
       <Modal visible={composeVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={closeCompose}>
         <KeyboardAvoidingView
           style={styles.modalContainer}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
         >
           {/* Modal header */}
           <View style={styles.modalHeader}>
