@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { userAPI, SchoolInfo } from '../api/user';
@@ -83,7 +84,12 @@ export default function MySchoolScreen({ navigation }: any) {
                 school.schoolCode
                   ? userAPI.searchClassmates(user.userId, school.schoolCode, school.graduationYear)
                   : Promise.resolve({ classmates: [], totalCount: 0 }),
-                postAPI.getNewCounts(user.userId, school.schoolName, school.graduationYear),
+                (async () => {
+                  const key = `lastSeen_${school.schoolName}_${school.graduationYear}`;
+                  const lastSeen = await AsyncStorage.getItem(key);
+                  const ts = lastSeen ? parseInt(lastSeen, 10) : 0;
+                  return postAPI.getNewCounts(user.userId, school.schoolName, school.graduationYear, ts, ts, ts);
+                })(),
               ]);
               const newPostCount = (newCounts.all || 0) + (newCounts.myGrade || 0) + (newCounts.myClass || 0);
               return {
@@ -113,6 +119,8 @@ export default function MySchoolScreen({ navigation }: any) {
   };
 
   const handleSchoolPress = (school: SchoolWithStats) => {
+    // 마지막 방문 시간 저장 → NEW 카운트 초기화
+    AsyncStorage.setItem(`lastSeen_${school.schoolName}_${school.graduationYear}`, String(Date.now()));
     navigation.navigate('Board', {
       schoolName: school.schoolName,
       graduationYear: school.graduationYear,
@@ -121,6 +129,7 @@ export default function MySchoolScreen({ navigation }: any) {
   };
 
   const handleGradePress = (school: SchoolWithStats, gc: GradeClass) => {
+    AsyncStorage.setItem(`lastSeen_${school.schoolName}_${school.graduationYear}`, String(Date.now()));
     navigation.navigate('Board', {
       schoolName: school.schoolName,
       graduationYear: school.graduationYear,

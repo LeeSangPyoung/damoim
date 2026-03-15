@@ -439,11 +439,21 @@ public class PostService {
                 .filter(post -> canUserAccessPost(post, matchingSchools))
                 .collect(Collectors.toList());
 
-        // 탭별 새 글 수 계산 (24시간 이내 기준)
-        LocalDateTime since = LocalDateTime.now().minusHours(24);
+        // 탭별 새 글 수 계산 (lastSeen 기준, 없으면 최근 24시간)
+        LocalDateTime defaultSince = LocalDateTime.now().minusHours(24);
+
+        LocalDateTime sinceAll = lastSeenAll > 0
+                ? LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(lastSeenAll), java.time.ZoneId.systemDefault())
+                : defaultSince;
+        LocalDateTime sinceGrade = lastSeenMyGrade > 0
+                ? LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(lastSeenMyGrade), java.time.ZoneId.systemDefault())
+                : defaultSince;
+        LocalDateTime sinceClass = lastSeenMyClass > 0
+                ? LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(lastSeenMyClass), java.time.ZoneId.systemDefault())
+                : defaultSince;
 
         long allCount = accessiblePosts.stream()
-                .filter(p -> p.getCreatedAt() != null && p.getCreatedAt().isAfter(since))
+                .filter(p -> p.getCreatedAt() != null && p.getCreatedAt().isAfter(sinceAll))
                 .filter(p -> {
                     String vis = p.getVisibility();
                     return vis == null || "SCHOOL".equals(vis);
@@ -452,13 +462,13 @@ public class PostService {
         counts.put("all", allCount);
 
         long gradeCount = accessiblePosts.stream()
-                .filter(p -> p.getCreatedAt() != null && p.getCreatedAt().isAfter(since))
+                .filter(p -> p.getCreatedAt() != null && p.getCreatedAt().isAfter(sinceGrade))
                 .filter(p -> isPostForGradeTab(p, schoolName, matchingSchools))
                 .count();
         counts.put("myGrade", gradeCount);
 
         long classCount = accessiblePosts.stream()
-                .filter(p -> p.getCreatedAt() != null && p.getCreatedAt().isAfter(since))
+                .filter(p -> p.getCreatedAt() != null && p.getCreatedAt().isAfter(sinceClass))
                 .filter(p -> isPostForClassTab(p, schoolName, matchingSchools))
                 .count();
         counts.put("myClass", classCount);
