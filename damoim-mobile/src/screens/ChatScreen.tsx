@@ -73,6 +73,12 @@ function groupReactions(reactions?: { emoji: string; userId: string; userName: s
   return Array.from(map.values());
 }
 
+// 이모지만으로 구성된 메시지인지 판별 (1~3개)
+function isEmojiOnly(text: string): boolean {
+  const emojiRegex = /^(\p{Emoji_Presentation}|\p{Extended_Pictographic}){1,3}$/u;
+  return emojiRegex.test(text.trim());
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -896,6 +902,8 @@ export default function ChatScreen() {
                   </View>
                   <Ionicons name="download-outline" size={20} color={isMine ? 'rgba(255,255,255,0.7)' : Colors.gray400} />
                 </TouchableOpacity>
+              ) : isEmojiOnly(item.content) ? (
+                <Text style={{ fontSize: 36, lineHeight: 44 }}>{item.content}</Text>
               ) : (
                 <View style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther]}>
                   <Text style={[styles.msgText, isMine && styles.msgTextMine]}>{item.content}</Text>
@@ -1038,7 +1046,7 @@ export default function ChatScreen() {
         <View style={styles.emojiPanel}>
           <View style={styles.emojiPanelContent}>
             {EMOJI_LIST.map((em, i) => (
-              <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => { setMessageText(prev => prev + em); setShowEmoji(false); }}>
+              <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => setMessageText(prev => prev + em)}>
                 <Text style={styles.emojiText}>{em}</Text>
               </TouchableOpacity>
             ))}
@@ -1103,6 +1111,8 @@ export default function ChatScreen() {
                   </View>
                   <Ionicons name="download-outline" size={20} color={isMine ? 'rgba(255,255,255,0.7)' : Colors.gray400} />
                 </TouchableOpacity>
+              ) : isEmojiOnly(item.content) ? (
+                <Text style={{ fontSize: 36, lineHeight: 44 }}>{item.content}</Text>
               ) : (
                 <View style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther]}>
                   <Text style={[styles.msgText, isMine && styles.msgTextMine]}>{item.content}</Text>
@@ -1265,7 +1275,7 @@ export default function ChatScreen() {
         <View style={styles.emojiPanel}>
           <View style={styles.emojiPanelContent}>
             {EMOJI_LIST.map((em, i) => (
-              <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => { setMessageText(prev => prev + em); setShowEmoji(false); }}>
+              <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => setMessageText(prev => prev + em)}>
                 <Text style={styles.emojiText}>{em}</Text>
               </TouchableOpacity>
             ))}

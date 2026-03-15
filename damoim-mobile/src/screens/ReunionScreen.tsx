@@ -14,7 +14,8 @@ import {
   reunionAPI, ReunionResponse, MeetingResponse, ReunionPostResponse,
   FeeGroupResponse, FeeSummaryResponse, JoinRequestResponse, ReunionCommentResponse,
 } from '../api/reunion';
-import { alumniShopAPI, ShopResponse, CATEGORY_ICONS } from '../api/alumniShop';
+import { alumniShopAPI, ShopResponse, CATEGORY_ICONS, OwnerSchoolDetail } from '../api/alumniShop';
+import { userAPI } from '../api/user';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
 import HeaderActions from '../components/HeaderActions';
@@ -65,6 +66,7 @@ export default function ReunionScreen() {
   const [dateOptions, setDateOptions] = useState<string[]>(['']);
   const [locationOptions, setLocationOptions] = useState<string[]>(['']);
   const [shopList, setShopList] = useState<ShopResponse[]>([]);
+  const [mySchools, setMySchools] = useState<{ schoolName: string; grade: string; classNumber: string }[]>([]);
 
   // Fees
   const [feeGroups, setFeeGroups] = useState<FeeGroupResponse[]>([]);
@@ -127,6 +129,10 @@ export default function ReunionScreen() {
       }
       // Load shops for meeting recommendations
       alumniShopAPI.getShops(user.userId).then(setShopList).catch(() => {});
+      // Load my school info
+      userAPI.getProfile(user.userId).then(p => {
+        if (p.schools) setMySchools(p.schools.map((s: any) => ({ schoolName: s.schoolName, grade: s.grade, classNumber: s.classNumber })));
+      }).catch(() => {});
     } catch {}
   };
 
@@ -1020,8 +1026,36 @@ export default function ReunionScreen() {
                 <Text style={styles.inputLabel}>날짜 옵션</Text>
                 {dateOptions.map((d, i) => (
                   <View key={i} style={styles.optionRow}>
-                    <TextInput style={[styles.input, { flex: 1 }]} placeholder="예: 2026-03-15 18:00" value={d}
-                      onChangeText={v => { const arr = [...dateOptions]; arr[i] = v; setDateOptions(arr); }} />
+                    {Platform.OS === 'web' ? (
+                      <input
+                        type="datetime-local"
+                        value={d}
+                        onChange={(e: any) => { const arr = [...dateOptions]; arr[i] = e.target.value; setDateOptions(arr); }}
+                        style={{
+                          flex: 1, padding: 12, fontSize: 14, borderRadius: 10,
+                          border: '1.5px solid #F0E0B0', backgroundColor: '#fff',
+                          fontFamily: 'inherit', color: '#3E2723',
+                        } as any}
+                      />
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.input, { flex: 1, justifyContent: 'center' }]}
+                        onPress={() => {
+                          const now = new Date();
+                          const year = now.getFullYear();
+                          const month = String(now.getMonth() + 1).padStart(2, '0');
+                          const day = String(now.getDate()).padStart(2, '0');
+                          const hours = String(now.getHours()).padStart(2, '0');
+                          const mins = String(now.getMinutes()).padStart(2, '0');
+                          const defaultVal = d || `${year}-${month}-${day}T${hours}:${mins}`;
+                          const arr = [...dateOptions]; arr[i] = defaultVal; setDateOptions(arr);
+                        }}
+                      >
+                        <Text style={{ color: d ? '#3E2723' : '#9e9e9e', fontSize: 14 }}>
+                          {d ? d.replace('T', ' ') : '날짜를 선택하세요'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                     {dateOptions.length > 1 && (
                       <TouchableOpacity onPress={() => setDateOptions(dateOptions.filter((_, j) => j !== i))}>
                         <Text style={styles.removeOption}>✕</Text>
@@ -1080,7 +1114,23 @@ export default function ReunionScreen() {
                               {shop.averageRating != null && ` ★${shop.averageRating.toFixed(1)}`}
                             </Text>
                             <Text style={styles.shopRecommendAddr}>{shop.address}</Text>
-                            <Text style={styles.shopRecommendMeta}>{shop.ownerName} 사장 · {shop.subCategory || shop.category}</Text>
+                            <Text style={styles.shopRecommendMeta}>
+                              {shop.ownerName} 사장 · {shop.subCategory || shop.category}
+                              {(() => {
+                                if (!shop.ownerSchoolDetails || !mySchools.length) return '';
+                                const matches = shop.ownerSchoolDetails.filter(s =>
+                                  mySchools.some(my => my.schoolName === s.schoolName && my.grade === s.grade && my.classNumber === s.classNumber)
+                                );
+                                if (matches.length === 0) return shop.ownerSchools?.[0] ? `\n✎ ${shop.ownerSchools[0]}` : '';
+                                const labels = [...new Set(matches.map(s => {
+                                  const shortName = s.schoolName.replace(/(초등학교|중학교|고등학교|대학교)/, (m: string) =>
+                                    m === '초등학교' ? '초' : m === '중학교' ? '중' : m === '고등학교' ? '고' : '대'
+                                  );
+                                  return `${shortName} ${s.grade}-${s.classNumber}반`;
+                                }))];
+                                return `\n🤝 나와 ${labels.join(', ')} 동창`;
+                              })()}
+                            </Text>
                           </View>
                           <Text style={added ? styles.shopAddedLabel : styles.shopAddLabel}>{added ? '추가됨' : '+ 추가'}</Text>
                         </TouchableOpacity>
