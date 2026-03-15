@@ -23,9 +23,30 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 응답 인터셉터: 401 처리
+// 응답 인터셉터: localhost URL을 현재 서버 URL로 치환
+const SERVER_BASE = API_BASE_URL.replace('/api', '');
+function replaceLocalhostUrls(data: any): any {
+  if (typeof data === 'string') {
+    return data.replace(/http:\/\/localhost:8080/g, SERVER_BASE);
+  }
+  if (Array.isArray(data)) {
+    return data.map(replaceLocalhostUrls);
+  }
+  if (data && typeof data === 'object') {
+    const result: any = {};
+    for (const key of Object.keys(data)) {
+      result[key] = replaceLocalhostUrls(data[key]);
+    }
+    return result;
+  }
+  return data;
+}
+
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    response.data = replaceLocalhostUrls(response.data);
+    return response;
+  },
   async (error) => {
     if (error.response?.status === 401) {
       await AsyncStorage.removeItem('token');

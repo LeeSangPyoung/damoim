@@ -960,17 +960,6 @@ export default function ChatScreen() {
         />
       )}
 
-      {/* Emoji Panel */}
-      {showEmoji && (
-        <ScrollView style={styles.emojiPanel} contentContainerStyle={styles.emojiPanelContent}>
-          {EMOJI_LIST.map((em, i) => (
-            <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => setMessageText(prev => prev + em)}>
-              <Text style={styles.emojiText}>{em}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
       {/* Attach Menu */}
       {showAttachMenu && (
         <View style={styles.attachMenu}>
@@ -1041,6 +1030,19 @@ export default function ChatScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Emoji Panel - 인풋 아래 */}
+      {showEmoji && (
+        <View style={styles.emojiPanel}>
+          <View style={styles.emojiPanelContent}>
+            {EMOJI_LIST.map((em, i) => (
+              <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => { setMessageText(prev => prev + em); setShowEmoji(false); }}>
+                <Text style={styles.emojiText}>{em}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 
@@ -1185,17 +1187,6 @@ export default function ChatScreen() {
         />
       )}
 
-      {/* Emoji Panel */}
-      {showEmoji && (
-        <ScrollView style={styles.emojiPanel} contentContainerStyle={styles.emojiPanelContent}>
-          {EMOJI_LIST.map((em, i) => (
-            <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => setMessageText(prev => prev + em)}>
-              <Text style={styles.emojiText}>{em}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
       {/* Attach Menu */}
       {showAttachMenu && (
         <View style={styles.attachMenu}>
@@ -1266,6 +1257,19 @@ export default function ChatScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Emoji Panel - 인풋 아래 */}
+      {showEmoji && (
+        <View style={styles.emojiPanel}>
+          <View style={styles.emojiPanelContent}>
+            {EMOJI_LIST.map((em, i) => (
+              <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => { setMessageText(prev => prev + em); setShowEmoji(false); }}>
+                <Text style={styles.emojiText}>{em}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 
@@ -1900,13 +1904,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF3D0',
     borderTopWidth: 1,
     borderTopColor: '#E8C84A',
-    maxHeight: 100,
+    height: 150,
   },
   emojiPanelContent: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 4,
-    paddingVertical: 2,
+    paddingVertical: 4,
   },
   emojiItem: {
     width: 44,
@@ -1915,7 +1919,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emojiText: {
-    fontSize: 24,
+    fontSize: 26,
   },
   membersPanel: {
     backgroundColor: Colors.backgroundDeep,
