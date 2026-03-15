@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Damoim 디자인 샘플</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Noto Sans KR', sans-serif; background: #f0f0f0; padding: 20px; }
+  h1 { text-align: center; margin-bottom: 30px; font-size: 24px; color: #333; }
+  .samples { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; }
+  .sample-label { text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+  .phone { width: 375px; height: 750px; border-radius: 36px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.18); position: relative; border: 8px solid #222; background: #fff; }
+  .phone-inner { height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+
+  /* ====== CONCEPT 1: 네이트온/싸이월드 레트로 ====== */
+  .c1 { background: linear-gradient(180deg, #FFF8F0 0%, #FFF3E6 100%); }
+  .c1 .status-bar { background: #FF9F43; color: #fff; padding: 8px 16px; font-size: 11px; display: flex; justify-content: space-between; }
+  .c1 .header { background: linear-gradient(135deg, #FF9F43, #FF6B6B); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .c1 .header-title { color: #fff; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .c1 .header-icons { display: flex; gap: 12px; }
+  .c1 .header-icon { width: 32px; height: 32px; background: rgba(255,255,255,0.25); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .c1 .notice { background: #FFF5E6; border-bottom: 1px solid #FFE0B2; padding: 10px 16px; font-size: 12px; color: #E65100; display: flex; align-items: center; gap: 6px; }
+  .c1 .tabs { display: flex; border-bottom: 2px solid #FFE0B2; background: #fff; }
+  .c1 .tab { flex: 1; text-align: center; padding: 12px; font-size: 14px; color: #999; cursor: pointer; position: relative; }
+  .c1 .tab.active { color: #FF6B6B; font-weight: 700; }
+  .c1 .tab.active::after { content: ''; position: absolute; bottom: -2px; left: 20%; right: 20%; height: 3px; background: #FF6B6B; border-radius: 3px; }
+  .c1 .chat-list { flex: 1; padding: 8px; }
+  .c1 .chat-item { display: flex; align-items: center; padding: 12px; background: #fff; border-radius: 16px; margin-bottom: 8px; box-shadow: 0 2px 8px rgba(255,159,67,0.08); border: 1px solid #FFE8CC; }
+  .c1 .avatar { width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .c1 .avatar.a1 { background: linear-gradient(135deg, #FF9F43, #FF6B6B); }
+  .c1 .avatar.a2 { background: linear-gradient(135deg, #48C9B0, #2ECC71); }
+  .c1 .avatar.a3 { background: linear-gradient(135deg, #9B59B6, #E056A0); }
+  .c1 .chat-info { flex: 1; min-width: 0; }
+  .c1 .chat-name { font-weight: 700; font-size: 15px; color: #333; }
+  .c1 .chat-msg { font-size: 13px; color: #888; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c1 .chat-meta { text-align: right; flex-shrink: 0; margin-left: 8px; }
+  .c1 .chat-time { font-size: 11px; color: #bbb; }
+  .c1 .chat-badge { background: linear-gradient(135deg, #FF6B6B, #FF9F43); color: #fff; font-size: 11px; font-weight: 700; border-radius: 10px; padding: 2px 8px; margin-top: 4px; display: inline-block; }
+  .c1 .bottom-nav { display: flex; background: #fff; border-top: 1px solid #FFE0B2; padding: 6px 0 10px; }
+  .c1 .nav-item { flex: 1; text-align: center; font-size: 10px; color: #999; }
+  .c1 .nav-item.active { color: #FF6B6B; }
+  .c1 .nav-icon { font-size: 22px; margin-bottom: 2px; }
+
+  /* ====== CONCEPT 2: 모던 미니멀 ====== */
+  .c2 { background: #FAFAFA; }
+  .c2 .status-bar { background: #fff; color: #333; padding: 8px 16px; font-size: 11px; display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; }
+  .c2 .header { background: #fff; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #EEEEEE; }
+  .c2 .header-title { color: #111; font-size: 22px; font-weight: 800; letter-spacing: -1px; }
+  .c2 .header-icons { display: flex; gap: 16px; }
+  .c2 .header-icon { font-size: 20px; color: #555; }
+  .c2 .notice { display: none; }
+  .c2 .tabs { display: flex; background: #fff; padding: 0 20px; gap: 20px; }
+  .c2 .tab { padding: 14px 0; font-size: 14px; color: #bbb; cursor: pointer; position: relative; font-weight: 500; }
+  .c2 .tab.active { color: #111; font-weight: 700; }
+  .c2 .tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: #111; }
+  .c2 .chat-list { flex: 1; padding: 4px 0; }
+  .c2 .chat-item { display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #F5F5F5; }
+  .c2 .avatar { width: 48px; height: 48px; border-radius: 14px; margin-right: 14px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; color: #fff; flex-shrink: 0; }
+  .c2 .avatar.a1 { background: #111; }
+  .c2 .avatar.a2 { background: #6C63FF; }
+  .c2 .avatar.a3 { background: #333; }
+  .c2 .chat-info { flex: 1; min-width: 0; }
+  .c2 .chat-name { font-weight: 700; font-size: 15px; color: #111; }
+  .c2 .chat-msg { font-size: 13px; color: #999; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c2 .chat-meta { text-align: right; flex-shrink: 0; margin-left: 8px; }
+  .c2 .chat-time { font-size: 11px; color: #ccc; }
+  .c2 .chat-badge { background: #6C63FF; color: #fff; font-size: 11px; font-weight: 700; border-radius: 10px; padding: 2px 8px; margin-top: 4px; display: inline-block; }
+  .c2 .bottom-nav { display: flex; background: #fff; border-top: 1px solid #eee; padding: 6px 0 10px; }
+  .c2 .nav-item { flex: 1; text-align: center; font-size: 10px; color: #bbb; }
+  .c2 .nav-item.active { color: #6C63FF; }
+  .c2 .nav-icon { font-size: 22px; margin-bottom: 2px; }
+
+  /* ====== CONCEPT 3: 학교/동창 감성 ====== */
+  .c3 { background: #F5F7F0; }
+  .c3 .status-bar { background: #2C3E50; color: #D4AF37; padding: 8px 16px; font-size: 11px; display: flex; justify-content: space-between; }
+  .c3 .header { background: linear-gradient(135deg, #1A3A4A, #2C3E50); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .c3 .header-title { color: #D4AF37; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+  .c3 .header-icons { display: flex; gap: 12px; }
+  .c3 .header-icon { width: 32px; height: 32px; background: rgba(212,175,55,0.2); border: 1px solid rgba(212,175,55,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .c3 .notice { background: #2C3E50; padding: 10px 16px; font-size: 12px; color: #D4AF37; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid #3D5467; }
+  .c3 .tabs { display: flex; background: #F8F6EF; border-bottom: 1px solid #E0D9C8; }
+  .c3 .tab { flex: 1; text-align: center; padding: 12px; font-size: 14px; color: #999; cursor: pointer; position: relative; }
+  .c3 .tab.active { color: #2C3E50; font-weight: 700; }
+  .c3 .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 20%; right: 20%; height: 3px; background: #D4AF37; border-radius: 3px; }
+  .c3 .chat-list { flex: 1; padding: 8px; }
+  .c3 .chat-item { display: flex; align-items: center; padding: 12px; background: #FFFEF9; border-radius: 12px; margin-bottom: 8px; box-shadow: 0 2px 8px rgba(44,62,80,0.06); border: 1px solid #E8E2D0; }
+  .c3 .avatar { width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0; border: 2px solid #D4AF37; }
+  .c3 .avatar.a1 { background: linear-gradient(135deg, #2C3E50, #1A3A4A); }
+  .c3 .avatar.a2 { background: linear-gradient(135deg, #27AE60, #2ECC71); }
+  .c3 .avatar.a3 { background: linear-gradient(135deg, #8E44AD, #9B59B6); }
+  .c3 .chat-info { flex: 1; min-width: 0; }
+  .c3 .chat-name { font-weight: 700; font-size: 15px; color: #2C3E50; }
+  .c3 .chat-msg { font-size: 13px; color: #7F8C8D; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c3 .chat-meta { text-align: right; flex-shrink: 0; margin-left: 8px; }
+  .c3 .chat-time { font-size: 11px; color: #BDC3C7; }
+  .c3 .chat-badge { background: linear-gradient(135deg, #D4AF37, #C19A2E); color: #fff; font-size: 11px; font-weight: 700; border-radius: 10px; padding: 2px 8px; margin-top: 4px; display: inline-block; }
+  .c3 .bottom-nav { display: flex; background: #2C3E50; border-top: 1px solid #3D5467; padding: 6px 0 10px; }
+  .c3 .nav-item { flex: 1; text-align: center; font-size: 10px; color: #7F8C8D; }
+  .c3 .nav-item.active { color: #D4AF37; }
+  .c3 .nav-icon { font-size: 22px; margin-bottom: 2px; }
+
+  .sample-desc { text-align: center; margin-top: 10px; font-size: 13px; color: #777; max-width: 375px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<h1>🎨 Damoim 디자인 컨셉 비교</h1>
+
+<div class="samples">
+
+  <!-- CONCEPT 1 -->
+  <div>
+    <div class="sample-label">1️⃣ 네이트온/싸이월드 레트로</div>
+    <div class="phone">
+      <div class="phone-inner c1">
+        <div class="status-bar"><span>10:53</span><span>Wi-Fi 🔋</span></div>
+        <div class="header">
+          <div class="header-title">다모임 💬</div>
+          <div class="header-icons">
+            <div class="header-icon">🔔</div>
+            <div class="header-icon">✉️</div>
+            <div class="header-icon">👤</div>
+          </div>
+        </div>
+        <div class="notice">📢 [공지] 봄맞이 동창 모임 이벤트 진행중!</div>
+        <div class="tabs">
+          <div class="tab active">1:1 채팅</div>
+          <div class="tab">그룹 채팅</div>
+        </div>
+        <div class="chat-list">
+          <div class="chat-item">
+            <div class="avatar a1">홍</div>
+            <div class="chat-info">
+              <div class="chat-name">홍길동</div>
+              <div class="chat-msg">어! 오랜만이다~ 잘 지내지? 😄</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">오후 9:04</div>
+              <div class="chat-badge">3</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar a2">김</div>
+            <div class="chat-info">
+              <div class="chat-name">김영희</div>
+              <div class="chat-msg">내일 모임 장소 어디로 할까?</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">오후 7:30</div>
+              <div class="chat-badge">1</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar a3">박</div>
+            <div class="chat-info">
+              <div class="chat-name">박철수</div>
+              <div class="chat-msg">사진 보내줄게 잠깐만~</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">3/8</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar a1">이</div>
+            <div class="chat-info">
+              <div class="chat-name">이민수</div>
+              <div class="chat-msg">졸업앨범 찾았다!! 🎉</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">3/7</div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><div class="nav-icon">🏫</div>우리학교</div>
+          <div class="nav-item"><div class="nav-icon">👥</div>내동창친구</div>
+          <div class="nav-item active"><div class="nav-icon">💬</div>채팅</div>
+          <div class="nav-item"><div class="nav-icon">🎉</div>찐모임</div>
+          <div class="nav-item"><div class="nav-icon">🏪</div>동창이네</div>
+        </div>
+      </div>
+    </div>
+    <div class="sample-desc">따뜻한 오렌지+코랄 톤<br>둥근 카드 UI, 그라데이션 아바타<br>친근하고 감성적인 분위기</div>
+  </div>
+
+  <!-- CONCEPT 2 -->
+  <div>
+    <div class="sample-label">2️⃣ 모던 미니멀</div>
+    <div class="phone">
+      <div class="phone-inner c2">
+        <div class="status-bar"><span>10:53</span><span>Wi-Fi 🔋</span></div>
+        <div class="header">
+          <div class="header-title">채팅</div>
+          <div class="header-icons">
+            <div class="header-icon">🔔</div>
+            <div class="header-icon">✉️</div>
+            <div class="header-icon">👤</div>
+          </div>
+        </div>
+        <div class="notice"></div>
+        <div class="tabs">
+          <div class="tab active">1:1</div>
+          <div class="tab">그룹</div>
+        </div>
+        <div class="chat-list">
+          <div class="chat-item">
+            <div class="avatar a1">홍</div>
+            <div class="chat-info">
+              <div class="chat-name">홍길동</div>
+              <div class="chat-msg">어! 오랜만이다~ 잘 지내지? 😄</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">오후 9:04</div>
+              <div class="chat-badge">3</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar a2">김</div>
+            <div class="chat-info">
+              <div class="chat-name">김영희</div>
+              <div class="chat-msg">내일 모임 장소 어디로 할까?</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">오후 7:30</div>
+              <div class="chat-badge">1</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar a3">박</div>
+            <div class="chat-info">
+              <div class="chat-name">박철수</div>
+              <div class="chat-msg">사진 보내줄게 잠깐만~</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">3/8</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar a1">이</div>
+            <div class="chat-info">
+              <div class="chat-name">이민수</div>
+              <div class="chat-msg">졸업앨범 찾았다!! 🎉</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">3/7</div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><div class="nav-icon">🏫</div>우리학교</div>
+          <div class="nav-item"><div class="nav-icon">👥</div>동창친구</div>
+          <div class="nav-item active"><div class="nav-icon">💬</div>채팅</div>
+          <div class="nav-item"><div class="nav-icon">🎉</div>찐모임</div>
+          <div class="nav-item"><div class="nav-icon">🏪</div>동창이네</div>
+        </div>
+      </div>
+    </div>
+    <div class="sample-desc">흑백 + 바이올렛 포인트<br>사각 아바타, 미니멀 레이아웃<br>깔끔하고 세련된 분위기</div>
+  </div>
+
+  <!-- CONCEPT 3 -->
+  <div>
+    <div class="sample-label">3️⃣ 학교/동창 감성 (네이비+골드)</div>
+    <div class="phone">
+      <div class="phone-inner c3">
+        <div class="status-bar"><span>10:53</span><span>Wi-Fi 🔋</span></div>
+        <div class="header">
+          <div class="header-title">✦ 다모임</div>
+          <div class="header-icons">
+            <div class="header-icon">🔔</div>
+            <div class="header-icon">✉️</div>
+            <div class="header-icon">👤</div>
+          </div>
+        </div>
+        <div class="notice">📢 [공지] 봄맞이 동창 모임 이벤트!</div>
+        <div class="tabs">
+          <div class="tab active">1:1 채팅</div>
+          <div class="tab">그룹 채팅</div>
+        </div>
+        <div class="chat-list">
+          <div class="chat-item">
+            <div class="avatar a1">홍</div>
+            <div class="chat-info">
+              <div class="chat-name">홍길동</div>
+              <div class="chat-msg">어! 오랜만이다~ 잘 지내지? 😄</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">오후 9:04</div>
+              <div class="chat-badge">3</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar a2">김</div>
+            <div class="chat-info">
+              <div class="chat-name">김영희</div>
+              <div class="chat-msg">내일 모임 장소 어디로 할까?</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">오후 7:30</div>
+              <div class="chat-badge">1</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar a3">박</div>
+            <div class="chat-info">
+              <div class="chat-name">박철수</div>
+              <div class="chat-msg">사진 보내줄게 잠깐만~</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">3/8</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar a1">이</div>
+            <div class="chat-info">
+              <div class="chat-name">이민수</div>
+              <div class="chat-msg">졸업앨범 찾았다!! 🎉</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">3/7</div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><div class="nav-icon">🏫</div>우리학교</div>
+          <div class="nav-item"><div class="nav-icon">👥</div>내동창친구</div>
+          <div class="nav-item active"><div class="nav-icon">💬</div>채팅</div>
+          <div class="nav-item"><div class="nav-icon">🎉</div>찐모임</div>
+          <div class="nav-item"><div class="nav-icon">🏪</div>동창이네</div>
+        </div>
+      </div>
+    </div>
+    <div class="sample-desc">네이비+골드 프리미엄 톤<br>골드 테두리 아바타, 클래식 카드<br>품격있고 신뢰감 있는 분위기</div>
+  </div>
+
+</div>
+
+</body>
+</html>

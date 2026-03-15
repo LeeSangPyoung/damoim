@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
 import { useAuth } from '../hooks/useAuth';
 import LoadingScreen from '../components/LoadingScreen';
 import { chatAPI } from '../api/chat';
@@ -21,6 +21,7 @@ import AlumniShopScreen from '../screens/AlumniShopScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import ClassmateFriendsScreen from '../screens/ClassmateFriendsScreen';
+import PostDetailScreen from '../screens/PostDetailScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -34,12 +35,11 @@ function AuthStack() {
   );
 }
 
-// 공통 화면(프로필, 쪽지, 알림)을 각 탭 스택에 추가하는 헬퍼
-const commonScreens = (Stack: ReturnType<typeof createStackNavigator>) => (
+const commonScreens = (StackNav: ReturnType<typeof createStackNavigator>) => (
   <>
-    <Stack.Screen name="Messages" component={MessagesScreen} />
-    <Stack.Screen name="Notifications" component={NotificationsScreen} />
-    <Stack.Screen name="Profile" component={ProfileScreen} />
+    <StackNav.Screen name="Messages" component={MessagesScreen} />
+    <StackNav.Screen name="Notifications" component={NotificationsScreen} />
+    <StackNav.Screen name="Profile" component={ProfileScreen} />
   </>
 );
 
@@ -50,6 +50,8 @@ function MySchoolStack() {
       <MySchoolStackNav.Screen name="MySchoolHome" component={MySchoolScreen} />
       <MySchoolStackNav.Screen name="Board" component={DashboardScreen} />
       <MySchoolStackNav.Screen name="CreatePost" component={CreatePostScreen} />
+      <MySchoolStackNav.Screen name="EditPost" component={CreatePostScreen} />
+      <MySchoolStackNav.Screen name="PostDetail" component={PostDetailScreen} />
       {commonScreens(MySchoolStackNav)}
     </MySchoolStackNav.Navigator>
   );
@@ -80,6 +82,7 @@ function ReunionStack() {
   return (
     <ReunionStackNav.Navigator screenOptions={{ headerShown: false }}>
       <ReunionStackNav.Screen name="ReunionHome" component={ReunionScreen} />
+      <ReunionStackNav.Screen name="PostDetail" component={PostDetailScreen} />
       {commonScreens(ReunionStackNav)}
     </ReunionStackNav.Navigator>
   );
@@ -94,6 +97,96 @@ function ShopStack() {
     </ShopStackNav.Navigator>
   );
 }
+
+const TAB_CONFIG = [
+  { name: 'MySchool', label: '우리학교', icon: 'school' as const },
+  { name: 'Friends', label: '내동창친구', icon: 'person-add' as const },
+  { name: 'Chat', label: '채팅', icon: 'chatbubbles' as const },
+  { name: 'Reunion', label: '찐모임', icon: 'people' as const },
+  { name: 'Shop', label: '동창이네', icon: 'storefront' as const },
+];
+
+// 커스텀 탭바: 탭 클릭 시 해당 탭의 중첩 스택 상태를 완전히 초기화
+function CustomTabBar({ state, navigation, chatUnread }: any) {
+  const handleTabPress = (tabName: string, tabIndex: number) => {
+    // 모든 탭의 key를 새로 생성 → React Navigation이 완전히 새 라우트로 인식
+    navigation.reset({
+      index: tabIndex,
+      routes: state.routes.map((r: any) => ({
+        name: r.name,
+        key: `${r.name}-${Date.now()}`,
+      })),
+    });
+  };
+
+  return (
+    <View style={tabStyles.bar}>
+      {state.routes.map((route: any, index: number) => {
+        const config = TAB_CONFIG.find(t => t.name === route.name);
+        if (!config) return null;
+        const isFocused = state.index === index;
+        const color = isFocused ? '#FFFFFF' : 'rgba(255,255,255,0.45)';
+
+        return (
+          <TouchableOpacity
+            key={route.key}
+            onPress={() => handleTabPress(config.name, index)}
+            style={tabStyles.tab}
+          >
+            <View>
+              <Ionicons name={config.icon} size={24} color={color} />
+              {config.name === 'Chat' && chatUnread && (
+                <View style={tabStyles.badge}>
+                  <Text style={tabStyles.badgeText}>N</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[tabStyles.label, { color }]}>{config.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+const tabStyles = StyleSheet.create({
+  bar: {
+    flexDirection: 'row',
+    backgroundColor: '#2D5016',
+    borderTopColor: '#C49A2A',
+    borderTopWidth: 4,
+    paddingBottom: 4,
+    height: 60,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 4,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Gaegu_700Bold',
+    marginTop: 2,
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    backgroundColor: '#FF3B30',
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+});
 
 function MainTabs() {
   const { user } = useAuth();
@@ -116,49 +209,18 @@ function MainTabs() {
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: 'rgba(255,255,255,0.45)',
-        tabBarStyle: {
-          backgroundColor: '#2D5016',
-          borderTopColor: '#C49A2A',
-          borderTopWidth: 4,
-          paddingBottom: 4,
-          height: 60,
-        },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', fontFamily: 'Gaegu_700Bold' },
-        tabBarIcon: ({ color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap = 'home';
-          switch (route.name) {
-            case 'MySchool': iconName = 'school'; break;
-            case 'Chat': iconName = 'chatbubbles'; break;
-            case 'Reunion': iconName = 'people'; break;
-            case 'Shop': iconName = 'storefront'; break;
-            case 'Friends': iconName = 'person-add'; break;
-          }
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-      })}
+      tabBar={(props) => <CustomTabBar {...props} chatUnread={chatUnread} />}
+      screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen name="MySchool" component={MySchoolStack} options={{ tabBarLabel: '우리학교' }} />
-      <Tab.Screen name="Friends" component={FriendsStack} options={{ tabBarLabel: '내동창친구' }} />
-      <Tab.Screen
-        name="Chat"
-        component={ChatStack}
-        options={{
-          tabBarLabel: '채팅',
-          tabBarBadge: chatUnread ? 'N' : undefined,
-          tabBarBadgeStyle: { backgroundColor: '#FF3B30', fontSize: 9, fontWeight: '800', minWidth: 16, height: 16, lineHeight: 15, borderRadius: 8 },
-        }}
-      />
-      <Tab.Screen name="Reunion" component={ReunionStack} options={{ tabBarLabel: '찐모임' }} />
-      <Tab.Screen name="Shop" component={ShopStack} options={{ tabBarLabel: '동창이네' }} />
+      <Tab.Screen name="MySchool" component={MySchoolStack} />
+      <Tab.Screen name="Friends" component={FriendsStack} />
+      <Tab.Screen name="Chat" component={ChatStack} />
+      <Tab.Screen name="Reunion" component={ReunionStack} />
+      <Tab.Screen name="Shop" component={ShopStack} />
     </Tab.Navigator>
   );
 }
 
-// 루트 스택: 탭만 (공통 화면은 각 탭 내부 스택에 포함)
 function RootStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

@@ -74,31 +74,27 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
       setPendingRequests(pr);
       setSentRequests(sr);
 
+      // 학교별 동창 검색을 병렬로 실행
+      const schoolQueries = profile.schools
+        .filter((s: any) => s.schoolCode && s.schoolType !== '대학교')
+        .map((s: any) => userAPI.searchClassmates(user.userId, s.schoolCode, s.graduationYear).catch(() => ({ classmates: [] })));
+      const schoolResults = await Promise.all(schoolQueries);
+
       const allCm: ClassmateInfo[] = [];
       const seen = new Set<string>();
-      for (const school of profile.schools) {
-        if (school.schoolCode && school.schoolType !== '대학교') {
-          try {
-            const res = await userAPI.searchClassmates(user.userId, school.schoolCode, school.graduationYear);
-            for (const c of res.classmates) {
-              if (!seen.has(c.userId)) { seen.add(c.userId); allCm.push(c); }
-            }
-          } catch {}
+      for (const res of schoolResults) {
+        for (const c of res.classmates) {
+          if (!seen.has(c.userId)) { seen.add(c.userId); allCm.push(c); }
         }
       }
       setAllClassmates(allCm);
       setOnlineClassmates(allCm.filter(c => c.online));
 
-      // 친구 온라인 상태
+      // 동창 목록에서 친구 온라인 상태 매핑 (개별 API 호출 없이)
+      const cmOnlineMap: Record<string, boolean> = {};
+      for (const c of allCm) { cmOnlineMap[c.userId] = !!c.online; }
       const onlineMap: Record<string, boolean> = {};
-      await Promise.all(
-        fr.slice(0, 30).map(async (f) => {
-          try {
-            const p = await userAPI.getProfile(f.userId);
-            onlineMap[f.userId] = !!p.online;
-          } catch { onlineMap[f.userId] = false; }
-        })
-      );
+      for (const f of fr) { onlineMap[f.userId] = cmOnlineMap[f.userId] ?? false; }
       setFriendOnlineMap(onlineMap);
 
       // 동창에 대한 친구 상태
@@ -535,7 +531,7 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                   </View>
                 ) : (
                   pendingRequests.map(req => (
-                    <View key={req.friendshipId} style={styles.personRow}>
+                    <TouchableOpacity key={req.friendshipId} style={styles.personRow} onPress={() => navigation.navigate('Profile', { userId: req.userId })}>
                       <View style={styles.avatarWrap}>
                         <Avatar uri={req.profileImageUrl} name={req.name} size={44} />
                       </View>
@@ -551,7 +547,7 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                           <Text style={styles.rejectBtnText}>거절</Text>
                         </TouchableOpacity>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   ))
                 )}
 
@@ -564,7 +560,7 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                   </View>
                 ) : (
                   sentRequests.map(req => (
-                    <View key={req.friendshipId} style={styles.personRow}>
+                    <TouchableOpacity key={req.friendshipId} style={styles.personRow} onPress={() => navigation.navigate('Profile', { userId: req.userId })}>
                       <View style={styles.avatarWrap}>
                         <Avatar uri={req.profileImageUrl} name={req.name} size={44} />
                       </View>
@@ -575,7 +571,7 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                       <TouchableOpacity style={styles.cancelBtn} onPress={() => handleRejectRequest(req.friendshipId)}>
                         <Text style={styles.cancelBtnText}>취소</Text>
                       </TouchableOpacity>
-                    </View>
+                    </TouchableOpacity>
                   ))
                 )}
               </>

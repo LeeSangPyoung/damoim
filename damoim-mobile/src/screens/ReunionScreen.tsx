@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
   RefreshControl, Alert, Modal, ScrollView, Image, KeyboardAvoidingView, Platform,
+  ActivityIndicator,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../constants/colors';
@@ -46,7 +48,14 @@ export default function ReunionScreen() {
   // Feed
   const [posts, setPosts] = useState<ReunionPostResponse[]>([]);
   const [newPostContent, setNewPostContent] = useState('');
+  const [newPostImages, setNewPostImages] = useState<string[]>([]);
+  const [postSubmitting, setPostSubmitting] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
+  const [menuPost, setMenuPost] = useState<ReunionPostResponse | null>(null);
+  const [editPost, setEditPost] = useState<ReunionPostResponse | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editImages, setEditImages] = useState<string[]>([]);
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   // Meetings
   const [meetings, setMeetings] = useState<MeetingResponse[]>([]);
@@ -64,6 +73,14 @@ export default function ReunionScreen() {
   // Members
   const [joinRequests, setJoinRequests] = useState<JoinRequestResponse[]>([]);
 
+  // Reunion menu (edit/delete)
+  const [menuReunion, setMenuReunion] = useState<ReunionResponse | null>(null);
+  const [editingReunion, setEditingReunion] = useState<ReunionResponse | null>(null);
+  const [showEditReunionModal, setShowEditReunionModal] = useState(false);
+  const [editReunionName, setEditReunionName] = useState('');
+  const [editReunionDesc, setEditReunionDesc] = useState('');
+  const [editReunionCoverUris, setEditReunionCoverUris] = useState<string[]>([]);
+
   // Join by code
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinCode, setJoinCode] = useState('');
@@ -72,6 +89,7 @@ export default function ReunionScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [coverImageUris, setCoverImageUris] = useState<string[]>([]);
 
   useEffect(() => { if (user) loadReunions(); }, [user]);
 
@@ -112,18 +130,116 @@ export default function ReunionScreen() {
     } catch {}
   };
 
+  const pickCoverImage = async () => {
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e: any) => {
+        const file = e.target?.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              setCoverImageUris(prev => [...prev, reader.result as string]);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
+    } else {
+      const ImagePicker = require('expo-image-picker');
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setCoverImageUris(prev => [...prev, result.assets[0].uri]);
+      }
+    }
+  };
+
+  const removeCoverImage = (index: number) => {
+    setCoverImageUris(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleCreateReunion = async () => {
     if (!user || !newName.trim()) return;
     try {
-      await reunionAPI.createReunion(user.userId, { name: newName.trim(), description: newDesc.trim(), memberIds: [] });
+      let uploadedCoverUrl: string | undefined;
+      if (coverImageUris.length > 0) {
+        uploadedCoverUrl = await reunionAPI.uploadImage(coverImageUris[0]);
+      }
+      await reunionAPI.createReunion(user.userId, { name: newName.trim(), description: newDesc.trim(), coverImageUrl: uploadedCoverUrl, memberIds: [] });
       setShowCreateModal(false);
       setNewName('');
       setNewDesc('');
+      setCoverImageUris([]);
       loadReunions();
       Alert.alert('완료', '찐모임이 생성되었습니다!');
     } catch (e: any) {
       Alert.alert('오류', e?.response?.data?.error || '생성 실패');
     }
+  };
+
+  const handleEditReunion = async () => {
+    if (!user || !editingReunion || !editReunionName.trim()) return;
+    try {
+      let uploadedCoverUrl: string | undefined;
+      if (editReunionCoverUris.length > 0 && !editReunionCoverUris[0].startsWith('http')) {
+        uploadedCoverUrl = await reunionAPI.uploadImage(editReunionCoverUris[0]);
+      } else if (editReunionCoverUris.length > 0) {
+        uploadedCoverUrl = editReunionCoverUris[0];
+      }
+      await reunionAPI.updateReunion(editingReunion.id, user.userId, {
+        name: editReunionName.trim(),
+        description: editReunionDesc.trim() || undefined,
+        coverImageUrl: uploadedCoverUrl,
+      });
+      setShowEditReunionModal(false);
+      setEditingReunion(null);
+      loadReunions();
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || '수정 실패';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('오류', msg);
+    }
+  };
+
+  const handleDeleteReunion = async (reunion: ReunionResponse) => {
+    if (!user) return;
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm(`"${reunion.name}" 모임을 삭제하시겠습니까?\n모든 데이터가 삭제됩니다.`)
+      : await new Promise<boolean>(resolve => {
+          Alert.alert('모임 삭제', `"${reunion.name}" 모임을 삭제하시겠습니까?\n모든 데이터가 삭제됩니다.`, [
+            { text: '취소', style: 'cancel', onPress: () => resolve(false) },
+            { text: '삭제', style: 'destructive', onPress: () => resolve(true) },
+          ]);
+        });
+    if (!confirmed) return;
+    try {
+      await reunionAPI.deleteReunion(reunion.id, user.userId);
+      setMenuReunion(null);
+      loadReunions();
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || '삭제 실패';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('오류', msg);
+    }
+  };
+
+  const openReunionMenu = (reunion: ReunionResponse) => {
+    setMenuReunion(reunion);
+  };
+
+  const openReunionEdit = (reunion: ReunionResponse) => {
+    setEditReunionName(reunion.name);
+    setEditReunionDesc(reunion.description || '');
+    setEditReunionCoverUris(reunion.coverImageUrl ? [reunion.coverImageUrl] : []);
+    setEditingReunion(reunion);
+    setMenuReunion(null);
+    setShowEditReunionModal(true);
   };
 
   const handleJoinByCode = async () => {
@@ -169,15 +285,79 @@ export default function ReunionScreen() {
     }
   };
 
+  const MAX_POST_IMAGES = 5;
+
+  const pickImagesFor = async (currentImages: string[], setter: React.Dispatch<React.SetStateAction<string[]>>) => {
+    if (currentImages.length >= MAX_POST_IMAGES) {
+      Alert.alert('알림', `이미지는 최대 ${MAX_POST_IMAGES}장까지 첨부할 수 있습니다.`);
+      return;
+    }
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.multiple = true;
+      input.onchange = (e: any) => {
+        const files = Array.from(e.target?.files || []) as File[];
+        const remaining = MAX_POST_IMAGES - currentImages.length;
+        files.slice(0, remaining).forEach(file => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              setter(prev => [...prev, reader.result as string].slice(0, MAX_POST_IMAGES));
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      };
+      input.click();
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '사진 라이브러리 접근 권한이 필요합니다.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_POST_IMAGES - currentImages.length,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      const newUris = result.assets.map(a => a.uri);
+      setter(prev => [...prev, ...newUris].slice(0, MAX_POST_IMAGES));
+    }
+  };
+  const pickPostImages = () => pickImagesFor(newPostImages, setNewPostImages);
+  const pickEditImages = () => pickImagesFor(editImages, setEditImages);
+
   const handleCreatePost = async () => {
     if (!user || !selected || !newPostContent.trim()) return;
+    setPostSubmitting(true);
     try {
-      await reunionAPI.createPost(selected.id, user.userId, { content: newPostContent.trim() });
+      let finalUrls: string[] = [];
+      if (newPostImages.length > 0) {
+        finalUrls = await Promise.all(
+          newPostImages.map(uri =>
+            uri.startsWith('http') ? Promise.resolve(uri) : reunionAPI.uploadImage(uri)
+          )
+        );
+      }
+      await reunionAPI.createPost(selected.id, user.userId, {
+        content: newPostContent.trim(),
+        imageUrls: finalUrls.length > 0 ? finalUrls : undefined,
+      });
       setShowCreatePost(false);
       setNewPostContent('');
+      setNewPostImages([]);
       const p = await reunionAPI.getPosts(selected.id, user.userId);
       setPosts(p);
-    } catch {}
+    } catch {
+      Alert.alert('오류', '게시글 작성에 실패했습니다.');
+    } finally {
+      setPostSubmitting(false);
+    }
   };
 
   const handleToggleFee = async (feeId: number) => {
@@ -220,7 +400,7 @@ export default function ReunionScreen() {
         {/* Header */}
         <View style={styles.detailHeader}>
           <TouchableOpacity onPress={() => { setView('list'); setSelected(null); }}>
-            <Text style={styles.backBtn}>← 뒤로</Text>
+            <Ionicons name="chevron-back" size={26} color="#FFE156" />
           </TouchableOpacity>
           <Text style={styles.detailTitle} numberOfLines={1}>{selected.name}</Text>
           <Text style={styles.memberCount}>{selected.memberCount}명</Text>
@@ -240,52 +420,206 @@ export default function ReunionScreen() {
 
         {/* Feed Tab */}
         {tab === 'feed' && (
-          <FlatList
-            data={posts}
-            keyExtractor={item => String(item.id)}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); selected && loadDetail(selected); }} />}
-            ListHeaderComponent={
-              <TouchableOpacity style={styles.createPostBtn} onPress={() => setShowCreatePost(true)}>
-                <Text style={styles.createPostText}>✏️ 글 작성하기...</Text>
-              </TouchableOpacity>
-            }
-            ListEmptyComponent={<EmptyState icon="📝" title="아직 게시글이 없습니다" />}
-            renderItem={({ item }) => (
-              <View style={styles.postCard}>
-                <View style={styles.postHeader}>
-                  <Avatar uri={item.authorProfileImageUrl} name={item.authorName} size={36} />
-                  <View style={{ marginLeft: 8, flex: 1 }}>
-                    <Text style={styles.postAuthor}>{item.authorName}</Text>
-                    <Text style={styles.postTime}>{timeAgo(item.createdAt)}</Text>
+          <View style={{ flex: 1 }}>
+            <FlatList
+              data={posts}
+              keyExtractor={item => String(item.id)}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); selected && loadDetail(selected); }} />}
+              ListEmptyComponent={<EmptyState ionIcon="document-text-outline" title="아직 게시글이 없습니다" />}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.postCard}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate('PostDetail', { reunionPost: item })}
+                >
+                  <View style={styles.postHeader}>
+                    <Avatar uri={item.authorProfileImageUrl} name={item.authorName} size={36} />
+                    <View style={{ marginLeft: 8, flex: 1 }}>
+                      <Text style={styles.postAuthor}>{item.authorName}</Text>
+                      <Text style={styles.postTime}>{timeAgo(item.createdAt)}</Text>
+                    </View>
+                    {user?.userId === item.authorUserId && (
+                      <TouchableOpacity
+                        onPress={() => setMenuPost(item)}
+                        activeOpacity={0.6}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="ellipsis-vertical" size={16} color={Colors.gray400} />
+                      </TouchableOpacity>
+                    )}
                   </View>
-                </View>
-                <Text style={styles.postContent}>{item.content}</Text>
-                {item.imageUrls.length > 0 && (
-                  <ScrollView horizontal style={{ marginTop: 8 }}>
-                    {item.imageUrls.map((url, i) => (
-                      <Image key={i} source={{ uri: url }} style={styles.postImage} />
-                    ))}
-                  </ScrollView>
-                )}
-                <View style={styles.postActions}>
-                  <TouchableOpacity onPress={async () => {
-                    if (!user) return;
-                    try {
-                      await reunionAPI.togglePostLike(item.id, user.userId);
-                      const p = await reunionAPI.getPosts(selected.id, user.userId);
-                      setPosts(p);
-                    } catch {}
+                  <Text style={styles.postContent}>{item.content}</Text>
+                  {item.imageUrls.length > 0 && (
+                    <ScrollView horizontal style={{ marginTop: 8 }}>
+                      {item.imageUrls.map((url, i) => (
+                        <Image key={i} source={{ uri: url }} style={styles.postImage} />
+                      ))}
+                    </ScrollView>
+                  )}
+                  <View style={styles.postActions}>
+                    <TouchableOpacity onPress={async () => {
+                      if (!user) return;
+                      try {
+                        await reunionAPI.togglePostLike(item.id, user.userId);
+                        const p = await reunionAPI.getPosts(selected.id, user.userId);
+                        setPosts(p);
+                      } catch {}
+                    }}>
+                      <Text style={[styles.postAction, item.liked && { color: Colors.red }]}>
+                        {item.liked ? '❤️' : '🤍'} {item.likeCount}
+                      </Text>
+                    </TouchableOpacity>
+                    <Text style={styles.postAction}>💬 {item.commentCount}</Text>
+                    <Text style={styles.postAction}>👁 {item.viewCount}</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+            <TouchableOpacity style={styles.fab} onPress={() => setShowCreatePost(true)} activeOpacity={0.8}>
+              <Ionicons name="add" size={28} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Post Menu Modal */}
+            <Modal visible={!!menuPost} transparent animationType="fade" onRequestClose={() => setMenuPost(null)}>
+              <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setMenuPost(null)}>
+                <View style={styles.menuSheet}>
+                  <TouchableOpacity style={styles.menuItem} onPress={() => {
+                    if (!menuPost) return;
+                    setEditContent(menuPost.content);
+                    setEditImages(menuPost.imageUrls || []);
+                    setEditPost(menuPost);
+                    setMenuPost(null);
                   }}>
-                    <Text style={[styles.postAction, item.liked && { color: Colors.red }]}>
-                      {item.liked ? '❤️' : '🤍'} {item.likeCount}
-                    </Text>
+                    <Ionicons name="create-outline" size={18} color={Colors.primary} />
+                    <Text style={styles.menuItemText}>수정</Text>
                   </TouchableOpacity>
-                  <Text style={styles.postAction}>💬 {item.commentCount}</Text>
-                  <Text style={styles.postAction}>👁 {item.viewCount}</Text>
+                  <TouchableOpacity style={styles.menuItem} onPress={async () => {
+                    if (!menuPost || !user || !selected) return;
+                    const postToDelete = menuPost;
+                    setMenuPost(null);
+                    Alert.alert('삭제', '게시글을 삭제하시겠습니까?', [
+                      { text: '취소', style: 'cancel' },
+                      { text: '삭제', style: 'destructive', onPress: async () => {
+                        try {
+                          await reunionAPI.deletePost(postToDelete.id, user.userId);
+                          const p = await reunionAPI.getPosts(selected.id, user.userId);
+                          setPosts(p);
+                        } catch { Alert.alert('오류', '삭제에 실패했습니다.'); }
+                      }},
+                    ]);
+                  }}>
+                    <Ionicons name="trash-outline" size={18} color="#D32F2F" />
+                    <Text style={[styles.menuItemText, { color: '#D32F2F' }]}>삭제</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]} onPress={() => setMenuPost(null)}>
+                    <Text style={styles.menuItemText}>취소</Text>
+                  </TouchableOpacity>
                 </View>
-              </View>
-            )}
-          />
+              </TouchableOpacity>
+            </Modal>
+
+            {/* Edit Post Modal - Full Screen */}
+            <Modal visible={!!editPost} animationType="slide">
+              <KeyboardAvoidingView
+                style={{ flex: 1, backgroundColor: '#FFF8E7' }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+              >
+                <View style={styles.createPostHeader}>
+                  <TouchableOpacity onPress={() => { setEditPost(null); setEditContent(''); setEditImages([]); }} activeOpacity={0.7}>
+                    <Ionicons name="close" size={26} color="#FFE156" />
+                  </TouchableOpacity>
+                  <Text style={styles.createPostHeaderTitle}>글 수정</Text>
+                  <TouchableOpacity
+                    style={[styles.createPostSubmitBtn, (!editContent.trim() || editSubmitting) && { backgroundColor: '#ccc' }]}
+                    onPress={async () => {
+                      if (!editPost || !user || !selected || !editContent.trim()) return;
+                      setEditSubmitting(true);
+                      try {
+                        let finalUrls: string[] = [];
+                        if (editImages.length > 0) {
+                          finalUrls = await Promise.all(
+                            editImages.map(uri =>
+                              uri.startsWith('http') ? Promise.resolve(uri) : reunionAPI.uploadImage(uri)
+                            )
+                          );
+                        }
+                        await reunionAPI.updatePost(editPost.id, user.userId, {
+                          content: editContent.trim(),
+                          imageUrls: finalUrls.length > 0 ? finalUrls : undefined,
+                        });
+                        setEditPost(null);
+                        setEditContent('');
+                        setEditImages([]);
+                        const p = await reunionAPI.getPosts(selected.id, user.userId);
+                        setPosts(p);
+                      } catch {
+                        Alert.alert('오류', '수정에 실패했습니다.');
+                      } finally {
+                        setEditSubmitting(false);
+                      }
+                    }}
+                    disabled={!editContent.trim() || editSubmitting}
+                    activeOpacity={0.7}
+                  >
+                    {editSubmitting ? (
+                      <ActivityIndicator size="small" color="#2D5016" />
+                    ) : (
+                      <Text style={styles.createPostSubmitText}>수정</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
+                  <TextInput
+                    style={styles.createPostInput}
+                    placeholder="내용을 입력하세요..."
+                    placeholderTextColor={Colors.textMuted}
+                    value={editContent}
+                    onChangeText={setEditContent}
+                    multiline
+                    textAlignVertical="top"
+                    autoFocus
+                  />
+                  <View style={{ marginTop: 4, marginBottom: 8 }}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
+                      {editImages.map((uri, index) => (
+                        <View key={`${uri}-${index}`} style={{ position: 'relative', borderRadius: 12, overflow: 'visible' }}>
+                          <Image source={{ uri }} style={{ width: 88, height: 88, borderRadius: 12, backgroundColor: '#f0f0f0', borderWidth: 1, borderColor: '#F0E0B0' }} />
+                          {index === 0 && editImages.length > 1 && (
+                            <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: '#2D5016', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                              <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFE156' }}>대표</Text>
+                            </View>
+                          )}
+                          <TouchableOpacity
+                            style={{ position: 'absolute', top: -6, right: -6, zIndex: 10 }}
+                            onPress={() => setEditImages(prev => prev.filter((_, i) => i !== index))}
+                            activeOpacity={0.7}
+                          >
+                            <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' }}>
+                              <Ionicons name="close" size={12} color="#fff" />
+                            </View>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                      {editImages.length < MAX_POST_IMAGES && (
+                        <TouchableOpacity
+                          style={{ width: 88, height: 88, borderRadius: 12, borderWidth: 1.5, borderColor: '#F0E0B0', borderStyle: 'dashed', backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', gap: 2 }}
+                          onPress={pickEditImages}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="add" size={28} color={Colors.gray400} />
+                          <Text style={{ fontSize: 11, color: Colors.gray400, fontWeight: '500' }}>{editImages.length}/{MAX_POST_IMAGES}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </ScrollView>
+                  </View>
+                </ScrollView>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#F0E0B0', backgroundColor: '#fff' }}>
+                  <Text style={{ fontSize: 12, color: Colors.textMuted }}>{editContent.length}자</Text>
+                </View>
+              </KeyboardAvoidingView>
+            </Modal>
+          </View>
         )}
 
         {/* Meetings Tab */}
@@ -299,7 +633,7 @@ export default function ReunionScreen() {
                 <Text style={styles.primaryBtnText}>+ 모임 만들기</Text>
               </TouchableOpacity>
             }
-            ListEmptyComponent={<EmptyState icon="📅" title="모임이 없습니다" />}
+            ListEmptyComponent={<EmptyState ionIcon="calendar-outline" title="모임이 없습니다" />}
             renderItem={({ item: mt }) => {
               const isConfirmed = mt.status === 'CONFIRMED';
               const isCancelled = mt.status === 'CANCELLED';
@@ -537,7 +871,7 @@ export default function ReunionScreen() {
                 ))}
               </View>
             ))}
-            {feeGroups.length === 0 && <EmptyState icon="💰" title="회비 내역이 없습니다" />}
+            {feeGroups.length === 0 && <EmptyState ionIcon="wallet-outline" title="회비 내역이 없습니다" />}
           </ScrollView>
         )}
 
@@ -589,18 +923,87 @@ export default function ReunionScreen() {
           </ScrollView>
         )}
 
-        {/* Create Post Modal */}
-        <Modal visible={showCreatePost} animationType="slide" transparent>
-          <View style={styles.modalOverlay}>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalContent}>
-              <Text style={styles.modalTitle}>글 작성</Text>
-              <TextInput style={styles.textArea} placeholder="내용을 입력하세요" value={newPostContent} onChangeText={setNewPostContent} multiline numberOfLines={5} textAlignVertical="top" />
-              <View style={styles.modalBtns}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCreatePost(false)}><Text style={styles.cancelBtnText}>취소</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.submitBtn} onPress={handleCreatePost}><Text style={styles.submitBtnText}>작성</Text></TouchableOpacity>
+        {/* Create Post Modal - Full Screen */}
+        <Modal visible={showCreatePost} animationType="slide">
+          <KeyboardAvoidingView
+            style={{ flex: 1, backgroundColor: '#FFF8E7' }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+          >
+            {/* Header */}
+            <View style={styles.createPostHeader}>
+              <TouchableOpacity onPress={() => { setShowCreatePost(false); setNewPostContent(''); setNewPostImages([]); }} activeOpacity={0.7}>
+                <Ionicons name="close" size={26} color="#FFE156" />
+              </TouchableOpacity>
+              <Text style={styles.createPostHeaderTitle}>글 작성</Text>
+              <TouchableOpacity
+                style={[styles.createPostSubmitBtn, (!newPostContent.trim() || postSubmitting) && { backgroundColor: '#ccc' }]}
+                onPress={handleCreatePost}
+                disabled={!newPostContent.trim() || postSubmitting}
+                activeOpacity={0.7}
+              >
+                {postSubmitting ? (
+                  <ActivityIndicator size="small" color="#2D5016" />
+                ) : (
+                  <Text style={styles.createPostSubmitText}>게시</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
+              {/* Content input */}
+              <TextInput
+                style={styles.createPostInput}
+                placeholder="동창들에게 공유하고 싶은 이야기를 적어보세요..."
+                placeholderTextColor={Colors.textMuted}
+                value={newPostContent}
+                onChangeText={setNewPostContent}
+                multiline
+                textAlignVertical="top"
+                autoFocus
+              />
+
+              {/* Image section */}
+              <View style={{ marginTop: 4, marginBottom: 8 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
+                  {newPostImages.map((uri, index) => (
+                    <View key={`${uri}-${index}`} style={{ position: 'relative', borderRadius: 12, overflow: 'visible' }}>
+                      <Image source={{ uri }} style={{ width: 88, height: 88, borderRadius: 12, backgroundColor: '#f0f0f0', borderWidth: 1, borderColor: '#F0E0B0' }} />
+                      {index === 0 && newPostImages.length > 1 && (
+                        <View style={{ position: 'absolute', bottom: 4, left: 4, backgroundColor: '#2D5016', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                          <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFE156' }}>대표</Text>
+                        </View>
+                      )}
+                      <TouchableOpacity
+                        style={{ position: 'absolute', top: -6, right: -6, zIndex: 10 }}
+                        onPress={() => setNewPostImages(prev => prev.filter((_, i) => i !== index))}
+                        activeOpacity={0.7}
+                      >
+                        <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' }}>
+                          <Ionicons name="close" size={12} color="#fff" />
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  {newPostImages.length < MAX_POST_IMAGES && (
+                    <TouchableOpacity
+                      style={{ width: 88, height: 88, borderRadius: 12, borderWidth: 1.5, borderColor: '#F0E0B0', borderStyle: 'dashed', backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', gap: 2 }}
+                      onPress={pickPostImages}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="add" size={28} color={Colors.gray400} />
+                      <Text style={{ fontSize: 11, color: Colors.gray400, fontWeight: '500' }}>{newPostImages.length}/{MAX_POST_IMAGES}</Text>
+                    </TouchableOpacity>
+                  )}
+                </ScrollView>
               </View>
-            </KeyboardAvoidingView>
-          </View>
+            </ScrollView>
+
+            {/* Bottom bar */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#F0E0B0', backgroundColor: '#fff' }}>
+              <Text style={{ fontSize: 12, color: Colors.textMuted }}>{newPostContent.length}자</Text>
+            </View>
+          </KeyboardAvoidingView>
         </Modal>
 
         {/* Create Meeting Modal */}
@@ -723,7 +1126,7 @@ export default function ReunionScreen() {
         data={reunions}
         keyExtractor={item => String(item.id)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadReunions(); }} />}
-        ListEmptyComponent={<EmptyState icon="👥" title="참여 중인 찐모임이 없습니다" subtitle="모임을 만들거나 초대 코드로 가입하세요" />}
+        ListEmptyComponent={<EmptyState ionIcon="people-outline" title="참여 중인 찐모임이 없습니다" subtitle="모임을 만들거나 초대 코드로 가입하세요" />}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.reunionCard} onPress={() => loadDetail(item)}>
             {item.coverImageUrl ? (
@@ -741,6 +1144,15 @@ export default function ReunionScreen() {
                 {item.schoolName && <Text style={styles.reunionMetaText}>{item.schoolName}</Text>}
               </View>
             </View>
+            {user?.userId === item.createdByUserId && (
+              <TouchableOpacity
+                style={styles.reunionMenuBtn}
+                onPress={(e) => { e.stopPropagation(); openReunionMenu(item); }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="ellipsis-vertical" size={18} color={Colors.textMuted} />
+              </TouchableOpacity>
+            )}
           </TouchableOpacity>
         )}
       />
@@ -750,13 +1162,83 @@ export default function ReunionScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>찐모임 만들기</Text>
+            <Text style={styles.inputLabel}>사진 (첫 번째가 대표 사진)</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
+              {coverImageUris.map((uri, idx) => (
+                <View key={idx} style={styles.imageThumbWrap}>
+                  <Image source={{ uri }} style={styles.imageThumb} />
+                  {idx === 0 && <View style={styles.repBadge}><Text style={styles.repBadgeText}>대표</Text></View>}
+                  <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => removeCoverImage(idx)}>
+                    <Ionicons name="close-circle" size={22} color="#FF6B6B" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity style={styles.coverPlaceholder} onPress={pickCoverImage}>
+                <Ionicons name="camera-outline" size={28} color={Colors.gray400} />
+                <Text style={styles.coverPlaceholderText}>추가</Text>
+              </TouchableOpacity>
+            </ScrollView>
             <Text style={styles.inputLabel}>모임 이름 *</Text>
             <TextInput style={styles.input} placeholder="모임 이름" value={newName} onChangeText={setNewName} />
             <Text style={styles.inputLabel}>설명</Text>
             <TextInput style={styles.textArea} placeholder="모임 설명" value={newDesc} onChangeText={setNewDesc} multiline numberOfLines={3} textAlignVertical="top" />
             <View style={styles.modalBtns}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCreateModal(false)}><Text style={styles.cancelBtnText}>취소</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowCreateModal(false); setCoverImageUris([]); }}><Text style={styles.cancelBtnText}>취소</Text></TouchableOpacity>
               <TouchableOpacity style={styles.submitBtn} onPress={handleCreateReunion}><Text style={styles.submitBtnText}>만들기</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Reunion Modal */}
+      <Modal visible={showEditReunionModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>모임 수정</Text>
+            <Text style={styles.inputLabel}>대표 사진</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
+              {editReunionCoverUris.map((uri, idx) => (
+                <View key={idx} style={styles.imageThumbWrap}>
+                  <Image source={{ uri }} style={styles.imageThumb} />
+                  <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => setEditReunionCoverUris(prev => prev.filter((_, i) => i !== idx))}>
+                    <Ionicons name="close-circle" size={22} color="#FF6B6B" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {editReunionCoverUris.length === 0 && (
+                <TouchableOpacity style={styles.coverPlaceholder} onPress={async () => {
+                  if (Platform.OS === 'web') {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = (e: any) => {
+                      const file = e.target?.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          if (typeof reader.result === 'string') setEditReunionCoverUris([reader.result]);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    };
+                    input.click();
+                  } else {
+                    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [16, 9], quality: 0.8 });
+                    if (!result.canceled && result.assets[0]) setEditReunionCoverUris([result.assets[0].uri]);
+                  }
+                }}>
+                  <Ionicons name="camera-outline" size={28} color={Colors.gray400} />
+                  <Text style={styles.coverPlaceholderText}>추가</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+            <Text style={styles.inputLabel}>모임 이름 *</Text>
+            <TextInput style={styles.input} placeholder="모임 이름" value={editReunionName} onChangeText={setEditReunionName} />
+            <Text style={styles.inputLabel}>설명</Text>
+            <TextInput style={styles.textArea} placeholder="모임 설명" value={editReunionDesc} onChangeText={setEditReunionDesc} multiline numberOfLines={3} textAlignVertical="top" />
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowEditReunionModal(false); setEditingReunion(null); }}><Text style={styles.cancelBtnText}>취소</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.submitBtn} onPress={handleEditReunion}><Text style={styles.submitBtnText}>수정</Text></TouchableOpacity>
             </View>
           </View>
         </View>
@@ -774,6 +1256,27 @@ export default function ReunionScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Reunion Menu Modal (수정/삭제) */}
+      <Modal visible={!!menuReunion} animationType="fade" transparent>
+        <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setMenuReunion(null)}>
+          <View style={styles.menuSheet}>
+            <Text style={{ fontFamily: Fonts.bold, fontSize: 15, color: Colors.text, textAlign: 'center', marginBottom: 8 }}>{menuReunion?.name}</Text>
+            <TouchableOpacity style={styles.menuItem} onPress={() => menuReunion && openReunionEdit(menuReunion)}>
+              <Ionicons name="create-outline" size={20} color={Colors.text} />
+              <Text style={styles.menuItemText}>수정</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => menuReunion && handleDeleteReunion(menuReunion)}>
+              <Ionicons name="trash-outline" size={20} color="#FF4444" />
+              <Text style={[styles.menuItemText, { color: '#FF4444' }]}>삭제</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]} onPress={() => setMenuReunion(null)}>
+              <Ionicons name="close-outline" size={20} color={Colors.textMuted} />
+              <Text style={[styles.menuItemText, { color: Colors.textMuted }]}>취소</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -795,6 +1298,7 @@ const styles = StyleSheet.create({
   reunionDesc: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   reunionMeta: { flexDirection: 'row', gap: 8, marginTop: 4 },
   reunionMetaText: { fontSize: 11, color: Colors.textMuted },
+  reunionMenuBtn: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10 },
 
   // Detail
   detailHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, paddingTop: HEADER_TOP_PADDING, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A', gap: 10 },
@@ -809,8 +1313,12 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#2D5016' },
 
   // Post
-  createPostBtn: { margin: 12, padding: 14, backgroundColor: Colors.white, borderRadius: 10, borderWidth: 1, borderColor: Colors.border },
-  createPostText: { fontSize: 14, color: Colors.textMuted },
+  fab: {
+    position: 'absolute', right: 20, bottom: 20,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: '#2D5016', justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 5,
+  },
   postCard: { marginHorizontal: 12, marginTop: 10, padding: 14, backgroundColor: '#ffffff', borderRadius: 12, borderWidth: 1, borderColor: '#F0E0B0' },
   postHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   postAuthor: { fontSize: 14, fontWeight: '600', color: Colors.text, fontFamily: Fonts.bold },
@@ -950,4 +1458,85 @@ const styles = StyleSheet.create({
   shopRecommendMeta: { fontSize: 11, color: Colors.slate400, marginTop: 1 },
   shopAddLabel: { fontSize: 11, fontWeight: '600', color: Colors.white, backgroundColor: Colors.green, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   shopAddedLabel: { fontSize: 11, fontWeight: '600', color: Colors.gray400, backgroundColor: Colors.gray200, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+
+  // Cover image picker (multi)
+  imageThumbWrap: { position: 'relative', width: 80, height: 80, borderRadius: 8, overflow: 'hidden' },
+  imageThumb: { width: 80, height: 80, borderRadius: 8 },
+  repBadge: { position: 'absolute', top: 4, left: 4, backgroundColor: Colors.primary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  repBadgeText: { fontSize: 9, fontWeight: '700', color: Colors.white },
+  imageRemoveBtn: { position: 'absolute', top: -2, right: -2 },
+  coverPlaceholder: { width: 80, height: 80, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.gray50, borderRadius: 8, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed', gap: 2 },
+  coverPlaceholderText: { fontSize: 11, color: Colors.gray400, fontFamily: Fonts.regular },
+  createPostHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: HEADER_TOP_PADDING,
+    paddingBottom: 12,
+    backgroundColor: '#2D5016',
+    borderBottomWidth: 3,
+    borderBottomColor: '#C49A2A',
+  },
+  createPostHeaderTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#fff',
+    fontFamily: Fonts.bold,
+    letterSpacing: 2,
+  },
+  createPostSubmitBtn: {
+    backgroundColor: '#FFE156',
+    paddingHorizontal: 18,
+    paddingVertical: 7,
+    borderRadius: 18,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  createPostSubmitText: {
+    color: '#2D5016',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: Fonts.bold,
+  },
+  createPostInput: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    fontSize: 15,
+    lineHeight: 22,
+    color: Colors.text,
+    minHeight: 200,
+    backgroundColor: '#fff',
+    margin: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F0E0B0',
+    paddingBottom: 12,
+    fontFamily: Fonts.regular,
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  menuSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    paddingBottom: 32,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  menuItemText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text,
+  },
 });

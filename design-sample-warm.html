@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Damoim - 따뜻한 노란 칠판 컨셉</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@300;400;700&family=Hi+Melody&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, sans-serif; background: #F5E6C8; padding: 20px; min-height: 100vh; }
+  h1 { text-align: center; margin-bottom: 8px; font-size: 28px; color: #5D4037; font-family: 'Gaegu', cursive; }
+  .subtitle { text-align: center; color: #8D6E63; margin-bottom: 30px; font-family: 'Gaegu', cursive; font-size: 16px; }
+
+  .samples { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; }
+  .sample-label { text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #5D4037; font-family: 'Gaegu', cursive; }
+
+  .phone { width: 390px; height: 780px; border-radius: 36px; overflow: hidden; box-shadow: 0 8px 40px rgba(93,64,55,0.2); position: relative; border: 8px solid #5D4037; }
+  .phone-inner { height: 100%; overflow-y: auto; display: flex; flex-direction: column; font-family: 'Gaegu', cursive; }
+
+  /* ====== 따뜻한 노란 배경 + 칠판 포인트 ====== */
+  .warm { background: #FFF8E7; }
+
+  .warm .status-bar {
+    background: #2D5016;
+    color: rgba(255,255,255,0.8);
+    padding: 8px 16px;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .warm .header {
+    background: #2D5016;
+    padding: 14px 16px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+  }
+  /* 칠판 텍스처 */
+  .warm .header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #8B6914, #C49A2A, #8B6914, #C49A2A, #8B6914);
+  }
+  .warm .header-title {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+    letter-spacing: 2px;
+  }
+  .warm .header-icons { display: flex; gap: 10px; }
+  .warm .header-icon {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    border: 2px solid rgba(255,255,255,0.25);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  .warm .notice {
+    background: #FFF3D0;
+    border-bottom: 1.5px dashed #E8C84A;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #8B6914;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .warm .tabs {
+    display: flex;
+    background: #FFF8E7;
+    border-bottom: 2px solid #F0E0B0;
+  }
+  .warm .tab {
+    flex: 1; text-align: center; padding: 13px;
+    font-size: 16px; color: #C4A96A;
+    cursor: pointer; position: relative;
+    font-weight: 400;
+  }
+  .warm .tab.active { color: #2D5016; font-weight: 700; }
+  .warm .tab.active::after {
+    content: ''; position: absolute;
+    bottom: -2px; left: 20%; right: 20%;
+    height: 3px;
+    background: #2D5016;
+    border-radius: 3px;
+  }
+
+  .warm .chat-list { flex: 1; padding: 10px 12px; }
+  .warm .chat-item {
+    display: flex; align-items: center;
+    padding: 14px;
+    background: #fff;
+    border-radius: 16px;
+    margin-bottom: 10px;
+    border: 1.5px solid #F0E0B0;
+    box-shadow: 0 2px 8px rgba(139,105,20,0.06);
+  }
+
+  .warm .avatar {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    margin-right: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .warm .chat-info { flex: 1; min-width: 0; }
+  .warm .chat-name {
+    font-weight: 700; font-size: 16px;
+    color: #3E2723;
+  }
+  .warm .chat-school {
+    font-size: 12px;
+    color: #2D5016;
+    margin-top: 1px;
+    opacity: 0.7;
+  }
+  .warm .chat-msg {
+    font-size: 14px;
+    color: #8D6E63;
+    margin-top: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .warm .chat-meta { text-align: right; flex-shrink: 0; margin-left: 8px; }
+  .warm .chat-time { font-size: 11px; color: #C4A96A; }
+  .warm .chat-badge {
+    background: #FF6B6B;
+    color: #fff; font-size: 12px; font-weight: 700;
+    border-radius: 10px; padding: 2px 9px;
+    margin-top: 5px; display: inline-block;
+  }
+
+  .warm .bottom-nav {
+    display: flex;
+    background: #2D5016;
+    padding: 8px 0 12px;
+    position: relative;
+  }
+  .warm .bottom-nav::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #8B6914, #C49A2A, #8B6914, #C49A2A, #8B6914);
+  }
+  .warm .nav-item {
+    flex: 1; text-align: center;
+    font-size: 11px; color: rgba(255,255,255,0.45);
+  }
+  .warm .nav-item.active { color: #FFE156; }
+  .warm .nav-icon { font-size: 22px; margin-bottom: 3px; }
+
+  /* === 채팅방 내부 === */
+  .warm .chat-room { flex: 1; display: flex; flex-direction: column; }
+  .warm .chat-room-header {
+    background: #2D5016;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+  }
+  .warm .chat-room-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #8B6914, #C49A2A, #8B6914, #C49A2A, #8B6914);
+  }
+  .warm .back-btn { color: #FFE156; font-size: 22px; cursor: pointer; }
+  .warm .room-name { color: #fff; font-size: 18px; font-weight: 700; flex: 1; }
+  .warm .leave-btn {
+    background: rgba(255,107,107,0.15);
+    border: 1.5px solid rgba(255,107,107,0.4);
+    border-radius: 10px; padding: 5px 12px;
+    color: #FF6B6B; font-size: 13px; font-weight: 700;
+    cursor: pointer;
+  }
+
+  .warm .messages { flex: 1; padding: 16px 14px; overflow-y: auto; background: #FFF8E7; }
+
+  .warm .msg-system {
+    text-align: center;
+    font-size: 12px;
+    margin: 12px 0;
+  }
+  .warm .msg-system span {
+    background: #F0E0B0;
+    color: #8B6914;
+    padding: 4px 14px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  .warm .msg-row { display: flex; margin-bottom: 12px; gap: 8px; }
+  .warm .msg-row.mine { flex-direction: row-reverse; }
+  .warm .msg-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .warm .msg-content { max-width: 65%; }
+  .warm .msg-sender { font-size: 12px; color: #8D6E63; margin-bottom: 4px; }
+  .warm .msg-bubble {
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .warm .msg-row:not(.mine) .msg-bubble {
+    background: #fff;
+    border: 1.5px solid #F0E0B0;
+    color: #3E2723;
+    border-top-left-radius: 4px;
+  }
+  .warm .msg-row.mine .msg-bubble {
+    background: #2D5016;
+    color: #fff;
+    border-top-right-radius: 4px;
+  }
+  .warm .msg-time {
+    font-size: 10px; color: #C4A96A; margin-top: 4px;
+  }
+  .warm .msg-row.mine .msg-time { text-align: right; }
+  .warm .msg-read { color: #2D5016; }
+
+  .warm .input-area {
+    background: #fff;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-top: 1.5px solid #F0E0B0;
+  }
+  .warm .emoji-btn {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; cursor: pointer;
+    background: #FFF8E7;
+    border-radius: 50%;
+    border: 1.5px solid #F0E0B0;
+  }
+  .warm .input-box {
+    flex: 1;
+    background: #FFF8E7;
+    border: 1.5px solid #F0E0B0;
+    border-radius: 20px;
+    padding: 10px 16px;
+    color: #5D4037;
+    font-size: 14px;
+    font-family: 'Gaegu', cursive;
+  }
+  .warm .send-btn {
+    background: #2D5016;
+    color: #FFE156;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Gaegu', cursive;
+    cursor: pointer;
+  }
+
+  .warm .emoji-panel {
+    background: #FFF3D0;
+    border-top: 1.5px solid #E8C84A;
+    padding: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+  .warm .emoji-item {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: all 0.15s;
+  }
+  .warm .emoji-item:hover {
+    background: rgba(255,225,86,0.4);
+    transform: scale(1.1);
+  }
+
+  .sample-desc {
+    text-align: center; margin-top: 14px;
+    font-size: 14px; color: #8D6E63;
+    max-width: 390px; line-height: 1.8;
+    font-family: 'Gaegu', cursive;
+  }
+  .sample-desc strong { color: #2D5016; }
+
+  /* 만화 아바타에 분필 느낌 테두리 */
+  .chalk-border { filter: url(#chalk-filter); }
+</style>
+</head>
+<body>
+
+<h1>✎ 다모임 - 따뜻한 교실 컨셉</h1>
+<p class="subtitle">노란 배경 + 칠판 포인트 + 분필 만화</p>
+
+<div class="samples">
+
+  <!-- 채팅 목록 -->
+  <div>
+    <div class="sample-label">채팅 목록</div>
+    <div class="phone">
+      <div class="phone-inner warm">
+        <div class="status-bar"><span>오후 10:53</span><span>WiFi ⚡</span></div>
+        <div class="header">
+          <div class="header-title">✎ 다모임</div>
+          <div class="header-icons">
+            <div class="header-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2.5" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </div>
+            <div class="header-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2.5" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </div>
+            <div class="header-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="notice">📢 [공지] 봄맞이 동창 모임 이벤트 진행중!</div>
+        <div class="tabs">
+          <div class="tab active">1:1 채팅</div>
+          <div class="tab">그룹 채팅</div>
+        </div>
+        <div class="chat-list">
+          <div class="chat-item">
+            <div class="avatar">
+              <svg width="50" height="50" viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="23" fill="#FFE99A" stroke="#5D4037" stroke-width="2.5"/>
+                <circle cx="18" cy="22" r="2.5" fill="#5D4037"/>
+                <circle cx="32" cy="22" r="2.5" fill="#5D4037"/>
+                <circle cx="18" cy="21.5" r="0.8" fill="#fff"/>
+                <circle cx="32" cy="21.5" r="0.8" fill="#fff"/>
+                <path d="M17 31 Q25 38 33 31" stroke="#5D4037" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="chat-info">
+              <div class="chat-name">홍길동</div>
+              <div class="chat-school">✎ 서울고 3-2반</div>
+              <div class="chat-msg">어! 오랜만이다~ 잘 지내지?</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">오후 9:04</div>
+              <div class="chat-badge">3</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar">
+              <svg width="50" height="50" viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="23" fill="#B8E6B8" stroke="#5D4037" stroke-width="2.5"/>
+                <circle cx="18" cy="22" r="2.5" fill="#5D4037"/>
+                <circle cx="32" cy="22" r="2.5" fill="#5D4037"/>
+                <circle cx="18" cy="21.5" r="0.8" fill="#fff"/>
+                <circle cx="32" cy="21.5" r="0.8" fill="#fff"/>
+                <path d="M20 31 Q25 34 30 31" stroke="#5D4037" stroke-width="2" fill="none" stroke-linecap="round"/>
+                <path d="M14 17 Q18 13 22 17" stroke="#5D4037" stroke-width="2" fill="none"/>
+                <path d="M28 17 Q32 13 36 17" stroke="#5D4037" stroke-width="2" fill="none"/>
+              </svg>
+            </div>
+            <div class="chat-info">
+              <div class="chat-name">김영희</div>
+              <div class="chat-school">✎ 한국여고 2-5반</div>
+              <div class="chat-msg">내일 모임 장소 어디로 할까?</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">오후 7:30</div>
+              <div class="chat-badge">1</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar">
+              <svg width="50" height="50" viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="23" fill="#FFD0D0" stroke="#5D4037" stroke-width="2.5"/>
+                <circle cx="18" cy="20" r="3" fill="#5D4037"/>
+                <circle cx="32" cy="20" r="3" fill="#5D4037"/>
+                <circle cx="18" cy="19.5" r="1" fill="#fff"/>
+                <circle cx="32" cy="19.5" r="1" fill="#fff"/>
+                <ellipse cx="25" cy="30" rx="5" ry="4" fill="#5D4037"/>
+                <ellipse cx="25" cy="29" rx="3.5" ry="2" fill="#FF8A80"/>
+              </svg>
+            </div>
+            <div class="chat-info">
+              <div class="chat-name">박철수</div>
+              <div class="chat-school">✎ 부산중 1-3반</div>
+              <div class="chat-msg">졸업앨범 찾았다!!</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">3/8</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar">
+              <svg width="50" height="50" viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="23" fill="#C5CAE9" stroke="#5D4037" stroke-width="2.5"/>
+                <line x1="15" y1="22" x2="22" y2="22" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="28" y1="22" x2="35" y2="22" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M20 32 Q25 29 30 32" stroke="#5D4037" stroke-width="2" fill="none" stroke-linecap="round"/>
+                <text x="36" y="16" font-size="10" font-weight="bold" fill="#5D4037" font-family="Gaegu">Z</text>
+                <text x="40" y="11" font-size="7" fill="#5D4037" font-family="Gaegu">z</text>
+              </svg>
+            </div>
+            <div class="chat-info">
+              <div class="chat-name">이민수</div>
+              <div class="chat-school">✎ 대전고 2-1반</div>
+              <div class="chat-msg">zzz... 내일 연락할게~</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">3/7</div>
+            </div>
+          </div>
+          <div class="chat-item">
+            <div class="avatar">
+              <svg width="50" height="50" viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="23" fill="#F8BBD0" stroke="#5D4037" stroke-width="2.5"/>
+                <circle cx="18" cy="22" r="2.5" fill="#5D4037"/>
+                <circle cx="32" cy="22" r="2.5" fill="#5D4037"/>
+                <circle cx="18" cy="21.5" r="0.8" fill="#fff"/>
+                <circle cx="32" cy="21.5" r="0.8" fill="#fff"/>
+                <path d="M18 31 Q25 36 32 31" stroke="#5D4037" stroke-width="2" fill="none" stroke-linecap="round"/>
+                <ellipse cx="13" cy="28" rx="3" ry="2.5" fill="rgba(255,138,128,0.3)"/>
+                <ellipse cx="37" cy="28" rx="3" ry="2.5" fill="rgba(255,138,128,0.3)"/>
+              </svg>
+            </div>
+            <div class="chat-info">
+              <div class="chat-name">최수진</div>
+              <div class="chat-school">✎ 인천여중 3-4반</div>
+              <div class="chat-msg">사진 좀 보내줘~ 😊</div>
+            </div>
+            <div class="chat-meta">
+              <div class="chat-time">3/6</div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item">
+            <div class="nav-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>우리학교
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>동창친구
+          </div>
+          <div class="nav-item active">
+            <div class="nav-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>채팅
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            </div>찐모임
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>
+            </div>동창이네
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sample-desc">
+      <strong>따뜻한 노란 배경</strong> + 칠판 헤더/네비<br>
+      나무 프레임 느낌 골드 라인<br>
+      파스텔 만화 아바타
+    </div>
+  </div>
+
+  <!-- 채팅방 내부 -->
+  <div>
+    <div class="sample-label">채팅방 내부</div>
+    <div class="phone">
+      <div class="phone-inner warm">
+        <div class="status-bar"><span>오후 10:53</span><span>WiFi ⚡</span></div>
+        <div class="chat-room">
+          <div class="chat-room-header">
+            <div class="back-btn">◁</div>
+            <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
+              <svg width="30" height="30" viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="23" fill="#FFE99A" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+                <circle cx="18" cy="22" r="2.5" fill="#5D4037"/>
+                <circle cx="32" cy="22" r="2.5" fill="#5D4037"/>
+                <path d="M17 31 Q25 38 33 31" stroke="#5D4037" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="room-name">홍길동</div>
+            <div class="leave-btn">나가기</div>
+          </div>
+
+          <div class="messages">
+            <div class="msg-system"><span>── 2026년 3월 9일 ──</span></div>
+
+            <div class="msg-row">
+              <div class="msg-avatar">
+                <svg width="36" height="36" viewBox="0 0 50 50">
+                  <circle cx="25" cy="25" r="23" fill="#FFE99A" stroke="#5D4037" stroke-width="2"/>
+                  <circle cx="18" cy="22" r="2.5" fill="#5D4037"/>
+                  <circle cx="32" cy="22" r="2.5" fill="#5D4037"/>
+                  <path d="M17 31 Q25 38 33 31" stroke="#5D4037" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="msg-content">
+                <div class="msg-sender">홍길동</div>
+                <div class="msg-bubble">야 오랜만이다!! 😆</div>
+                <div class="msg-time">오후 2:30</div>
+              </div>
+            </div>
+
+            <div class="msg-row mine">
+              <div class="msg-content">
+                <div class="msg-bubble">헐 길동아!! 진짜 오랜만 ㅋㅋ</div>
+                <div class="msg-time"><span class="msg-read">읽음 </span>오후 2:31</div>
+              </div>
+            </div>
+
+            <div class="msg-row">
+              <div class="msg-avatar">
+                <svg width="36" height="36" viewBox="0 0 50 50">
+                  <circle cx="25" cy="25" r="23" fill="#FFE99A" stroke="#5D4037" stroke-width="2"/>
+                  <circle cx="18" cy="22" r="2.5" fill="#5D4037"/>
+                  <circle cx="32" cy="22" r="2.5" fill="#5D4037"/>
+                  <path d="M17 31 Q25 38 33 31" stroke="#5D4037" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="msg-content">
+                <div class="msg-sender">홍길동</div>
+                <div class="msg-bubble">이번 주말에 동창 모임 하는데 올 수 있어?</div>
+                <div class="msg-time">오후 2:32</div>
+              </div>
+            </div>
+
+            <div class="msg-row mine">
+              <div class="msg-content">
+                <div class="msg-bubble">당연하지!! 어디서 해?</div>
+                <div class="msg-time"><span class="msg-read">읽음 </span>오후 2:33</div>
+              </div>
+            </div>
+
+            <div class="msg-row">
+              <div class="msg-avatar">
+                <svg width="36" height="36" viewBox="0 0 50 50">
+                  <circle cx="25" cy="25" r="23" fill="#FFE99A" stroke="#5D4037" stroke-width="2"/>
+                  <circle cx="18" cy="22" r="2.5" fill="#5D4037"/>
+                  <circle cx="32" cy="22" r="2.5" fill="#5D4037"/>
+                  <path d="M17 31 Q25 38 33 31" stroke="#5D4037" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="msg-content">
+                <div class="msg-sender">홍길동</div>
+                <div class="msg-bubble">강남역 근처! 찐모임에서 투표하자 ✌️</div>
+                <div class="msg-time">오후 2:34</div>
+              </div>
+            </div>
+
+            <div class="msg-row mine">
+              <div class="msg-content">
+                <div class="msg-bubble" style="background:transparent;border:none;padding:4px;">
+                  <svg width="56" height="56" viewBox="0 0 60 60">
+                    <circle cx="30" cy="30" r="26" fill="#FFE99A" stroke="#5D4037" stroke-width="3"/>
+                    <circle cx="22" cy="26" r="3" fill="#5D4037"/>
+                    <circle cx="38" cy="26" r="3" fill="#5D4037"/>
+                    <circle cx="22" cy="25" r="1" fill="#fff"/>
+                    <circle cx="38" cy="25" r="1" fill="#fff"/>
+                    <path d="M20 37 Q30 45 40 37" stroke="#5D4037" stroke-width="3" fill="none" stroke-linecap="round"/>
+                    <path d="M15 19 Q22 13 29 19" stroke="#5D4037" stroke-width="2" fill="none"/>
+                    <path d="M31 19 Q38 13 45 19" stroke="#5D4037" stroke-width="2" fill="none"/>
+                  </svg>
+                </div>
+                <div class="msg-time"><span class="msg-read">읽음 </span>오후 2:35</div>
+              </div>
+            </div>
+
+            <div class="msg-row mine">
+              <div class="msg-content">
+                <div class="msg-bubble">완전 기대돼!! ㅋㅋㅋ</div>
+                <div class="msg-time">1 오후 9:04</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="emoji-panel">
+            <div class="emoji-item">
+              <svg width="34" height="34" viewBox="0 0 50 50"><circle cx="25" cy="25" r="22" fill="#FFE99A" stroke="#5D4037" stroke-width="2.5"/><circle cx="18" cy="22" r="2.5" fill="#5D4037"/><circle cx="32" cy="22" r="2.5" fill="#5D4037"/><path d="M17 32 Q25 39 33 32" stroke="#5D4037" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+            </div>
+            <div class="emoji-item">
+              <svg width="34" height="34" viewBox="0 0 50 50"><circle cx="25" cy="25" r="22" fill="#FFE99A" stroke="#5D4037" stroke-width="2.5"/><circle cx="18" cy="22" r="2.5" fill="#5D4037"/><line x1="29" y1="22" x2="36" y2="22" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/><path d="M17 32 Q25 39 33 32" stroke="#5D4037" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+            </div>
+            <div class="emoji-item">
+              <svg width="34" height="34" viewBox="0 0 50 50"><circle cx="25" cy="25" r="22" fill="#FFD0D0" stroke="#5D4037" stroke-width="2.5"/><path d="M15 20 Q15 14 21 14 Q25 14 25 21 Q25 14 29 14 Q35 14 35 20 Q35 30 25 35 Q15 30 15 20Z" fill="#FF6B6B" stroke="#5D4037" stroke-width="2"/></svg>
+            </div>
+            <div class="emoji-item">
+              <svg width="34" height="34" viewBox="0 0 50 50"><circle cx="25" cy="25" r="22" fill="#B8E6B8" stroke="#5D4037" stroke-width="2.5"/><circle cx="18" cy="20" r="3.5" fill="#5D4037"/><circle cx="32" cy="20" r="3.5" fill="#5D4037"/><circle cx="18" cy="19" r="1.2" fill="#fff"/><circle cx="32" cy="19" r="1.2" fill="#fff"/><ellipse cx="25" cy="33" rx="4" ry="5" fill="#5D4037"/></svg>
+            </div>
+            <div class="emoji-item">
+              <svg width="34" height="34" viewBox="0 0 50 50"><circle cx="25" cy="25" r="22" fill="#B3D4FC" stroke="#5D4037" stroke-width="2.5"/><circle cx="18" cy="22" r="2.5" fill="#5D4037"/><circle cx="32" cy="22" r="2.5" fill="#5D4037"/><path d="M18 34 Q25 29 32 34" stroke="#5D4037" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M14 26 L12 33" stroke="#4FC3F7" stroke-width="2.5" stroke-linecap="round"/><path d="M36 26 L38 33" stroke="#4FC3F7" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="emoji-item">
+              <svg width="34" height="34" viewBox="0 0 50 50"><circle cx="25" cy="25" r="22" fill="#FFCDD2" stroke="#5D4037" stroke-width="2.5"/><line x1="14" y1="18" x2="22" y2="22" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/><line x1="36" y1="18" x2="28" y2="22" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/><circle cx="18" cy="24" r="2" fill="#5D4037"/><circle cx="32" cy="24" r="2" fill="#5D4037"/><path d="M20 34 Q25 31 30 34" stroke="#5D4037" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+            </div>
+            <div class="emoji-item">
+              <svg width="34" height="34" viewBox="0 0 50 50"><circle cx="25" cy="25" r="22" fill="#C5CAE9" stroke="#5D4037" stroke-width="2.5"/><line x1="15" y1="22" x2="22" y2="22" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/><line x1="28" y1="22" x2="35" y2="22" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="25" cy="32" rx="3" ry="2" fill="#5D4037"/><text x="38" y="16" font-size="11" font-weight="bold" fill="#5D4037" font-family="Gaegu">Z</text></svg>
+            </div>
+            <div class="emoji-item">
+              <svg width="34" height="34" viewBox="0 0 50 50"><circle cx="25" cy="25" r="22" fill="#FFE0B2" stroke="#5D4037" stroke-width="2.5"/><polygon points="25,8 29,19 41,19 31,26 34,37 25,30 16,37 19,26 9,19 21,19" fill="#FFD54F" stroke="#5D4037" stroke-width="2"/></svg>
+            </div>
+            <div class="emoji-item">
+              <svg width="34" height="34" viewBox="0 0 50 50"><circle cx="25" cy="25" r="22" fill="#F8BBD0" stroke="#5D4037" stroke-width="2.5"/><circle cx="18" cy="22" r="2.5" fill="#5D4037"/><circle cx="32" cy="22" r="2.5" fill="#5D4037"/><path d="M18 32 Q25 37 32 32" stroke="#5D4037" stroke-width="2.5" fill="none" stroke-linecap="round"/><ellipse cx="13" cy="28" rx="3.5" ry="2.5" fill="rgba(255,138,128,0.35)"/><ellipse cx="37" cy="28" rx="3.5" ry="2.5" fill="rgba(255,138,128,0.35)"/></svg>
+            </div>
+          </div>
+
+          <div class="input-area">
+            <div class="emoji-btn">😊</div>
+            <div class="input-box">메시지를 입력하세요...</div>
+            <div class="send-btn">전송</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sample-desc">
+      <strong>노란 배경 위 대화</strong><br>
+      칠판 색 내 말풍선 + 흰 상대 말풍선<br>
+      만화 이모지 패널
+    </div>
+  </div>
+
+  <!-- 다른 화면들 -->
+  <div>
+    <div class="sample-label">메인 / 동창친구</div>
+    <div class="phone">
+      <div class="phone-inner warm">
+        <div class="status-bar"><span>오후 10:53</span><span>WiFi ⚡</span></div>
+        <div class="header">
+          <div class="header-title">✎ 우리학교</div>
+          <div class="header-icons">
+            <div class="header-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2.5" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </div>
+            <div class="header-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- 학교 카드 -->
+        <div style="padding:14px;">
+          <div style="background:#fff;border-radius:16px;border:1.5px solid #F0E0B0;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(139,105,20,0.06);">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+              <div style="width:48px;height:48px;background:#2D5016;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFE156" stroke-width="2.5" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <div>
+                <div style="font-size:18px;font-weight:700;color:#3E2723;">서울고등학교</div>
+                <div style="font-size:13px;color:#8D6E63;">서울시 강남구 · 2005년 졸업</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <div style="flex:1;background:#FFF8E7;border-radius:10px;padding:10px;text-align:center;border:1px solid #F0E0B0;">
+                <div style="font-size:20px;font-weight:700;color:#2D5016;">24</div>
+                <div style="font-size:11px;color:#8D6E63;">동창</div>
+              </div>
+              <div style="flex:1;background:#FFF8E7;border-radius:10px;padding:10px;text-align:center;border:1px solid #F0E0B0;">
+                <div style="font-size:20px;font-weight:700;color:#2D5016;">8</div>
+                <div style="font-size:11px;color:#8D6E63;">친구</div>
+              </div>
+              <div style="flex:1;background:#FFF8E7;border-radius:10px;padding:10px;text-align:center;border:1px solid #F0E0B0;">
+                <div style="font-size:20px;font-weight:700;color:#2D5016;">3</div>
+                <div style="font-size:11px;color:#8D6E63;">모임</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 동창 목록 -->
+          <div style="font-size:16px;font-weight:700;color:#3E2723;margin-bottom:10px;">내 동창친구</div>
+
+          <div style="background:#fff;border-radius:14px;border:1.5px solid #F0E0B0;overflow:hidden;">
+            <div style="display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid #F5EDD5;">
+              <svg width="44" height="44" viewBox="0 0 50 50" style="margin-right:12px;flex-shrink:0;">
+                <circle cx="25" cy="25" r="22" fill="#FFE99A" stroke="#5D4037" stroke-width="2.5"/>
+                <circle cx="18" cy="22" r="2.5" fill="#5D4037"/>
+                <circle cx="32" cy="22" r="2.5" fill="#5D4037"/>
+                <path d="M17 32 Q25 38 33 32" stroke="#5D4037" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              </svg>
+              <div style="flex:1;">
+                <div style="font-size:15px;font-weight:700;color:#3E2723;">홍길동</div>
+                <div style="font-size:12px;color:#2D5016;opacity:0.7;">3학년 2반</div>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <div style="width:32px;height:32px;background:#FFF8E7;border:1.5px solid #F0E0B0;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D5016" stroke-width="2.5" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div style="width:32px;height:32px;background:#FFF8E7;border:1.5px solid #F0E0B0;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D5016" stroke-width="2.5" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid #F5EDD5;">
+              <svg width="44" height="44" viewBox="0 0 50 50" style="margin-right:12px;flex-shrink:0;">
+                <circle cx="25" cy="25" r="22" fill="#B8E6B8" stroke="#5D4037" stroke-width="2.5"/>
+                <circle cx="18" cy="22" r="2.5" fill="#5D4037"/>
+                <circle cx="32" cy="22" r="2.5" fill="#5D4037"/>
+                <path d="M20 32 Q25 35 30 32" stroke="#5D4037" stroke-width="2" fill="none" stroke-linecap="round"/>
+              </svg>
+              <div style="flex:1;">
+                <div style="font-size:15px;font-weight:700;color:#3E2723;">김영희</div>
+                <div style="font-size:12px;color:#2D5016;opacity:0.7;">2학년 5반</div>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <div style="width:32px;height:32px;background:#FFF8E7;border:1.5px solid #F0E0B0;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D5016" stroke-width="2.5" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div style="width:32px;height:32px;background:#FFF8E7;border:1.5px solid #F0E0B0;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D5016" stroke-width="2.5" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;padding:12px 14px;">
+              <svg width="44" height="44" viewBox="0 0 50 50" style="margin-right:12px;flex-shrink:0;">
+                <circle cx="25" cy="25" r="22" fill="#FFD0D0" stroke="#5D4037" stroke-width="2.5"/>
+                <circle cx="18" cy="20" r="3" fill="#5D4037"/>
+                <circle cx="32" cy="20" r="3" fill="#5D4037"/>
+                <ellipse cx="25" cy="30" rx="5" ry="4" fill="#5D4037"/>
+              </svg>
+              <div style="flex:1;">
+                <div style="font-size:15px;font-weight:700;color:#3E2723;">박철수</div>
+                <div style="font-size:12px;color:#2D5016;opacity:0.7;">1학년 3반</div>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <div style="width:32px;height:32px;background:#FFF8E7;border:1.5px solid #F0E0B0;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D5016" stroke-width="2.5" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div style="width:32px;height:32px;background:#FFF8E7;border:1.5px solid #F0E0B0;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D5016" stroke-width="2.5" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-item active">
+            <div class="nav-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>우리학교
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>동창친구
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>채팅
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            </div>찐모임
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>
+            </div>동창이네
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sample-desc">
+      <strong>메인 화면</strong> 학교 카드 + 동창 목록<br>
+      칠판 녹색 아이콘 포인트<br>
+      전체적으로 따뜻하고 친근한 톤
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

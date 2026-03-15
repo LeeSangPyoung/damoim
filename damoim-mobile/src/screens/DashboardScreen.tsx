@@ -8,10 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Dimensions,
   Modal,
-  TextInput,
-  KeyboardAvoidingView,
   Platform,
   Alert,
 } from 'react-native';
@@ -20,7 +17,7 @@ import { ScrollView } from 'react-native';
 import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
-import { postAPI, PostResponse, CommentResponse } from '../api/post';
+import { postAPI, PostResponse } from '../api/post';
 import { userAPI, ProfileResponse, SchoolInfo } from '../api/user';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
@@ -29,7 +26,7 @@ import HeaderActions from '../components/HeaderActions';
 type FilterType = 'all' | 'myGrade' | 'myClass';
 
 const FILTER_LABELS: Record<FilterType, string> = {
-  all: '전체글',
+  all: '우리학교',
   myGrade: '우리학년',
   myClass: '우리반',
 };
@@ -50,7 +47,6 @@ function formatTimeAgo(dateString: string): string {
   return date.toLocaleDateString('ko-KR');
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function DashboardScreen({ navigation, route }: any) {
   const { user } = useAuth();
@@ -63,16 +59,22 @@ export default function DashboardScreen({ navigation, route }: any) {
 
   // 우리반 필터: 프로필에 등록된 학년/반 목록
   const [gradeClasses, setGradeClasses] = useState<{ grade: string; classNumber?: string }[]>([]);
-  const [selectedClasses, setSelectedClasses] = useState<{ grade: string; classNumber: string }[]>([]);
-  const [isAllSelected, setIsAllSelected] = useState<boolean>(true);
+  const [selectedClasses, setSelectedClasses] = useState<{ grade: string; classNumber: string }[]>(
+    route?.params?.grade && route?.params?.classNumber
+      ? [{ grade: route.params.grade, classNumber: route.params.classNumber }]
+      : []
+  );
+  const [isAllSelected, setIsAllSelected] = useState<boolean>(
+    !(route?.params?.grade && route?.params?.classNumber)
+  );
 
-  // 댓글 모달
-  const [commentPostId, setCommentPostId] = useState<number | null>(null);
-  const [comments, setComments] = useState<CommentResponse[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
-  const [commentText, setCommentText] = useState('');
-  const [commentSending, setCommentSending] = useState(false);
-  const [replyTo, setReplyTo] = useState<{ id: number; name: string } | null>(null);
+  // 탭별 새 글 카운트
+  const [newCounts, setNewCounts] = useState<Record<FilterType, number>>({ all: 0, myGrade: 0, myClass: 0 });
+
+  // 게시글 메뉴 모달
+  const [menuPost, setMenuPost] = useState<PostResponse | null>(null);
+
+  // 댓글 모달 (상세 화면으로 이동됨 - 미사용 state 유지는 하지 않음)
 
   // route params에서 학교 정보를 받거나, 프로필의 첫 번째 학교 사용
   const routeSchool = route?.params?.schoolName ? {
@@ -144,6 +146,16 @@ export default function DashboardScreen({ navigation, route }: any) {
     }
   }, [user?.userId, filter, primarySchool?.schoolName, primarySchool?.graduationYear, selectedClasses, isAllSelected]);
 
+  const fetchNewCounts = useCallback(async () => {
+    if (!user?.userId || !primarySchool?.schoolName) return;
+    try {
+      const counts = await postAPI.getNewCounts(
+        user.userId, primarySchool.schoolName, primarySchool.graduationYear
+      );
+      setNewCounts(counts);
+    } catch {}
+  }, [user?.userId, primarySchool?.schoolName, primarySchool?.graduationYear]);
+
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
@@ -152,89 +164,28 @@ export default function DashboardScreen({ navigation, route }: any) {
     fetchPosts();
   }, [fetchPosts]);
 
+  useEffect(() => {
+    fetchNewCounts();
+  }, [fetchNewCounts]);
+
+  // 화면이 다시 포커스되면 게시글 새로고침 (글 작성 후 돌아올 때)
+  useEffect(() => {
+    const unsubscribe = navigation?.addListener?.('focus', () => {
+      fetchPosts(false);
+      fetchNewCounts();
+    });
+    return unsubscribe;
+  }, [navigation, fetchPosts, fetchNewCounts]);
+
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     fetchPosts(false);
   }, [fetchPosts]);
 
-  const handleToggleLike = useCallback(async (postId: number) => {
-    if (!user?.userId) return;
-
-    // Optimistic update
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId
-          ? { ...p, liked: !p.liked, likeCount: p.liked ? p.likeCount - 1 : p.likeCount + 1 }
-          : p,
-      ),
-    );
-
-    try {
-      await postAPI.toggleLike(postId, user.userId);
-    } catch {
-      // Revert on failure
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId
-            ? { ...p, liked: !p.liked, likeCount: p.liked ? p.likeCount - 1 : p.likeCount + 1 }
-            : p,
-        ),
-      );
-    }
-  }, [user?.userId]);
-
-  // ---- 댓글 ----
-  const openComments = useCallback(async (postId: number) => {
-    setCommentPostId(postId);
-    setCommentText('');
-    setReplyTo(null);
-    setCommentsLoading(true);
-    try {
-      const data = await postAPI.getComments(postId, user?.userId);
-      setComments(data);
-    } catch {} finally {
-      setCommentsLoading(false);
-    }
-  }, [user?.userId]);
-
-  const handleSendComment = useCallback(async () => {
-    if (!user?.userId || !commentPostId || !commentText.trim()) return;
-    setCommentSending(true);
-    try {
-      await postAPI.addComment(commentPostId, user.userId, commentText.trim(), replyTo?.id);
-      setCommentText('');
-      setReplyTo(null);
-      // 댓글 다시 로드
-      const data = await postAPI.getComments(commentPostId, user.userId);
-      setComments(data);
-      // 게시글 댓글 수 업데이트
-      setPosts(prev => prev.map(p => p.id === commentPostId ? { ...p, commentCount: data.length } : p));
-    } catch {
-      Alert.alert('오류', '댓글 작성에 실패했습니다');
-    } finally {
-      setCommentSending(false);
-    }
-  }, [user?.userId, commentPostId, commentText, replyTo]);
-
-  const handleDeleteComment = useCallback(async (commentId: number) => {
-    if (!user?.userId || !commentPostId) return;
-    Alert.alert('댓글 삭제', '이 댓글을 삭제하시겠습니까?', [
-      { text: '취소' },
-      {
-        text: '삭제', style: 'destructive', onPress: async () => {
-          try {
-            await postAPI.deleteComment(commentId, user.userId);
-            const data = await postAPI.getComments(commentPostId, user.userId);
-            setComments(data);
-            setPosts(prev => prev.map(p => p.id === commentPostId ? { ...p, commentCount: data.length } : p));
-          } catch {}
-        },
-      },
-    ]);
-  }, [user?.userId, commentPostId]);
-
   const handleFilterChange = useCallback((key: FilterType) => {
     setFilter(key);
+    // 해당 탭의 새 글 카운트 초기화
+    setNewCounts(prev => ({ ...prev, [key]: 0 }));
     // 우리반 외 탭 선택 시 학년/반 필터 초기화
     if (key !== 'myClass') {
       setIsAllSelected(true);
@@ -277,6 +228,11 @@ export default function DashboardScreen({ navigation, route }: any) {
           <Text style={[styles.filterTabText, filter === key && styles.filterTabTextActive]}>
             {FILTER_LABELS[key]}
           </Text>
+          {filter !== key && newCounts[key] > 0 && (
+            <View style={styles.tabNewBadge}>
+              <Text style={styles.tabNewBadgeText}>N</Text>
+            </View>
+          )}
         </TouchableOpacity>
       ))}
     </View>
@@ -321,119 +277,122 @@ export default function DashboardScreen({ navigation, route }: any) {
     );
   };
 
-  const renderPostImages = (imageUrls: string[]) => {
-    if (imageUrls.length === 0) return null;
-
-    if (imageUrls.length === 1) {
-      return (
-        <Image source={{ uri: imageUrls[0] }} style={styles.singleImage} resizeMode="cover" />
-      );
+  const handleDeletePost = useCallback(async (postId: number) => {
+    if (!user?.userId) return;
+    setMenuPost(null);
+    if (Platform.OS === 'web') {
+      if (!window.confirm('이 게시글을 삭제하시겠습니까?')) return;
     }
+    try {
+      await postAPI.deletePost(postId, user.userId);
+      setPosts(prev => prev.filter(p => p.id !== postId));
+    } catch {
+      Alert.alert('오류', '게시글 삭제에 실패했습니다.');
+    }
+  }, [user?.userId]);
 
+  const handleEditPost = useCallback((item: PostResponse) => {
+    setMenuPost(null);
+    navigation?.navigate?.('EditPost', {
+      postId: item.id,
+      content: item.content,
+      imageUrls: item.imageUrls || [],
+      schoolName: primarySchool?.schoolName,
+      graduationYear: primarySchool?.graduationYear,
+    });
+  }, [navigation, primarySchool]);
+
+  const handleOpenDetail = useCallback((item: PostResponse) => {
+    navigation?.navigate?.('PostDetail', {
+      postId: item.id,
+      schoolName: primarySchool?.schoolName,
+      graduationYear: primarySchool?.graduationYear,
+    });
+  }, [navigation, primarySchool]);
+
+  const renderPostCard = ({ item }: { item: PostResponse }) => {
+    const isMyPost = item.author.userId === user?.userId;
+    const hasImage = item.imageUrls && item.imageUrls.length > 0;
     return (
-      <FlatList
-        data={imageUrls}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(item, index) => `${item}-${index}`}
-        renderItem={({ item }) => (
-          <Image source={{ uri: item }} style={styles.carouselImage} resizeMode="cover" />
-        )}
-        style={styles.imageCarousel}
-      />
-    );
-  };
+      <TouchableOpacity
+        style={styles.postCard}
+        activeOpacity={0.7}
+        onPress={() => handleOpenDetail(item)}
+      >
+        <View style={styles.postCardRow}>
+          {/* 왼쪽: 썸네일 */}
+          {hasImage && (
+            <Image
+              source={{ uri: item.imageUrls![0] }}
+              style={styles.postCardThumb}
+              resizeMode="cover"
+            />
+          )}
 
-  const renderPostCard = ({ item }: { item: PostResponse }) => (
-    <View style={styles.postCard}>
-      {/* Author header */}
-      <View style={styles.postHeader}>
-        <TouchableOpacity style={styles.authorRow} activeOpacity={0.7}>
-          <Avatar
-            uri={item.author.profileImageUrl}
-            name={item.author.name}
-            size={40}
-          />
-          <View style={styles.authorInfo}>
-            <Text style={styles.authorName}>{item.author.name}</Text>
-            <View style={styles.metaRow}>
-              <Text style={styles.schoolLabel}>
-                {item.author.schoolName} {item.author.graduationYear}
-              </Text>
-              <Text style={styles.dot}> · </Text>
-              <Text style={styles.timeAgo}>{formatTimeAgo(item.createdAt)}</Text>
+          {/* 오른쪽: 텍스트 영역 */}
+          <View style={styles.postCardLeft}>
+            {/* Author line */}
+            <View style={styles.postCardAuthorRow}>
+              <Avatar
+                uri={item.author.profileImageUrl}
+                name={item.author.name}
+                size={24}
+              />
+              <Text style={styles.postCardAuthorName}>{item.author.name}</Text>
+              <Text style={styles.postCardTime}>{formatTimeAgo(item.createdAt)}</Text>
+              {isMyPost && (
+                <TouchableOpacity
+                  onPress={(e) => { e.stopPropagation(); setMenuPost(item); }}
+                  activeOpacity={0.6}
+                  style={styles.postMenuBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="ellipsis-vertical" size={16} color={Colors.gray400} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Content preview */}
+            <Text style={styles.postCardContent} numberOfLines={2}>
+              {item.content}
+            </Text>
+
+            {/* Stats */}
+            <View style={styles.postCardStats}>
+              {item.visibility && item.visibility !== 'SCHOOL' && (
+                <View style={styles.postCardVisibility}>
+                  <Ionicons
+                    name={item.visibility === 'CLASS' ? 'people' : 'school'}
+                    size={10}
+                    color={Colors.primary}
+                  />
+                  <Text style={styles.postCardVisibilityText}>
+                    {item.visibility === 'CLASS'
+                      ? (item.targetGrade && item.targetClassNumber
+                          ? `${item.targetGrade}-${item.targetClassNumber}반`
+                          : '우리반')
+                      : '우리학년'}
+                  </Text>
+                </View>
+              )}
+              {item.likeCount > 0 && (
+                <View style={styles.postCardStatItem}>
+                  <Ionicons name="heart" size={11} color={Colors.red} />
+                  <Text style={styles.postCardStatText}>{item.likeCount}</Text>
+                </View>
+              )}
+              {item.commentCount > 0 && (
+                <View style={styles.postCardStatItem}>
+                  <Ionicons name="chatbubble" size={10} color={Colors.gray400} />
+                  <Text style={styles.postCardStatText}>{item.commentCount}</Text>
+                </View>
+              )}
             </View>
           </View>
-        </TouchableOpacity>
-        {item.visibility && item.visibility !== 'SCHOOL' && (
-          <View style={styles.visibilityBadge}>
-            <Ionicons
-              name={item.visibility === 'CLASS' ? 'people' : 'school'}
-              size={12}
-              color={Colors.primary}
-            />
-            <Text style={styles.visibilityText}>
-              {item.visibility === 'CLASS'
-                ? (item.targetGrade && item.targetClassNumber
-                    ? `${item.targetGrade}학년 ${item.targetClassNumber}반`
-                    : '우리반')
-                : '우리학년'}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Content */}
-      <Text style={styles.postContent} numberOfLines={5}>
-        {item.content}
-      </Text>
-
-      {/* Images */}
-      {item.imageUrls && item.imageUrls.length > 0 && renderPostImages(item.imageUrls)}
-
-      {/* Stats bar */}
-      <View style={styles.statsBar}>
-        {item.likeCount > 0 && (
-          <Text style={styles.statText}>
-            <Ionicons name="heart" size={12} color={Colors.red} /> {item.likeCount}
-          </Text>
-        )}
-        {item.commentCount > 0 && (
-          <Text style={styles.statText}>
-            댓글 {item.commentCount}개
-          </Text>
-        )}
-      </View>
-
-      {/* Action bar */}
-      <View style={styles.actionBar}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => handleToggleLike(item.id)}
-          activeOpacity={0.6}
-        >
-          <Ionicons
-            name={item.liked ? 'heart' : 'heart-outline'}
-            size={20}
-            color={item.liked ? Colors.red : Colors.gray500}
-          />
-          <Text style={[styles.actionText, item.liked && styles.actionTextLiked]}>
-            좋아요
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => openComments(item.id)}
-          activeOpacity={0.6}
-        >
-          <Ionicons name="chatbubble-outline" size={18} color={Colors.gray500} />
-          <Text style={styles.actionText}>댓글</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -481,7 +440,7 @@ export default function DashboardScreen({ navigation, route }: any) {
         {renderHeader()}
         <View style={styles.loadingWrap}>
           <EmptyState
-            icon="⚠️"
+            ionIcon="alert-circle-outline"
             title={error}
             subtitle="아래로 당겨서 다시 시도해주세요."
           />
@@ -502,7 +461,7 @@ export default function DashboardScreen({ navigation, route }: any) {
         ListHeaderComponent={renderListHeader}
         ListEmptyComponent={
           <EmptyState
-            icon="📝"
+            ionIcon="document-text-outline"
             title="아직 게시글이 없습니다"
             subtitle="첫 번째 게시글을 작성해보세요!"
           />
@@ -527,120 +486,49 @@ export default function DashboardScreen({ navigation, route }: any) {
         onPress={() => navigation?.navigate?.('CreatePost', {
           schoolName: primarySchool?.schoolName,
           graduationYear: primarySchool?.graduationYear,
+          currentFilter: filter,
+          selectedClass: (!isAllSelected && selectedClasses.length === 1) ? selectedClasses[0] : undefined,
+          gradeClasses,
         })}
         activeOpacity={0.8}
       >
         <Ionicons name="add" size={28} color={Colors.white} />
       </TouchableOpacity>
 
-      {/* 댓글 모달 */}
-      <Modal visible={commentPostId !== null} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          style={styles.commentModalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      {/* 게시글 메뉴 모달 */}
+      <Modal visible={menuPost !== null} animationType="fade" transparent>
+        <TouchableOpacity
+          style={styles.menuModalOverlay}
+          activeOpacity={1}
+          onPress={() => setMenuPost(null)}
         >
-          <View style={styles.commentModalContent}>
-            {/* 헤더 */}
-            <View style={styles.commentModalHeader}>
-              <Text style={styles.commentModalTitle}>댓글</Text>
-              <TouchableOpacity onPress={() => { setCommentPostId(null); setReplyTo(null); }}>
-                <Ionicons name="close" size={24} color={Colors.gray600} />
-              </TouchableOpacity>
-            </View>
-
-            {/* 댓글 목록 */}
-            {commentsLoading ? (
-              <ActivityIndicator style={{ marginVertical: 30 }} size="large" color={Colors.primary} />
-            ) : comments.length === 0 ? (
-              <View style={styles.commentEmpty}>
-                <Text style={styles.commentEmptyText}>아직 댓글이 없습니다</Text>
-                <Text style={styles.commentEmptySubText}>첫 댓글을 남겨보세요!</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={comments}
-                keyExtractor={item => String(item.id)}
-                style={styles.commentList}
-                renderItem={({ item: c }) => (
-                  <View>
-                    {/* 댓글 */}
-                    <View style={styles.commentRow}>
-                      <Avatar uri={c.author.profileImageUrl} name={c.author.name} size={32} />
-                      <View style={styles.commentBody}>
-                        <Text style={styles.commentAuthor}>{c.author.name}</Text>
-                        <Text style={styles.commentContent}>{c.content}</Text>
-                        <View style={styles.commentMeta}>
-                          <Text style={styles.commentTime}>{formatTimeAgo(c.createdAt)}</Text>
-                          <TouchableOpacity onPress={() => setReplyTo({ id: c.id, name: c.author.name })}>
-                            <Text style={styles.commentReplyBtn}>답글</Text>
-                          </TouchableOpacity>
-                          {c.canDelete && (
-                            <TouchableOpacity onPress={() => handleDeleteComment(c.id)}>
-                              <Text style={styles.commentDeleteBtn}>삭제</Text>
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      </View>
-                    </View>
-                    {/* 대댓글 */}
-                    {c.replies?.map(r => (
-                      <View key={r.id} style={[styles.commentRow, styles.commentReply]}>
-                        <Avatar uri={r.author.profileImageUrl} name={r.author.name} size={26} />
-                        <View style={styles.commentBody}>
-                          <Text style={styles.commentAuthor}>{r.author.name}</Text>
-                          <Text style={styles.commentContent}>{r.content}</Text>
-                          <View style={styles.commentMeta}>
-                            <Text style={styles.commentTime}>{formatTimeAgo(r.createdAt)}</Text>
-                            {r.canDelete && (
-                              <TouchableOpacity onPress={() => handleDeleteComment(r.id)}>
-                                <Text style={styles.commentDeleteBtn}>삭제</Text>
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              />
-            )}
-
-            {/* 답글 표시 */}
-            {replyTo && (
-              <View style={styles.replyToBar}>
-                <Text style={styles.replyToText}>{replyTo.name}님에게 답글</Text>
-                <TouchableOpacity onPress={() => setReplyTo(null)}>
-                  <Ionicons name="close-circle" size={18} color={Colors.gray400} />
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* 입력 */}
-            <View style={styles.commentInputBar}>
-              <TextInput
-                style={styles.commentInput}
-                placeholder={replyTo ? `${replyTo.name}님에게 답글...` : '댓글을 입력하세요...'}
-                placeholderTextColor={Colors.gray400}
-                value={commentText}
-                onChangeText={setCommentText}
-                multiline
-                maxLength={500}
-              />
-              <TouchableOpacity
-                style={[styles.commentSendBtn, (!commentText.trim() || commentSending) && { opacity: 0.4 }]}
-                onPress={handleSendComment}
-                disabled={!commentText.trim() || commentSending}
-              >
-                {commentSending ? (
-                  <ActivityIndicator size="small" color={Colors.white} />
-                ) : (
-                  <Ionicons name="send" size={18} color={Colors.white} />
-                )}
-              </TouchableOpacity>
-            </View>
+          <View style={styles.menuModalContent}>
+            <Text style={styles.menuModalTitle}>게시글 관리</Text>
+            <TouchableOpacity
+              style={styles.menuModalItem}
+              onPress={() => menuPost && handleEditPost(menuPost)}
+            >
+              <Ionicons name="create-outline" size={20} color={Colors.primary} />
+              <Text style={styles.menuModalItemText}>수정</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuModalItem}
+              onPress={() => menuPost && handleDeletePost(menuPost.id)}
+            >
+              <Ionicons name="trash-outline" size={20} color={Colors.red} />
+              <Text style={[styles.menuModalItemText, { color: Colors.red }]}>삭제</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.menuModalItem, { borderBottomWidth: 0 }]}
+              onPress={() => setMenuPost(null)}
+            >
+              <Ionicons name="close-outline" size={20} color={Colors.gray500} />
+              <Text style={[styles.menuModalItemText, { color: Colors.gray500 }]}>취소</Text>
+            </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </TouchableOpacity>
       </Modal>
+
     </View>
   );
 }
@@ -710,6 +598,22 @@ const styles = StyleSheet.create({
   filterTabTextActive: {
     color: Colors.white,
   },
+  tabNewBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 4,
+    backgroundColor: Colors.red,
+    borderRadius: 7,
+    width: 14,
+    height: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tabNewBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: Colors.white,
+  },
   classChipContainer: {
     backgroundColor: '#fff',
     borderBottomWidth: 1,
@@ -753,120 +657,81 @@ const styles = StyleSheet.create({
   separator: {
     height: 8,
   },
+  // 간략형 카드
   postCard: {
     backgroundColor: '#fff',
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: '#F0E0B0',
-  },
-  postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0E0B0',
   },
-  authorRow: {
+  postCardRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  postCardLeft: {
+    flex: 1,
+  },
+  postCardAuthorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    gap: 6,
+    marginBottom: 6,
   },
-  authorInfo: {
-    marginLeft: 10,
-    flex: 1,
-  },
-  authorName: {
-    fontSize: 14,
+  postCardAuthorName: {
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.text,
     fontFamily: Fonts.bold,
   },
-  metaRow: {
+  postCardTime: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    flex: 1,
+  },
+  postMenuBtn: {
+    padding: 4,
+  },
+  postCardContent: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.text,
+    fontFamily: Fonts.regular,
+    marginBottom: 6,
+  },
+  postCardStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    gap: 8,
   },
-  schoolLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  dot: {
-    fontSize: 12,
-    color: Colors.textMuted,
-  },
-  timeAgo: {
-    fontSize: 12,
-    color: Colors.textMuted,
-  },
-  visibilityBadge: {
+  postCardVisibility: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
     gap: 3,
   },
-  visibilityText: {
-    fontSize: 11,
+  postCardVisibilityText: {
+    fontSize: 10,
     fontWeight: '600',
     color: Colors.primary,
   },
-  postContent: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: Colors.text,
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    fontFamily: Fonts.regular,
-  },
-  singleImage: {
-    width: '100%',
-    height: 240,
-    backgroundColor: Colors.gray100,
-  },
-  imageCarousel: {
-    marginBottom: 4,
-  },
-  carouselImage: {
-    width: SCREEN_WIDTH,
-    height: 240,
-    backgroundColor: Colors.gray100,
-  },
-  statsBar: {
+  postCardStatItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 12,
+    gap: 3,
   },
-  statText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
+  postCardStatText: {
+    fontSize: 11,
+    color: Colors.textMuted,
   },
-  actionBar: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    marginHorizontal: 16,
-    paddingTop: 8,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 4,
-    gap: 6,
-  },
-  actionText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.gray500,
-    fontFamily: Fonts.bold,
-  },
-  actionTextLiked: {
-    color: Colors.red,
+  postCardThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: Colors.gray100,
   },
   loadingWrap: {
     flex: 1,
@@ -907,138 +772,41 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  // Comment modal styles
-  commentModalOverlay: {
+  // 게시글 메뉴 모달
+  menuModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  commentModalContent: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    minHeight: '50%',
-  },
-  commentModalHeader: {
-    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
+  },
+  menuModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: 260,
+    overflow: 'hidden',
+  },
+  menuModalTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+    textAlign: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-  },
-  commentModalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.text,
     fontFamily: Fonts.bold,
   },
-  commentEmpty: {
-    flex: 1,
-    justifyContent: 'center',
+  menuModalItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  commentEmptyText: {
+  menuModalItemText: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  commentEmptySubText: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    marginTop: 4,
-  },
-  commentList: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  commentRow: {
-    flexDirection: 'row',
-    paddingVertical: 10,
-    gap: 10,
-  },
-  commentBody: {
-    flex: 1,
-  },
-  commentAuthor: {
-    fontSize: 13,
-    fontWeight: '700',
     color: Colors.text,
-    marginBottom: 2,
-  },
-  commentContent: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: Colors.text,
-    fontFamily: Fonts.regular,
-  },
-  commentMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 4,
-  },
-  commentTime: {
-    fontSize: 12,
-    color: Colors.textMuted,
-  },
-  commentReplyBtn: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  commentDeleteBtn: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.red,
-  },
-  commentReply: {
-    marginLeft: 36,
-    borderLeftWidth: 2,
-    borderLeftColor: Colors.border,
-    paddingLeft: 10,
-  },
-  replyToBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: Colors.primaryLight,
-  },
-  replyToText: {
-    fontSize: 13,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-  commentInputBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    gap: 8,
-  },
-  commentInput: {
-    flex: 1,
-    backgroundColor: Colors.gray100,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    fontSize: 14,
-    maxHeight: 80,
-  },
-  commentSendBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#2D5016',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });

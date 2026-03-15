@@ -155,6 +155,15 @@ export const reunionAPI = {
     return response.data;
   },
 
+  updateReunion: async (reunionId: number, userId: string, data: { name: string; description?: string; coverImageUrl?: string }): Promise<ReunionResponse> => {
+    const response = await apiClient.put(`/reunions/${reunionId}`, data, { params: { userId } });
+    return response.data;
+  },
+
+  deleteReunion: async (reunionId: number, userId: string): Promise<void> => {
+    await apiClient.delete(`/reunions/${reunionId}`, { params: { userId } });
+  },
+
   inviteMembers: async (reunionId: number, userId: string, memberIds: string[]): Promise<void> => {
     const params = new URLSearchParams();
     params.append('userId', userId);
@@ -206,6 +215,11 @@ export const reunionAPI = {
 
   deletePost: async (postId: number, userId: string): Promise<void> => {
     await apiClient.delete(`/reunions/posts/${postId}`, { params: { userId } });
+  },
+
+  updatePost: async (postId: number, userId: string, data: { content: string; imageUrls?: string[] }): Promise<ReunionPostResponse> => {
+    const response = await apiClient.put(`/reunions/posts/${postId}`, data, { params: { userId } });
+    return response.data;
   },
 
   togglePostLike: async (postId: number, userId: string): Promise<void> => {

@@ -119,6 +119,32 @@ public class ReunionService {
     }
 
     @Transactional
+    public ReunionResponse updateReunion(Long reunionId, String userId, CreateReunionRequest request) {
+        Reunion reunion = reunionRepository.findById(reunionId)
+                .orElseThrow(() -> new RuntimeException("동창회를 찾을 수 없습니다"));
+        if (!reunion.getCreatedBy().getUserId().equals(userId)) {
+            throw new RuntimeException("개설자만 수정할 수 있습니다");
+        }
+        reunion.setName(request.getName());
+        reunion.setDescription(request.getDescription());
+        if (request.getCoverImageUrl() != null) {
+            reunion.setCoverImageUrl(request.getCoverImageUrl());
+        }
+        reunionRepository.save(reunion);
+        return getReunionDetail(reunionId, userId);
+    }
+
+    @Transactional
+    public void deleteReunion(Long reunionId, String userId) {
+        Reunion reunion = reunionRepository.findById(reunionId)
+                .orElseThrow(() -> new RuntimeException("동창회를 찾을 수 없습니다"));
+        if (!reunion.getCreatedBy().getUserId().equals(userId)) {
+            throw new RuntimeException("개설자만 삭제할 수 있습니다");
+        }
+        reunionRepository.delete(reunion);
+    }
+
+    @Transactional
     public void inviteMembers(Long reunionId, String inviterUserId, List<String> memberIds) {
         Reunion reunion = reunionRepository.findById(reunionId)
                 .orElseThrow(() -> new RuntimeException("동창회를 찾을 수 없습니다"));
@@ -426,6 +452,20 @@ public class ReunionService {
         }
 
         reunionPostRepository.delete(post);
+    }
+
+    public ReunionPostResponse updatePost(Long postId, String userId, String content, java.util.List<String> imageUrls) {
+        ReunionPost post = reunionPostRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다"));
+        if (!post.getAuthor().getUserId().equals(userId)) {
+            throw new RuntimeException("수정 권한이 없습니다");
+        }
+        if (content != null) post.setContent(content);
+        if (imageUrls != null) post.setImageUrls(imageUrls);
+        reunionPostRepository.save(post);
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+        return toReunionPostResponse(post, user);
     }
 
     // ========== 좋아요 ==========

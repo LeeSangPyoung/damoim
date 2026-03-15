@@ -13,7 +13,10 @@ import {
   Alert,
   Modal,
   ScrollView,
+  Image,
+  Linking,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../constants/colors';
 import { useAuth } from '../hooks/useAuth';
@@ -26,7 +29,7 @@ import Badge from '../components/Badge';
 import EmptyState from '../components/EmptyState';
 import NoticeBanner from '../components/NoticeBanner';
 import HeaderActions from '../components/HeaderActions';
-import { WS_BASE_URL, HEADER_TOP_PADDING } from '../constants/config';
+import { API_BASE_URL, WS_BASE_URL, HEADER_TOP_PADDING } from '../constants/config';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Client } from '@stomp/stompjs';
 
@@ -51,6 +54,30 @@ const EMOJI_LIST = [
   '🎉','✨','💪','🤝','👋','😱','🤗','😴','🤮','💕',
   '🙄','😏','🥳','😈','💀','🤡','👀','💬','📸','🎵',
 ];
+
+const REACTION_EMOJIS = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
+
+// 리액션을 그룹별로 묶기
+function groupReactions(reactions?: { emoji: string; userId: string; userName: string }[]) {
+  if (!reactions || reactions.length === 0) return [];
+  const map = new Map<string, { emoji: string; count: number; users: string[] }>();
+  for (const r of reactions) {
+    const existing = map.get(r.emoji);
+    if (existing) {
+      existing.count++;
+      existing.users.push(r.userId);
+    } else {
+      map.set(r.emoji, { emoji: r.emoji, count: 1, users: [r.userId] });
+    }
+  }
+  return Array.from(map.values());
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
 
 function formatTime(dateStr?: string): string {
   if (!dateStr) return '';
@@ -101,6 +128,7 @@ export default function ChatScreen() {
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
 
   // ---- New chat modal ----
   const [showNewChat, setShowNewChat] = useState(false);
@@ -399,6 +427,159 @@ export default function ChatScreen() {
   };
 
   // =========================================================================
+  // Attachment: pick & send
+  // =========================================================================
+
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const pickAndSendImage = (roomId: number, isGroup: boolean) => {
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        sendAttachmentWeb(roomId, isGroup, file);
+      };
+      input.click();
+    } else {
+      (async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 0.8,
+        });
+        if (result.canceled || !result.assets?.[0]) return;
+        const asset = result.assets[0];
+        await sendAttachmentNative(roomId, isGroup, asset.uri, asset.fileName || undefined);
+      })();
+    }
+  };
+
+  const pickAndSendFile = (roomId: number, isGroup: boolean) => {
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.onchange = (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        sendAttachmentWeb(roomId, isGroup, file);
+      };
+      input.click();
+    } else {
+      (async () => {
+        try {
+          const DocumentPicker = require('expo-document-picker');
+          const result = await DocumentPicker.getDocumentAsync({ type: '*/*' });
+          if (result.canceled || !result.assets?.[0]) return;
+          const asset = result.assets[0];
+          await sendAttachmentNative(roomId, isGroup, asset.uri, asset.name);
+        } catch {
+          Alert.alert('안내', '파일 선택을 사용하려면 expo-document-picker가 필요합니다.');
+        }
+      })();
+    }
+  };
+
+  // 웹: File 객체를 직접 FormData에 넣어 업로드
+  const sendAttachmentWeb = async (roomId: number, isGroup: boolean, file: File) => {
+    if (!userId) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file, file.name);
+      const res = await fetch(`${API_BASE_URL}/chat/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || '업로드 실패');
+      }
+      const uploaded = await res.json();
+      const attachment = {
+        messageType: uploaded.messageType as string,
+        attachmentUrl: uploaded.url as string,
+        fileName: uploaded.fileName as string,
+        fileSize: uploaded.fileSize as number,
+      };
+      const content = uploaded.messageType === 'IMAGE' ? '사진' : uploaded.fileName;
+      if (isGroup) {
+        const msg = await groupChatAPI.sendMessage(roomId, userId, content, attachment);
+        setGroupMessages((prev) => {
+          if (prev.find((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
+      } else {
+        const msg = await chatAPI.sendMessage(roomId, userId, content, attachment);
+        setDmMessages((prev) => {
+          if (prev.find((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
+      }
+    } catch (e: any) {
+      console.error('Upload error:', e);
+      if (Platform.OS === 'web') {
+        window.alert('업로드 실패: ' + (e?.message || '파일 전송에 실패했습니다.'));
+      } else {
+        Alert.alert('업로드 실패', e?.message || '파일 전송에 실패했습니다.');
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // 네이티브: URI 기반 업로드
+  const sendAttachmentNative = async (roomId: number, isGroup: boolean, uri: string, fileName?: string) => {
+    if (!userId) return;
+    setUploading(true);
+    try {
+      const uploaded = await chatAPI.uploadFile(uri, fileName);
+      const attachment = {
+        messageType: uploaded.messageType,
+        attachmentUrl: uploaded.url,
+        fileName: uploaded.fileName,
+        fileSize: uploaded.fileSize,
+      };
+      const content = uploaded.messageType === 'IMAGE' ? '사진' : uploaded.fileName;
+      const msg = await chatAPI.sendMessage(roomId, userId, content, attachment);
+      setDmMessages((prev) => {
+        if (prev.find((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    } catch (e: any) {
+      Alert.alert('업로드 실패', e?.message || '파일 전송에 실패했습니다.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+
+  // 리액션
+  const [reactionMsgId, setReactionMsgId] = useState<number | null>(null);
+  const [reactionSource, setReactionSource] = useState<'DM' | 'GROUP'>('DM');
+
+  const handleReaction = async (messageId: number, source: 'DM' | 'GROUP', emoji: string) => {
+    if (!userId) return;
+    setReactionMsgId(null);
+    try {
+      await chatAPI.toggleReaction(userId, messageId, source, emoji);
+      // 리액션 후 메시지 새로고침
+      if (source === 'DM' && view.kind === 'dm-chat') {
+        const msgs = await chatAPI.getMessages(view.room.id, userId);
+        setDmMessages(msgs);
+      } else if (source === 'GROUP' && view.kind === 'group-chat') {
+        const msgs = await groupChatAPI.getMessages(view.room.id, userId);
+        setGroupMessages(msgs);
+      }
+    } catch (e) {
+      console.error('Reaction error:', e);
+    }
+  };
+
+  // =========================================================================
   // Navigation helpers
   // =========================================================================
 
@@ -589,7 +770,7 @@ export default function ChatScreen() {
       return (
         <View>
           {renderNewChatButton('+ 새 1:1 채팅')}
-          <EmptyState icon="💬" title="채팅방이 없습니다" subtitle="친구에게 먼저 메시지를 보내보세요" />
+          <EmptyState ionIcon="chatbubble-outline" title="채팅방이 없습니다" subtitle="친구에게 먼저 메시지를 보내보세요" />
         </View>
       );
     }
@@ -638,7 +819,7 @@ export default function ChatScreen() {
       return (
         <View>
           {renderNewChatButton('+ 새 그룹 채팅')}
-          <EmptyState icon="👥" title="그룹 채팅방이 없습니다" subtitle="그룹을 만들어 대화를 시작하세요" />
+          <EmptyState ionIcon="people-outline" title="그룹 채팅방이 없습니다" subtitle="그룹을 만들어 대화를 시작하세요" />
         </View>
       );
     }
@@ -668,13 +849,14 @@ export default function ChatScreen() {
         </View>
       );
     }
+    const grouped = groupReactions(item.reactions);
     return (
       <View style={[styles.msgRow, isMine ? styles.msgRowRight : styles.msgRowLeft]}>
         {!isMine && (
           <Avatar
             uri={view.kind === 'dm-chat' ? view.room.otherUser.profileImageUrl : undefined}
             name={item.senderName}
-            size={32}
+            size={45}
           />
         )}
         <View style={isMine ? styles.msgRight : styles.msgLeft}>
@@ -686,17 +868,59 @@ export default function ChatScreen() {
                 <Text style={styles.msgTime}>{formatTime(item.sentAt)}</Text>
               </View>
             )}
-            <View style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther]}>
-              <Text style={[styles.msgText, isMine && styles.msgTextMine]}>
-                {item.deletedBySender ? '삭제된 메시지입니다' : item.content}
-              </Text>
-            </View>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onLongPress={() => { setReactionMsgId(item.id); setReactionSource('DM'); }}
+              onPress={item.messageType === 'IMAGE' && item.attachmentUrl ? () => setImagePreview(item.attachmentUrl!) : undefined}
+            >
+              {item.deletedBySender ? (
+                <View style={[styles.msgBubble, styles.msgDeleted]}>
+                  <Text style={styles.msgDeletedText}>삭제된 메시지입니다</Text>
+                </View>
+              ) : item.messageType === 'IMAGE' && item.attachmentUrl ? (
+                <Image source={{ uri: item.attachmentUrl }} style={styles.chatImage} resizeMode="cover" />
+              ) : item.messageType === 'FILE' && item.attachmentUrl ? (
+                <TouchableOpacity
+                  style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther, styles.fileBubble]}
+                  onPress={() => Linking.openURL(item.attachmentUrl!)}
+                  onLongPress={() => { setReactionMsgId(item.id); setReactionSource('DM'); }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="document-attach-outline" size={24} color={isMine ? '#fff' : Colors.primary} />
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <Text style={[styles.fileNameText, isMine && { color: '#fff' }]} numberOfLines={1}>{item.fileName || '파일'}</Text>
+                    {item.fileSize != null && <Text style={[styles.fileSizeText, isMine && { color: 'rgba(255,255,255,0.7)' }]}>{formatFileSize(item.fileSize)}</Text>}
+                  </View>
+                  <Ionicons name="download-outline" size={20} color={isMine ? 'rgba(255,255,255,0.7)' : Colors.gray400} />
+                </TouchableOpacity>
+              ) : (
+                <View style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther]}>
+                  <Text style={[styles.msgText, isMine && styles.msgTextMine]}>{item.content}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
             {!isMine && (
               <View style={styles.msgMeta}>
                 <Text style={styles.msgTime}>{formatTime(item.sentAt)}</Text>
               </View>
             )}
           </View>
+          {/* 리액션 표시 */}
+          {grouped.length > 0 && (
+            <View style={[styles.reactionRow, isMine && { justifyContent: 'flex-end' }]}>
+              {grouped.map(g => (
+                <TouchableOpacity
+                  key={g.emoji}
+                  style={[styles.reactionChip, g.users.includes(userId) && styles.reactionChipMine]}
+                  onPress={() => handleReaction(item.id, 'DM', g.emoji)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.reactionEmoji}>{g.emoji}</Text>
+                  {g.count > 1 && <Text style={styles.reactionCount}>{g.count}</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       </View>
     );
@@ -746,9 +970,50 @@ export default function ChatScreen() {
         </ScrollView>
       )}
 
+      {/* Attach Menu */}
+      {showAttachMenu && (
+        <View style={styles.attachMenu}>
+          <TouchableOpacity
+            style={styles.attachMenuItem}
+            onPress={() => { setShowAttachMenu(false); pickAndSendImage(room.id, false); }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.attachIconWrap, { backgroundColor: '#4CAF50' }]}>
+              <Ionicons name="image" size={22} color="#fff" />
+            </View>
+            <Text style={styles.attachMenuText}>사진</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.attachMenuItem}
+            onPress={() => { setShowAttachMenu(false); pickAndSendFile(room.id, false); }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.attachIconWrap, { backgroundColor: '#FF9800' }]}>
+              <Ionicons name="document" size={22} color="#fff" />
+            </View>
+            <Text style={styles.attachMenuText}>파일</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Uploading indicator */}
+      {uploading && (
+        <View style={styles.uploadingBar}>
+          <ActivityIndicator size="small" color={Colors.primary} />
+          <Text style={styles.uploadingText}>파일 전송 중...</Text>
+        </View>
+      )}
+
       {/* Input */}
       <View style={styles.inputBar}>
-        <TouchableOpacity onPress={() => setShowEmoji(v => !v)} style={styles.emojiBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => { setShowAttachMenu(v => !v); setShowEmoji(false); }}
+          style={styles.emojiBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={showAttachMenu ? 'close-circle' : 'add-circle'} size={26} color={showAttachMenu ? Colors.gray400 : Colors.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => { setShowEmoji(v => !v); setShowAttachMenu(false); }} style={styles.emojiBtn} activeOpacity={0.7}>
           <Ionicons name={showEmoji ? 'close-circle' : 'happy-outline'} size={24} color={showEmoji ? Colors.gray400 : Colors.primary} />
         </TouchableOpacity>
         <TextInput
@@ -757,7 +1022,7 @@ export default function ChatScreen() {
           placeholderTextColor={Colors.gray400}
           value={messageText}
           onChangeText={setMessageText}
-          onFocus={() => setShowEmoji(false)}
+          onFocus={() => { setShowEmoji(false); setShowAttachMenu(false); }}
           multiline
           maxLength={2000}
           editable={!sending}
@@ -793,10 +1058,11 @@ export default function ChatScreen() {
       );
     }
 
+    const grouped = groupReactions(item.reactions);
     return (
       <View style={[styles.msgRow, isMine ? styles.msgRowRight : styles.msgRowLeft]}>
         {!isMine && (
-          <Avatar name={item.senderName} size={32} />
+          <Avatar name={item.senderName} size={45} />
         )}
         <View style={isMine ? styles.msgRight : styles.msgLeft}>
           {!isMine && <Text style={styles.msgSenderName}>{item.senderName}</Text>}
@@ -809,9 +1075,35 @@ export default function ChatScreen() {
                 <Text style={styles.msgTime}>{formatTime(item.sentAt)}</Text>
               </View>
             )}
-            <View style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther]}>
-              <Text style={[styles.msgText, isMine && styles.msgTextMine]}>{item.content}</Text>
-            </View>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onLongPress={() => { setReactionMsgId(item.id); setReactionSource('GROUP'); }}
+              onPress={item.messageType === 'IMAGE' && item.attachmentUrl ? () => setImagePreview(item.attachmentUrl!) : undefined}
+            >
+              {(item.messageType === 'IMAGE') && item.attachmentUrl ? (
+                <Image source={{ uri: item.attachmentUrl }} style={styles.chatImage} resizeMode="cover" />
+              ) : (item.messageType === 'FILE') && item.attachmentUrl ? (
+                <TouchableOpacity
+                  style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther, styles.fileBubble]}
+                  onPress={() => Linking.openURL(item.attachmentUrl!)}
+                  onLongPress={() => { setReactionMsgId(item.id); setReactionSource('GROUP'); }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="document-attach-outline" size={24} color={isMine ? '#fff' : Colors.primary} />
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <Text style={[styles.fileNameText, isMine && { color: '#fff' }]} numberOfLines={1}>{item.fileName || '파일'}</Text>
+                    {item.fileSize != null && (
+                      <Text style={[styles.fileSizeText, isMine && { color: 'rgba(255,255,255,0.7)' }]}>{formatFileSize(item.fileSize)}</Text>
+                    )}
+                  </View>
+                  <Ionicons name="download-outline" size={20} color={isMine ? 'rgba(255,255,255,0.7)' : Colors.gray400} />
+                </TouchableOpacity>
+              ) : (
+                <View style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther]}>
+                  <Text style={[styles.msgText, isMine && styles.msgTextMine]}>{item.content}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
             {!isMine && (
               <View style={styles.msgMeta}>
                 {item.unreadCount > 0 && (
@@ -821,6 +1113,22 @@ export default function ChatScreen() {
               </View>
             )}
           </View>
+          {/* 리액션 표시 */}
+          {grouped.length > 0 && (
+            <View style={[styles.reactionRow, isMine && { justifyContent: 'flex-end' }]}>
+              {grouped.map(g => (
+                <TouchableOpacity
+                  key={g.emoji}
+                  style={[styles.reactionChip, g.users.includes(userId) && styles.reactionChipMine]}
+                  onPress={() => handleReaction(item.id, 'GROUP', g.emoji)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.reactionEmoji}>{g.emoji}</Text>
+                  {g.count > 1 && <Text style={styles.reactionCount}>{g.count}</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       </View>
     );
@@ -838,13 +1146,28 @@ export default function ChatScreen() {
           <Text style={styles.backBtnText}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={[styles.chatHeaderTitle, { flex: 1 }]}>{room.name}</Text>
-        <View style={styles.memberBadge}>
+        <TouchableOpacity style={styles.memberBadge} onPress={() => setShowMembers(!showMembers)}>
           <Text style={styles.memberBadgeText}>{room.memberCount}</Text>
-        </View>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => handleDeleteGroupRoom(room)} style={styles.leaveRoomBtn}>
           <Text style={styles.leaveRoomBtnText}>나가기</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Members Panel */}
+      {showMembers && (
+        <View style={styles.membersPanel}>
+          <Text style={styles.membersPanelTitle}>참가자 ({room.members.length}명)</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 4 }}>
+            {room.members.map(m => (
+              <View key={m.userId} style={styles.memberItem}>
+                <Avatar uri={m.profileImageUrl} name={m.name} size={36} />
+                <Text style={styles.memberItemName} numberOfLines={1}>{m.name}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Messages */}
       {groupMsgLoading ? (
@@ -872,9 +1195,50 @@ export default function ChatScreen() {
         </ScrollView>
       )}
 
+      {/* Attach Menu */}
+      {showAttachMenu && (
+        <View style={styles.attachMenu}>
+          <TouchableOpacity
+            style={styles.attachMenuItem}
+            onPress={() => { setShowAttachMenu(false); pickAndSendImage(room.id, true); }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.attachIconWrap, { backgroundColor: '#4CAF50' }]}>
+              <Ionicons name="image" size={22} color="#fff" />
+            </View>
+            <Text style={styles.attachMenuText}>사진</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.attachMenuItem}
+            onPress={() => { setShowAttachMenu(false); pickAndSendFile(room.id, true); }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.attachIconWrap, { backgroundColor: '#FF9800' }]}>
+              <Ionicons name="document" size={22} color="#fff" />
+            </View>
+            <Text style={styles.attachMenuText}>파일</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Uploading indicator */}
+      {uploading && (
+        <View style={styles.uploadingBar}>
+          <ActivityIndicator size="small" color={Colors.primary} />
+          <Text style={styles.uploadingText}>파일 전송 중...</Text>
+        </View>
+      )}
+
       {/* Input */}
       <View style={styles.inputBar}>
-        <TouchableOpacity onPress={() => setShowEmoji(v => !v)} style={styles.emojiBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => { setShowAttachMenu(v => !v); setShowEmoji(false); }}
+          style={styles.emojiBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={showAttachMenu ? 'close-circle' : 'add-circle'} size={26} color={showAttachMenu ? Colors.gray400 : Colors.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => { setShowEmoji(v => !v); setShowAttachMenu(false); }} style={styles.emojiBtn} activeOpacity={0.7}>
           <Ionicons name={showEmoji ? 'close-circle' : 'happy-outline'} size={24} color={showEmoji ? Colors.gray400 : Colors.primary} />
         </TouchableOpacity>
         <TextInput
@@ -883,7 +1247,7 @@ export default function ChatScreen() {
           placeholderTextColor={Colors.gray400}
           value={messageText}
           onChangeText={setMessageText}
-          onFocus={() => setShowEmoji(false)}
+          onFocus={() => { setShowEmoji(false); setShowAttachMenu(false); }}
           multiline
           maxLength={2000}
           editable={!sending}
@@ -905,6 +1269,50 @@ export default function ChatScreen() {
   );
 
   // =========================================================================
+  // Image preview modal
+  // =========================================================================
+
+  const renderImagePreviewModal = () => (
+    <Modal visible={!!imagePreview} transparent animationType="fade" onRequestClose={() => setImagePreview(null)}>
+      <View style={styles.imagePreviewOverlay}>
+        <TouchableOpacity style={styles.imagePreviewClose} onPress={() => setImagePreview(null)}>
+          <Ionicons name="close" size={30} color="#fff" />
+        </TouchableOpacity>
+        {imagePreview && (
+          <Image
+            source={{ uri: imagePreview }}
+            style={styles.imagePreviewFull}
+            resizeMode="contain"
+          />
+        )}
+      </View>
+    </Modal>
+  );
+
+  // =========================================================================
+  // Render: Reaction picker modal
+  // =========================================================================
+
+  const renderReactionPicker = () => (
+    <Modal visible={reactionMsgId !== null} transparent animationType="fade" onRequestClose={() => setReactionMsgId(null)}>
+      <TouchableOpacity style={styles.reactionOverlay} activeOpacity={1} onPress={() => setReactionMsgId(null)}>
+        <View style={styles.reactionPicker}>
+          {REACTION_EMOJIS.map(emoji => (
+            <TouchableOpacity
+              key={emoji}
+              style={styles.reactionPickerItem}
+              onPress={() => reactionMsgId && handleReaction(reactionMsgId, reactionSource, emoji)}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.reactionPickerEmoji}>{emoji}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  // =========================================================================
   // Render: Main
   // =========================================================================
 
@@ -912,6 +1320,8 @@ export default function ChatScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         {renderDmChat(view.room)}
+        {renderImagePreviewModal()}
+        {renderReactionPicker()}
       </SafeAreaView>
     );
   }
@@ -920,6 +1330,8 @@ export default function ChatScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         {renderGroupChat(view.room)}
+        {renderImagePreviewModal()}
+        {renderReactionPicker()}
       </SafeAreaView>
     );
   }
@@ -1069,12 +1481,14 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     marginLeft: 8,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,107,107,0.15)',
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
   },
   leaveRoomBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FF6B6B',
+    color: '#dc2626',
   },
   deleteAllBtn: {
     paddingHorizontal: 12,
@@ -1344,44 +1758,42 @@ const styles = StyleSheet.create({
   // Input bar
   inputBar: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 12,
+    alignItems: 'center',
+    paddingHorizontal: 10,
     paddingVertical: 8,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#F0E0B0',
+    gap: 8,
   },
   input: {
     flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
+    maxHeight: 80,
     backgroundColor: '#fff',
     borderRadius: 20,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
     color: Colors.text,
     borderWidth: 1,
-    borderColor: '#F0E0B0',
+    borderColor: '#e5e7eb',
+    textAlignVertical: 'center',
   },
   sendBtn: {
-    marginLeft: 8,
     backgroundColor: '#2D5016',
     borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    minWidth: 56,
   },
   sendBtnDisabled: {
     backgroundColor: Colors.gray300,
   },
   sendBtnText: {
-    color: '#FFE156',
+    color: '#fff',
     fontSize: 14,
-    fontWeight: '700',
-    fontFamily: Fonts.bold,
+    fontWeight: '600',
   },
 
   // Loader
@@ -1478,7 +1890,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
   },
   emojiBtn: {
-    paddingHorizontal: 4,
+    width: 36,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1502,5 +1915,183 @@ const styles = StyleSheet.create({
   },
   emojiText: {
     fontSize: 24,
+  },
+  membersPanel: {
+    backgroundColor: Colors.backgroundDeep,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.goldBorder,
+  },
+  membersPanelTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+    fontFamily: Fonts.bold,
+    marginBottom: 8,
+  },
+  memberItem: {
+    alignItems: 'center',
+    width: 50,
+    gap: 4,
+  },
+  memberItemName: {
+    fontSize: 11,
+    color: Colors.text,
+    fontFamily: Fonts.regular,
+    textAlign: 'center',
+  },
+
+  // Chat image message
+  chatImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+  },
+
+  // File message
+  fileBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minWidth: 200,
+    maxWidth: 260,
+  },
+  fileNameText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.text,
+    fontFamily: Fonts.bold,
+  },
+  fileSizeText: {
+    fontSize: 11,
+    color: Colors.gray400,
+    marginTop: 2,
+    fontFamily: Fonts.regular,
+  },
+
+  // Attach menu
+  attachMenu: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF8E7',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    gap: 32,
+    borderTopWidth: 1,
+    borderTopColor: '#F0E0B0',
+  },
+  attachMenuItem: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  attachIconWrap: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attachMenuText: {
+    fontSize: 12,
+    color: Colors.text,
+    fontFamily: Fonts.regular,
+  },
+
+  // Uploading bar
+  uploadingBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    backgroundColor: '#FFF8E7',
+    borderTopWidth: 1,
+    borderTopColor: '#F0E0B0',
+  },
+  uploadingText: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    fontFamily: Fonts.regular,
+  },
+
+  // Image preview modal
+  imagePreviewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePreviewClose: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
+  },
+  imagePreviewFull: {
+    width: '90%',
+    height: '80%',
+  },
+
+  // Reaction styles
+  reactionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 4,
+  },
+  reactionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  reactionChipMine: {
+    backgroundColor: '#e8f5e9',
+    borderColor: '#a5d6a7',
+  },
+  reactionEmoji: {
+    fontSize: 14,
+  },
+  reactionCount: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginLeft: 3,
+    fontWeight: '600',
+  },
+  reactionOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reactionPicker: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 28,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
+    gap: 2,
+  },
+  reactionPickerItem: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 22,
+  },
+  reactionPickerEmoji: {
+    fontSize: 28,
   },
 });

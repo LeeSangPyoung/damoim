@@ -79,12 +79,13 @@ export default function MySchoolScreen({ navigation }: any) {
           .filter(s => s.schoolType !== '대학교')
           .map(async (school) => {
             try {
-              const [classmatesData, newPostCount] = await Promise.all([
+              const [classmatesData, newCounts] = await Promise.all([
                 school.schoolCode
                   ? userAPI.searchClassmates(user.userId, school.schoolCode, school.graduationYear)
                   : Promise.resolve({ classmates: [], totalCount: 0 }),
-                postAPI.getNewPostCountForSchool(user.userId, school.schoolName, school.graduationYear),
+                postAPI.getNewCounts(user.userId, school.schoolName, school.graduationYear),
               ]);
+              const newPostCount = (newCounts.all || 0) + (newCounts.myGrade || 0) + (newCounts.myClass || 0);
               return {
                 ...school,
                 classmateCount: classmatesData.totalCount,

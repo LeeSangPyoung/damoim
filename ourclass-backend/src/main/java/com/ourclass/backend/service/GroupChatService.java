@@ -1,6 +1,9 @@
 package com.ourclass.backend.service;
 
 import com.ourclass.backend.dto.GroupChatMessageResponse;
+import com.ourclass.backend.dto.ReactionResponse;
+import com.ourclass.backend.entity.ChatMessageReaction;
+import com.ourclass.backend.repository.ChatMessageReactionRepository;
 import com.ourclass.backend.dto.GroupChatRoomResponse;
 import com.ourclass.backend.entity.GroupChatMember;
 import com.ourclass.backend.entity.GroupChatMessage;
@@ -32,6 +35,9 @@ public class GroupChatService {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private ChatMessageReactionRepository reactionRepository;
 
     // 그룹 채팅방 생성
     @Transactional
@@ -85,9 +91,16 @@ public class GroupChatService {
                 .collect(Collectors.toList());
     }
 
-    // 메시지 보내기
+    // 메시지 보내기 (텍스트)
     @Transactional
     public GroupChatMessageResponse sendMessage(Long roomId, String senderUserId, String content) {
+        return sendMessage(roomId, senderUserId, content, null, null, null, null);
+    }
+
+    // 메시지 보내기 (텍스트 + 첨부파일)
+    @Transactional
+    public GroupChatMessageResponse sendMessage(Long roomId, String senderUserId, String content,
+                                                 String messageType, String attachmentUrl, String fileName, Long fileSize) {
         GroupChatRoom room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("채팅방을 찾을 수 없습니다."));
         User sender = userRepository.findByUserId(senderUserId)
@@ -97,14 +110,28 @@ public class GroupChatService {
             throw new RuntimeException("채팅방 멤버가 아닙니다.");
         }
 
+        String type = (messageType != null && !messageType.isEmpty()) ? messageType : "CHAT";
+
         GroupChatMessage message = GroupChatMessage.builder()
                 .room(room)
                 .sender(sender)
                 .content(content)
+                .messageType(type)
+                .attachmentUrl(attachmentUrl)
+                .fileName(fileName)
+                .fileSize(fileSize)
                 .build();
         messageRepository.save(message);
 
-        room.setLastMessage(content);
+        String lastMsg;
+        if ("IMAGE".equals(type)) {
+            lastMsg = "사진을 보냈습니다";
+        } else if ("FILE".equals(type)) {
+            lastMsg = "파일을 보냈습니다";
+        } else {
+            lastMsg = content.length() > 100 ? content.substring(0, 100) + "..." : content;
+        }
+        room.setLastMessage(lastMsg);
         room.setLastMessageAt(LocalDateTime.now());
         roomRepository.save(room);
 
@@ -116,6 +143,9 @@ public class GroupChatService {
         }
 
         // 다른 멤버들에게 알림
+        String notifMsg = "IMAGE".equals(type) ? sender.getName() + "님이 사진을 보냈습니다"
+                         : "FILE".equals(type) ? sender.getName() + "님이 파일을 보냈습니다"
+                         : sender.getName() + "님이 메시지를 보냈습니다";
         List<GroupChatMember> members = memberRepository.findByRoom(room);
         for (GroupChatMember member : members) {
             if (!member.getUser().getUserId().equals(senderUserId)) {
@@ -124,7 +154,7 @@ public class GroupChatService {
                         senderUserId,
                         sender.getName(),
                         "GROUP_CHAT",
-                        "[" + room.getName() + "] " + sender.getName() + "님이 메시지를 보냈습니다",
+                        "[" + room.getName() + "] " + notifMsg,
                         roomId
                 );
             }
@@ -153,9 +183,27 @@ public class GroupChatService {
             }
         }
 
-        return messages.stream()
+        List<GroupChatMessage> filtered = messages.stream()
                 .filter(msg -> !msg.getCompletelyDeleted() && !msg.getDeletedByUserIds().contains(userId))
-                .map(msg -> toMessageResponse(msg, room))
+                .collect(Collectors.toList());
+
+        // 리액션 일괄 조회
+        List<Long> msgIds = filtered.stream().map(GroupChatMessage::getId).collect(Collectors.toList());
+        java.util.Map<Long, List<ReactionResponse>> reactionsMap = new java.util.HashMap<>();
+        if (!msgIds.isEmpty()) {
+            List<ChatMessageReaction> allReactions = reactionRepository.findByMessageIdInAndMessageSource(msgIds, "GROUP");
+            for (ChatMessageReaction r : allReactions) {
+                reactionsMap.computeIfAbsent(r.getMessageId(), k -> new java.util.ArrayList<>())
+                        .add(ReactionResponse.builder().emoji(r.getEmoji()).userId(r.getUserId()).userName(r.getUserName()).build());
+            }
+        }
+
+        return filtered.stream()
+                .map(msg -> {
+                    GroupChatMessageResponse resp = toMessageResponse(msg, room);
+                    resp.setReactions(reactionsMap.getOrDefault(msg.getId(), java.util.Collections.emptyList()));
+                    return resp;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -299,6 +347,9 @@ public class GroupChatService {
                 .senderName(msg.getSender().getName())
                 .content(msg.getContent())
                 .messageType(msg.getMessageType())
+                .attachmentUrl(msg.getAttachmentUrl())
+                .fileName(msg.getFileName())
+                .fileSize(msg.getFileSize())
                 .unreadCount(unreadCount)
                 .sentAt(msg.getSentAt() != null ? msg.getSentAt().toString() : null)
                 .build();

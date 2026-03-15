@@ -439,9 +439,11 @@ public class PostService {
                 .filter(post -> canUserAccessPost(post, matchingSchools))
                 .collect(Collectors.toList());
 
-        // 탭별 새 글 수 계산 ("우리 학교" 탭은 SCHOOL visibility만)
+        // 탭별 새 글 수 계산 (24시간 이내 기준)
+        LocalDateTime since = LocalDateTime.now().minusHours(24);
+
         long allCount = accessiblePosts.stream()
-                .filter(p -> p.getId() > lastSeenAll)
+                .filter(p -> p.getCreatedAt() != null && p.getCreatedAt().isAfter(since))
                 .filter(p -> {
                     String vis = p.getVisibility();
                     return vis == null || "SCHOOL".equals(vis);
@@ -450,13 +452,13 @@ public class PostService {
         counts.put("all", allCount);
 
         long gradeCount = accessiblePosts.stream()
-                .filter(p -> p.getId() > lastSeenMyGrade)
+                .filter(p -> p.getCreatedAt() != null && p.getCreatedAt().isAfter(since))
                 .filter(p -> isPostForGradeTab(p, schoolName, matchingSchools))
                 .count();
         counts.put("myGrade", gradeCount);
 
         long classCount = accessiblePosts.stream()
-                .filter(p -> p.getId() > lastSeenMyClass)
+                .filter(p -> p.getCreatedAt() != null && p.getCreatedAt().isAfter(since))
                 .filter(p -> isPostForClassTab(p, schoolName, matchingSchools))
                 .count();
         counts.put("myClass", classCount);
@@ -466,8 +468,9 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public long getNewPostCountForSchool(String userId, String schoolName, String graduationYear) {
-        // 해당 학교의 전체 새 글 수 (lastSeen 0 = 전체)
-        return postRepository.countNewBySchoolName(schoolName, 0L);
+        // 24시간 이내 작성된 글 수
+        LocalDateTime since = LocalDateTime.now().minusHours(24);
+        return postRepository.countRecentBySchoolName(schoolName, since);
     }
 
     // 요청된 학교 정보와 매칭되는 UserSchool 찾기 (없으면 첫 번째)

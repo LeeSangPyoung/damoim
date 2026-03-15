@@ -51,6 +51,29 @@ public class ReunionController {
         }
     }
 
+    @PutMapping("/{reunionId}")
+    public ResponseEntity<?> updateReunion(@PathVariable Long reunionId,
+                                           @RequestParam String userId,
+                                           @RequestBody CreateReunionRequest request) {
+        try {
+            ReunionResponse response = reunionService.updateReunion(reunionId, userId, request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{reunionId}")
+    public ResponseEntity<?> deleteReunion(@PathVariable Long reunionId,
+                                           @RequestParam String userId) {
+        try {
+            reunionService.deleteReunion(reunionId, userId);
+            return ResponseEntity.ok(Map.of("message", "삭제 완료"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/{reunionId}/invite")
     public ResponseEntity<?> inviteMembers(@PathVariable Long reunionId,
                                            @RequestParam String userId,
@@ -177,6 +200,21 @@ public class ReunionController {
         try {
             reunionService.deletePost(postId, userId);
             return ResponseEntity.ok(Map.of("message", "삭제 완료"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/posts/{postId}")
+    public ResponseEntity<?> updatePost(@PathVariable Long postId,
+                                         @RequestParam String userId,
+                                         @RequestBody Map<String, Object> body) {
+        try {
+            String content = (String) body.get("content");
+            @SuppressWarnings("unchecked")
+            java.util.List<String> imageUrls = (java.util.List<String>) body.get("imageUrls");
+            var post = reunionService.updatePost(postId, userId, content, imageUrls);
+            return ResponseEntity.ok(post);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

@@ -32,6 +32,20 @@ public class ChatMessage {
     @Column(nullable = false, length = 2000)
     private String content;
 
+    // TEXT, IMAGE, FILE
+    @Column(name = "message_type", length = 20, columnDefinition = "varchar(20) default 'TEXT'")
+    @Builder.Default
+    private String messageType = "TEXT";
+
+    @Column(name = "attachment_url", length = 500)
+    private String attachmentUrl;
+
+    @Column(name = "file_name", length = 255)
+    private String fileName;
+
+    @Column(name = "file_size")
+    private Long fileSize;
+
     @Column(name = "is_read", nullable = false)
     @Builder.Default
     private Boolean isRead = false;

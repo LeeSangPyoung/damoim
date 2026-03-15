@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -47,6 +48,10 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT COUNT(DISTINCT p) FROM Post p JOIN p.author.schools s " +
            "WHERE p.schoolName = :schoolName AND p.graduationYear = :graduationYear AND s.schoolName = :schoolName AND s.grade = :grade AND s.classNumber = :classNumber AND p.id > :afterId")
     long countNewBySchoolAndYearAndGradeAndClass(@Param("schoolName") String schoolName, @Param("graduationYear") String graduationYear, @Param("grade") String grade, @Param("classNumber") String classNumber, @Param("afterId") Long afterId);
+
+    // 24시간 이내 새 글 수
+    @Query("SELECT COUNT(p) FROM Post p WHERE p.schoolName = :schoolName AND p.createdAt >= :since")
+    long countRecentBySchoolName(@Param("schoolName") String schoolName, @Param("since") LocalDateTime since);
 
     // 작성자로 조회
     List<Post> findByAuthorOrderByCreatedAtDesc(User author);

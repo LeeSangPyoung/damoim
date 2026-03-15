@@ -55,4 +55,24 @@ public class Reunion {
     @OneToMany(mappedBy = "reunion", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ReunionMember> members = new ArrayList<>();
+
+    @OneToMany(mappedBy = "reunion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ReunionPost> posts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "reunion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ReunionMeeting> meetings = new ArrayList<>();
+
+    @OneToMany(mappedBy = "reunion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ReunionFee> fees = new ArrayList<>();
+
+    @OneToMany(mappedBy = "reunion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ReunionJoinRequest> joinRequests = new ArrayList<>();
+
+    @OneToMany(mappedBy = "reunion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<FeeGroup> feeGroups = new ArrayList<>();
 }

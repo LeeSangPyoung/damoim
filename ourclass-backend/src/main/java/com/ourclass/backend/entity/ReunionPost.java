@@ -47,4 +47,12 @@ public class ReunionPost {
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "reunionPost", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ReunionPostComment> comments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "reunionPost", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ReunionPostLike> likes = new ArrayList<>();
 }

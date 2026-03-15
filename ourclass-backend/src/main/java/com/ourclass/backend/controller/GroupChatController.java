@@ -76,7 +76,10 @@ public class GroupChatController {
             @RequestParam String userId,
             @RequestBody ChatMessageRequest request) {
         try {
-            GroupChatMessageResponse message = groupChatService.sendMessage(roomId, userId, request.getContent());
+            GroupChatMessageResponse message = groupChatService.sendMessage(
+                    roomId, userId, request.getContent(),
+                    request.getMessageType(), request.getAttachmentUrl(),
+                    request.getFileName(), request.getFileSize());
             messagingTemplate.convertAndSend("/topic/group-chat/" + roomId, message);
             return ResponseEntity.ok(message);
         } catch (Exception e) {
@@ -154,7 +157,10 @@ public class GroupChatController {
             @DestinationVariable Long roomId,
             @Payload ChatMessageRequest request,
             @Header("senderUserId") String senderUserId) {
-        GroupChatMessageResponse message = groupChatService.sendMessage(roomId, senderUserId, request.getContent());
+        GroupChatMessageResponse message = groupChatService.sendMessage(
+                roomId, senderUserId, request.getContent(),
+                request.getMessageType(), request.getAttachmentUrl(),
+                request.getFileName(), request.getFileSize());
         messagingTemplate.convertAndSend("/topic/group-chat/" + roomId, message);
     }
 }

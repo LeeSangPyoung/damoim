@@ -24,8 +24,12 @@ export interface GroupChatMessageResponse {
   senderName: string;
   content: string;
   messageType: string;
+  attachmentUrl?: string;
+  fileName?: string;
+  fileSize?: number;
   unreadCount: number;
   sentAt: string;
+  reactions?: { emoji: string; userId: string; userName: string }[];
 }
 
 export const groupChatAPI = {
@@ -48,8 +52,20 @@ export const groupChatAPI = {
     return response.data;
   },
 
-  sendMessage: async (roomId: number, userId: string, content: string): Promise<GroupChatMessageResponse> => {
-    const response = await apiClient.post(`/group-chat/rooms/${roomId}/messages`, { content }, { params: { userId } });
+  sendMessage: async (roomId: number, userId: string, content: string, attachment?: {
+    messageType: string;
+    attachmentUrl: string;
+    fileName: string;
+    fileSize: number;
+  }): Promise<GroupChatMessageResponse> => {
+    const body: any = { content };
+    if (attachment) {
+      body.messageType = attachment.messageType;
+      body.attachmentUrl = attachment.attachmentUrl;
+      body.fileName = attachment.fileName;
+      body.fileSize = attachment.fileSize;
+    }
+    const response = await apiClient.post(`/group-chat/rooms/${roomId}/messages`, body, { params: { userId } });
     return response.data;
   },
 

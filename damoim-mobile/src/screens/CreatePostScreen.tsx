@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  FlatList,
   StyleSheet,
   Alert,
   ActivityIndicator,
@@ -24,22 +23,37 @@ import { userAPI, ProfileResponse } from '../api/user';
 type VisibilityOption = 'SCHOOL' | 'GRADE' | 'CLASS';
 
 const VISIBILITY_OPTIONS: { key: VisibilityOption; label: string; icon: string }[] = [
-  { key: 'SCHOOL', label: '학교전체', icon: 'earth' },
-  { key: 'GRADE', label: '학년', icon: 'school' },
-  { key: 'CLASS', label: '반', icon: 'people' },
+  { key: 'SCHOOL', label: '우리학교', icon: 'earth' },
+  { key: 'GRADE', label: '우리학년', icon: 'school' },
+  { key: 'CLASS', label: '우리반', icon: 'people' },
 ];
 
 const MAX_IMAGES = 5;
 
 export default function CreatePostScreen({ navigation, route }: any) {
   const { user } = useAuth();
-  const [content, setContent] = useState('');
-  const [images, setImages] = useState<string[]>([]);
-  const [visibility, setVisibility] = useState<VisibilityOption>('SCHOOL');
+  const isEditMode = !!route?.params?.postId;
+  const editPostId: number | undefined = route?.params?.postId;
+  const [content, setContent] = useState(route?.params?.content || '');
+  const [images, setImages] = useState<string[]>(route?.params?.imageUrls || []);
+  const [visibility, setVisibility] = useState<VisibilityOption>(() => {
+    const currentFilter = route?.params?.currentFilter;
+    if (currentFilter === 'myClass') return 'CLASS';
+    if (currentFilter === 'myGrade') return 'GRADE';
+    return 'SCHOOL';
+  });
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
+
+  // 우리반 선택용: route에서 전달받은 gradeClasses와 선택된 반
+  const routeGradeClasses: { grade: string; classNumber?: string }[] = route?.params?.gradeClasses || [];
+  const routeSelectedClass: { grade: string; classNumber: string } | undefined = route?.params?.selectedClass;
+
+  const [selectedClass, setSelectedClass] = useState<{ grade: string; classNumber: string } | null>(
+    routeSelectedClass || null
+  );
 
   // Load profile for school info
   React.useEffect(() => {
@@ -58,6 +72,13 @@ export default function CreatePostScreen({ navigation, route }: any) {
     graduationYear: route.params.graduationYear,
   } : null;
   const primarySchool = routeSchool || profile?.schools?.[0];
+
+  // 프로필에서 해당 학교의 학년/반 목록 (route에서 없으면 프로필에서 추출)
+  const gradeClasses = routeGradeClasses.length > 0
+    ? routeGradeClasses
+    : (profile?.schools || [])
+        .filter(s => s.schoolName === primarySchool?.schoolName && s.graduationYear === primarySchool?.graduationYear && s.grade)
+        .map(s => ({ grade: s.grade!, classNumber: s.classNumber }));
 
   const pickImages = async () => {
     if (images.length >= MAX_IMAGES) {
@@ -119,30 +140,51 @@ export default function CreatePostScreen({ navigation, route }: any) {
       return;
     }
 
+    // 우리반 선택 시 반이 선택되어 있는지 확인
+    if (visibility === 'CLASS' && !selectedClass) {
+      Alert.alert('반 선택 필요', '우리반으로 게시하려면 반을 선택해주세요.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      // Upload images first
-      let uploadedUrls: string[] = [];
+      // Upload new images (skip already-uploaded URLs)
+      let finalUrls: string[] = [];
       if (images.length > 0) {
         setUploadingImage(true);
-        uploadedUrls = await Promise.all(images.map((uri) => postAPI.uploadImage(uri)));
+        finalUrls = await Promise.all(
+          images.map((uri) =>
+            uri.startsWith('http') ? Promise.resolve(uri) : postAPI.uploadImage(uri)
+          )
+        );
         setUploadingImage(false);
       }
 
-      await postAPI.createPost(user.userId, {
-        content: trimmed,
-        imageUrls: uploadedUrls.length > 0 ? uploadedUrls : undefined,
-        schoolName: primarySchool?.schoolName,
-        graduationYear: primarySchool?.graduationYear,
-        visibility,
-        targetGrade: visibility !== 'SCHOOL' ? primarySchool?.grade : undefined,
-        targetClassNumber: visibility === 'CLASS' ? primarySchool?.classNumber : undefined,
-      });
+      if (isEditMode && editPostId) {
+        await postAPI.updatePost(editPostId, user.userId, {
+          content: trimmed,
+          imageUrls: finalUrls.length > 0 ? finalUrls : undefined,
+        });
+      } else {
+        await postAPI.createPost(user.userId, {
+          content: trimmed,
+          imageUrls: finalUrls.length > 0 ? finalUrls : undefined,
+          schoolName: primarySchool?.schoolName,
+          graduationYear: primarySchool?.graduationYear,
+          visibility,
+          targetGrade: visibility === 'GRADE'
+            ? (gradeClasses[0]?.grade)
+            : visibility === 'CLASS'
+              ? selectedClass?.grade
+              : undefined,
+          targetClassNumber: visibility === 'CLASS' ? selectedClass?.classNumber : undefined,
+        });
+      }
 
       navigation?.goBack?.();
     } catch (err: any) {
       setUploadingImage(false);
-      Alert.alert('오류', '게시글 작성에 실패했습니다. 다시 시도해주세요.');
+      Alert.alert('오류', isEditMode ? '게시글 수정에 실패했습니다.' : '게시글 작성에 실패했습니다.');
     } finally {
       setSubmitting(false);
     }
@@ -161,7 +203,7 @@ export default function CreatePostScreen({ navigation, route }: any) {
         <TouchableOpacity onPress={() => navigation?.goBack?.()} activeOpacity={0.7}>
           <Ionicons name="close" size={26} color="#FFE156" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>글 작성</Text>
+        <Text style={styles.headerTitle}>{isEditMode ? '글 수정' : '글 작성'}</Text>
         <TouchableOpacity
           style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
           onPress={handleSubmit}
@@ -172,44 +214,91 @@ export default function CreatePostScreen({ navigation, route }: any) {
             <ActivityIndicator size="small" color="#2D5016" />
           ) : (
             <Text style={[styles.submitText, !canSubmit && styles.submitTextDisabled]}>
-              게시
+              {isEditMode ? '수정' : '게시'}
             </Text>
           )}
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
-        {/* Visibility selector */}
-        <View style={styles.visibilityContainer}>
-          <Text style={styles.visibilityLabel}>공개 범위</Text>
-          <View style={styles.visibilityOptions}>
-            {VISIBILITY_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt.key}
-                style={[
-                  styles.visibilityChip,
-                  visibility === opt.key && styles.visibilityChipActive,
-                ]}
-                onPress={() => setVisibility(opt.key)}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={opt.icon as any}
-                  size={14}
-                  color={visibility === opt.key ? '#FFE156' : '#8D6E63'}
-                />
-                <Text
-                  style={[
-                    styles.visibilityChipText,
-                    visibility === opt.key && styles.visibilityChipTextActive,
-                  ]}
-                >
-                  {opt.label}
+        {/* Visibility selector - hide in edit mode */}
+        {!isEditMode && (
+          <>
+            <View style={styles.visibilityContainer}>
+              <Text style={styles.visibilityLabel}>공개 범위</Text>
+              <View style={styles.visibilityOptions}>
+                {VISIBILITY_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={[
+                      styles.visibilityChip,
+                      visibility === opt.key && styles.visibilityChipActive,
+                    ]}
+                    onPress={() => {
+                      setVisibility(opt.key);
+                      if (opt.key !== 'CLASS') {
+                        setSelectedClass(null);
+                      }
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={opt.icon as any}
+                      size={14}
+                      color={visibility === opt.key ? '#FFE156' : '#8D6E63'}
+                    />
+                    <Text
+                      style={[
+                        styles.visibilityChipText,
+                        visibility === opt.key && styles.visibilityChipTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* 우리반 선택 시 반 선택 드롭다운 */}
+            {visibility === 'CLASS' && gradeClasses.length > 0 && (
+              <View style={styles.classSelectContainer}>
+                <Text style={styles.classSelectLabel}>
+                  <Ionicons name="people" size={13} color={Colors.primary} /> 어느 반에 게시할까요?
                 </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+                <View style={styles.classSelectChips}>
+                  {gradeClasses
+                    .filter(gc => gc.classNumber)
+                    .sort((a, b) => {
+                      const gDiff = Number(a.grade || 0) - Number(b.grade || 0);
+                      if (gDiff !== 0) return gDiff;
+                      return Number(a.classNumber || 0) - Number(b.classNumber || 0);
+                    })
+                    .map((gc, idx) => {
+                      const isActive = selectedClass?.grade === gc.grade && selectedClass?.classNumber === gc.classNumber;
+                      return (
+                        <TouchableOpacity
+                          key={`${gc.grade}-${gc.classNumber}-${idx}`}
+                          style={[styles.classSelectChip, isActive && styles.classSelectChipActive]}
+                          onPress={() => setSelectedClass({ grade: gc.grade, classNumber: gc.classNumber! })}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.classSelectChipText, isActive && styles.classSelectChipTextActive]}>
+                            {gc.grade}학년 {gc.classNumber}반
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                </View>
+                {!selectedClass && (
+                  <Text style={styles.classSelectHint}>
+                    반을 선택하지 않으면 게시할 수 없어요
+                  </Text>
+                )}
+              </View>
+            )}
+          </>
+        )}
 
         {/* Content input */}
         <TextInput
@@ -223,30 +312,42 @@ export default function CreatePostScreen({ navigation, route }: any) {
           autoFocus
         />
 
-        {/* Image preview */}
-        {images.length > 0 && (
-          <View style={styles.imageSection}>
-            <FlatList
-              data={images}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item, index) => `${item}-${index}`}
-              contentContainerStyle={styles.imageList}
-              renderItem={({ item, index }) => (
-                <View style={styles.imagePreviewWrap}>
-                  <Image source={{ uri: item }} style={styles.imagePreview} />
-                  <TouchableOpacity
-                    style={styles.imageRemoveButton}
-                    onPress={() => removeImage(index)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="close-circle" size={22} color={Colors.red} />
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-          </View>
-        )}
+        {/* Image section - always visible */}
+        <View style={styles.imageSection}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.imageList}
+          >
+            {images.map((uri, index) => (
+              <View key={`${uri}-${index}`} style={styles.imagePreviewWrap}>
+                <Image source={{ uri }} style={styles.imagePreview} />
+                {index === 0 && images.length > 1 && (
+                  <View style={styles.imageBadge}>
+                    <Text style={styles.imageBadgeText}>대표</Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.imageRemoveButton}
+                  onPress={() => removeImage(index)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.imageRemoveCircle}>
+                    <Ionicons name="close" size={12} color="#fff" />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            {/* Add button - always shown when under limit */}
+            {images.length < MAX_IMAGES && (
+              <TouchableOpacity style={styles.imageAddButton} onPress={pickImages} activeOpacity={0.7}>
+                <Ionicons name="add" size={28} color={Colors.gray400} />
+                <Text style={styles.imageAddText}>{images.length}/{MAX_IMAGES}</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        </View>
 
         {/* Uploading indicator */}
         {uploadingImage && (
@@ -257,29 +358,8 @@ export default function CreatePostScreen({ navigation, route }: any) {
         )}
       </ScrollView>
 
-      {/* Bottom toolbar */}
+      {/* Bottom bar - char count only */}
       <View style={styles.toolbar}>
-        <TouchableOpacity
-          style={styles.toolbarButton}
-          onPress={pickImages}
-          disabled={images.length >= MAX_IMAGES}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="image-outline"
-            size={24}
-            color={images.length >= MAX_IMAGES ? Colors.gray300 : Colors.gray600}
-          />
-          <Text
-            style={[
-              styles.toolbarButtonText,
-              images.length >= MAX_IMAGES && styles.toolbarButtonTextDisabled,
-            ]}
-          >
-            사진 {images.length}/{MAX_IMAGES}
-          </Text>
-        </TouchableOpacity>
-
         <Text style={styles.charCount}>{content.length}자</Text>
       </View>
     </KeyboardAvoidingView>
@@ -371,6 +451,54 @@ const styles = StyleSheet.create({
   visibilityChipTextActive: {
     color: '#FFE156',
   },
+  // 반 선택
+  classSelectContainer: {
+    marginHorizontal: 16,
+    marginBottom: 6,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
+    padding: 12,
+  },
+  classSelectLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.primary,
+    marginBottom: 10,
+  },
+  classSelectChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  classSelectChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: '#FFF8E7',
+    borderWidth: 1,
+    borderColor: '#F0E0B0',
+  },
+  classSelectChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  classSelectChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.gray500,
+    fontFamily: Fonts.bold,
+  },
+  classSelectChipTextActive: {
+    color: '#FFE156',
+  },
+  classSelectHint: {
+    fontSize: 11,
+    color: Colors.red,
+    marginTop: 8,
+    fontWeight: '500',
+  },
   contentInput: {
     paddingHorizontal: 16,
     paddingTop: 12,
@@ -386,8 +514,10 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     fontFamily: Fonts.regular,
   },
+  // 이미지 섹션 - 개선
   imageSection: {
-    marginTop: 12,
+    marginTop: 4,
+    marginBottom: 8,
   },
   imageList: {
     paddingHorizontal: 16,
@@ -395,20 +525,61 @@ const styles = StyleSheet.create({
   },
   imagePreviewWrap: {
     position: 'relative',
-    marginRight: 10,
+    borderRadius: 12,
+    overflow: 'visible',
   },
   imagePreview: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
+    width: 88,
+    height: 88,
+    borderRadius: 12,
     backgroundColor: Colors.gray100,
+    borderWidth: 1,
+    borderColor: '#F0E0B0',
+  },
+  imageBadge: {
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  imageBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFE156',
   },
   imageRemoveButton: {
     position: 'absolute',
     top: -6,
     right: -6,
-    backgroundColor: Colors.white,
-    borderRadius: 11,
+    zIndex: 10,
+  },
+  imageRemoveCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageAddButton: {
+    width: 88,
+    height: 88,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#F0E0B0',
+    borderStyle: 'dashed',
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 2,
+  },
+  imageAddText: {
+    fontSize: 11,
+    color: Colors.gray400,
+    fontWeight: '500',
   },
   uploadingRow: {
     flexDirection: 'row',
@@ -424,25 +595,12 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: '#F0E0B0',
     backgroundColor: '#fff',
-  },
-  toolbarButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  toolbarButtonText: {
-    fontSize: 13,
-    color: Colors.gray600,
-    fontWeight: '500',
-  },
-  toolbarButtonTextDisabled: {
-    color: Colors.gray300,
   },
   charCount: {
     fontSize: 12,

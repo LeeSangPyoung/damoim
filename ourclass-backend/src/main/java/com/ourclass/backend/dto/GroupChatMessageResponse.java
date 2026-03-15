@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -16,6 +18,10 @@ public class GroupChatMessageResponse {
     private String senderName;
     private String content;
     private String messageType;
+    private String attachmentUrl;
+    private String fileName;
+    private Long fileSize;
     private int unreadCount;
     private String sentAt;
+    private List<ReactionResponse> reactions;
 }

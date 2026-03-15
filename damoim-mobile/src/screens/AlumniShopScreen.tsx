@@ -593,7 +593,7 @@ export default function AlumniShopScreen() {
                 <View style={styles.categoryWrap}>
                   <TouchableOpacity style={[styles.categoryChip, category === '전체' && styles.categoryChipActive]} onPress={() => { setCategory('전체'); setDisplayCount(10); }}>
                     <View style={[styles.categoryIconCircle, category === '전체' && styles.categoryIconCircleActive]}>
-                      <Ionicons name="grid-outline" size={20} color={category === '전체' ? '#fff' : '#5D4037'} />
+                      <Ionicons name="grid-outline" size={16} color={category === '전체' ? '#fff' : '#5D4037'} />
                     </View>
                     <Text style={[styles.categoryChipText, category === '전체' && styles.categoryChipTextActive]}>전체</Text>
                   </TouchableOpacity>
@@ -602,7 +602,7 @@ export default function AlumniShopScreen() {
                     return (
                       <TouchableOpacity key={c} style={[styles.categoryChip, category === c && styles.categoryChipActive]} onPress={() => { setCategory(c); setDisplayCount(10); }}>
                         <View style={[styles.categoryIconCircle, category === c && styles.categoryIconCircleActive]}>
-                          <Ionicons name={icon as any} size={20} color={category === c ? '#fff' : '#5D4037'} />
+                          <Ionicons name={icon as any} size={16} color={category === c ? '#fff' : '#5D4037'} />
                         </View>
                         <Text style={[styles.categoryChipText, category === c && styles.categoryChipTextActive]}>{c}</Text>
                       </TouchableOpacity>
@@ -614,7 +614,7 @@ export default function AlumniShopScreen() {
             data={displayedShops}
             keyExtractor={item => String(item.id)}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); setDisplayCount(10); loadShops(); }} />}
-            ListEmptyComponent={<EmptyState icon="🏪" title="등록된 가게가 없습니다" />}
+            ListEmptyComponent={<EmptyState ionIcon="storefront-outline" title="등록된 가게가 없습니다" />}
             ListFooterComponent={hasMore ? (
               <TouchableOpacity style={styles.loadMoreBtn} onPress={() => setDisplayCount(prev => prev + 10)}>
                 <Text style={styles.loadMoreText}>+ 더보기 ({filteredShops.length - displayCount}개 남음)</Text>
@@ -669,7 +669,7 @@ export default function AlumniShopScreen() {
               </TouchableOpacity>
             ))
           ) : (
-            <EmptyState icon="🏪" title="등록한 가게가 없습니다" subtitle="아래에서 가게를 등록하세요" />
+            <EmptyState ionIcon="storefront-outline" title="등록한 가게가 없습니다" subtitle="아래에서 가게를 등록하세요" />
           )}
 
           {/* 등록 폼 토글 */}
@@ -779,19 +779,19 @@ const styles = StyleSheet.create({
   sortMenuItemActive: { backgroundColor: '#2D5016' + '08' },
   sortMenuText: { fontSize: 13, fontWeight: '500', color: '#5D4037' },
   sortMenuTextActive: { fontWeight: '700', color: '#2D5016' },
-  categoryWrap: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 12, backgroundColor: '#FFF8E7', gap: 8 },
-  categoryChip: { alignItems: 'center', gap: 4, paddingHorizontal: 6, paddingVertical: 6 },
+  categoryWrap: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10, paddingTop: 4, paddingBottom: 6, backgroundColor: '#FFF8E7', gap: 4 },
+  categoryChip: { alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 3 },
   categoryChipActive: {},
-  categoryIconCircle: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#F0E0B0', backgroundColor: '#FFF8E7' },
+  categoryIconCircle: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#F0E0B0', backgroundColor: '#FFF8E7' },
   categoryIconCircleActive: { backgroundColor: '#2D5016', borderColor: '#2D5016' },
-  categoryChipText: { fontSize: 11, fontWeight: '600', color: '#5D4037' },
+  categoryChipText: { fontSize: 10, fontWeight: '600', color: '#5D4037' },
   categoryChipTextActive: { color: '#2D5016', fontWeight: '700' },
 
   shopCard: { flexDirection: 'row', backgroundColor: '#ffffff', marginHorizontal: 12, marginTop: 8, borderRadius: 12, overflow: 'hidden', position: 'relative', borderWidth: 1, borderColor: '#F0E0B0' },
   shopCardImg: { width: 80, height: 80 },
   shopCardInfo: { flex: 1, padding: 10, justifyContent: 'center' },
   shopCardName: { fontSize: 15, fontWeight: '700', color: '#5D4037', fontFamily: Fonts.bold },
-  shopCardRating: { fontSize: 12, fontWeight: '600', color: Colors.amber },
+  shopCardRating: { fontSize: 12, fontWeight: '600', color: '#F5A623'},
   shopCardReviews: { fontSize: 11, color: Colors.textMuted },
   shopCardAddr: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   shopCardOwner: { fontSize: 11, color: '#2D5016', fontWeight: '600', marginTop: 2 },
@@ -802,7 +802,7 @@ const styles = StyleSheet.create({
   // Detail
   detailBox: { padding: 16, backgroundColor: '#ffffff' },
   detailName: { fontSize: 20, fontWeight: '800', color: '#5D4037', fontFamily: Fonts.bold },
-  detailRating: { fontSize: 16, fontWeight: '700', color: Colors.amber },
+  detailRating: { fontSize: 16, fontWeight: '700', color: '#F5A623'},
   detailCategory: { fontSize: 12, color: Colors.textMuted, marginBottom: 8 },
   detailAddress: { fontSize: 14, color: Colors.text, marginBottom: 4, fontFamily: Fonts.regular },
   detailPhone: { fontSize: 14, color: Colors.text, marginBottom: 4 },
@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
   reviewHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   reviewerName: { fontSize: 13, fontWeight: '600', color: Colors.text },
   reviewTime: { fontSize: 11, color: Colors.textMuted },
-  reviewStars: { fontSize: 14, color: Colors.amber },
+  reviewStars: { fontSize: 14, color: '#F5A623' },
   reviewContent: { fontSize: 13, color: Colors.text, lineHeight: 18 },
 
   // Modal
@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
   charCount: { fontSize: 11, color: Colors.textMuted, textAlign: 'right' },
   starPicker: { flexDirection: 'row', gap: 6, marginBottom: 8 },
   star: { fontSize: 30, color: Colors.gray300 },
-  starActive: { color: Colors.amber },
+  starActive: { color: '#F5A623' },
   modalBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
   cancelBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: Colors.gray100 },
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: Colors.gray600 },

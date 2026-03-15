@@ -39,6 +39,15 @@ public class GroupChatMessage {
     @Builder.Default
     private String messageType = "CHAT";
 
+    @Column(name = "attachment_url", length = 500)
+    private String attachmentUrl;
+
+    @Column(name = "file_name", length = 255)
+    private String fileName;
+
+    @Column(name = "file_size")
+    private Long fileSize;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime sentAt;

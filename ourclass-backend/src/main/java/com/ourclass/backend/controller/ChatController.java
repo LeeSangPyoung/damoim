@@ -12,7 +12,9 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import com.ourclass.backend.service.ImageService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -27,6 +29,15 @@ public class ChatController {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    private ImageService imageService;
+
+    @Autowired
+    private com.ourclass.backend.repository.ChatMessageReactionRepository reactionRepository;
+
+    @Autowired
+    private com.ourclass.backend.repository.UserRepository userRepository;
 
     // 채팅방 생성/조회
     @PostMapping("/rooms")
@@ -76,7 +87,10 @@ public class ChatController {
             @RequestParam String userId,
             @RequestBody ChatMessageRequest request) {
         try {
-            ChatMessageResponse message = chatService.sendMessage(roomId, userId, request.getContent());
+            ChatMessageResponse message = chatService.sendMessage(
+                    roomId, userId, request.getContent(),
+                    request.getMessageType(), request.getAttachmentUrl(),
+                    request.getFileName(), request.getFileSize());
             // WebSocket으로도 브로드캐스트
             messagingTemplate.convertAndSend("/topic/chat/" + roomId, message);
             return ResponseEntity.ok(message);
@@ -138,13 +152,79 @@ public class ChatController {
         }
     }
 
+    // 채팅 파일 업로드
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadChatFile(@RequestParam("file") MultipartFile file) {
+        try {
+            String url = imageService.uploadChatFile(file);
+            String originalName = file.getOriginalFilename();
+            boolean isImage = imageService.isImageExtension(originalName != null ? originalName : "");
+            return ResponseEntity.ok(Map.of(
+                    "url", url,
+                    "fileName", originalName != null ? originalName : "file",
+                    "fileSize", file.getSize(),
+                    "messageType", isImage ? "IMAGE" : "FILE"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // 리액션 추가/토글
+    @PostMapping("/reactions")
+    public ResponseEntity<?> toggleReaction(
+            @RequestParam String userId,
+            @RequestParam Long messageId,
+            @RequestParam String source,  // DM or GROUP
+            @RequestParam String emoji) {
+        try {
+            var existing = reactionRepository.findByMessageIdAndMessageSourceAndUserIdAndEmoji(
+                    messageId, source, userId, emoji);
+            if (existing.isPresent()) {
+                reactionRepository.delete(existing.get());
+                return ResponseEntity.ok(Map.of("action", "removed"));
+            } else {
+                var user = userRepository.findByUserId(userId)
+                        .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+                var reaction = com.ourclass.backend.entity.ChatMessageReaction.builder()
+                        .messageId(messageId)
+                        .messageSource(source)
+                        .userId(userId)
+                        .userName(user.getName())
+                        .emoji(emoji)
+                        .build();
+                reactionRepository.save(reaction);
+                return ResponseEntity.ok(Map.of("action", "added"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // 메시지 리액션 조회
+    @GetMapping("/reactions")
+    public ResponseEntity<?> getReactions(
+            @RequestParam Long messageId,
+            @RequestParam String source) {
+        var reactions = reactionRepository.findByMessageIdAndMessageSource(messageId, source);
+        var result = reactions.stream().map(r -> Map.of(
+                "emoji", r.getEmoji(),
+                "userId", r.getUserId(),
+                "userName", r.getUserName()
+        )).collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
+
     // WebSocket 메시지 전송
     @MessageMapping("/chat/{roomId}")
     public void handleWebSocketMessage(
             @DestinationVariable Long roomId,
             @Payload ChatMessageRequest request,
             @Header("senderUserId") String senderUserId) {
-        ChatMessageResponse message = chatService.sendMessage(roomId, senderUserId, request.getContent());
+        ChatMessageResponse message = chatService.sendMessage(
+                roomId, senderUserId, request.getContent(),
+                request.getMessageType(), request.getAttachmentUrl(),
+                request.getFileName(), request.getFileSize());
         messagingTemplate.convertAndSend("/topic/chat/" + roomId, message);
     }
 }

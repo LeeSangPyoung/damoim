@@ -1,6 +1,9 @@
 package com.ourclass.backend.service;
 
 import com.ourclass.backend.dto.ChatMessageResponse;
+import com.ourclass.backend.dto.ReactionResponse;
+import com.ourclass.backend.entity.ChatMessageReaction;
+import com.ourclass.backend.repository.ChatMessageReactionRepository;
 import com.ourclass.backend.dto.ChatRoomResponse;
 import com.ourclass.backend.entity.ChatMessage;
 import com.ourclass.backend.entity.ChatRoom;
@@ -14,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +34,9 @@ public class ChatService {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private ChatMessageReactionRepository reactionRepository;
 
     // 채팅방 생성 또는 기존 방 반환
     @Transactional
@@ -70,34 +77,58 @@ public class ChatService {
                 .collect(Collectors.toList());
     }
 
-    // 메시지 전송
+    // 메시지 전송 (텍스트)
     @Transactional
     public ChatMessageResponse sendMessage(Long chatRoomId, String senderUserId, String content) {
+        return sendMessage(chatRoomId, senderUserId, content, "TEXT", null, null, null);
+    }
+
+    // 메시지 전송 (텍스트 + 첨부파일)
+    @Transactional
+    public ChatMessageResponse sendMessage(Long chatRoomId, String senderUserId, String content,
+                                            String messageType, String attachmentUrl, String fileName, Long fileSize) {
         ChatRoom room = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new RuntimeException("채팅방을 찾을 수 없습니다"));
         User sender = userRepository.findByUserId(senderUserId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
+        String type = (messageType != null && !messageType.isEmpty()) ? messageType : "TEXT";
+
         ChatMessage message = ChatMessage.builder()
                 .chatRoom(room)
                 .sender(sender)
                 .content(content)
+                .messageType(type)
+                .attachmentUrl(attachmentUrl)
+                .fileName(fileName)
+                .fileSize(fileSize)
                 .build();
         chatMessageRepository.save(message);
 
         // 채팅방 마지막 메시지 업데이트
-        room.setLastMessage(content.length() > 100 ? content.substring(0, 100) + "..." : content);
+        String lastMsg;
+        if ("IMAGE".equals(type)) {
+            lastMsg = "사진을 보냈습니다";
+        } else if ("FILE".equals(type)) {
+            lastMsg = "파일을 보냈습니다";
+        } else {
+            lastMsg = content.length() > 100 ? content.substring(0, 100) + "..." : content;
+        }
+        room.setLastMessage(lastMsg);
         room.setLastMessageAt(LocalDateTime.now());
         chatRoomRepository.save(room);
 
         // 상대방에게 알림
         User otherUser = room.getUser1().getUserId().equals(senderUserId) ? room.getUser2() : room.getUser1();
+        String notifMsg = "IMAGE".equals(type) ? sender.getName() + "님이 사진을 보냈습니다"
+                         : "FILE".equals(type) ? sender.getName() + "님이 파일을 보냈습니다"
+                         : sender.getName() + "님이 메시지를 보냈습니다";
         notificationService.createAndSend(
                 otherUser.getUserId(),
                 senderUserId,
                 sender.getName(),
                 "CHAT",
-                sender.getName() + "님이 메시지를 보냈습니다",
+                notifMsg,
                 chatRoomId
         );
 
@@ -115,9 +146,27 @@ public class ChatService {
         // 읽음 처리
         chatMessageRepository.markAsRead(room, user);
 
-        return chatMessageRepository.findByChatRoomOrderBySentAtAsc(room).stream()
-                .filter(msg -> !Boolean.TRUE.equals(msg.getCompletelyDeleted()))  // 완전 삭제 메시지 제외
-                .map(msg -> toMessageResponse(msg, userId))
+        List<ChatMessage> messages = chatMessageRepository.findByChatRoomOrderBySentAtAsc(room).stream()
+                .filter(msg -> !Boolean.TRUE.equals(msg.getCompletelyDeleted()))
+                .collect(Collectors.toList());
+
+        // 리액션 일괄 조회
+        List<Long> msgIds = messages.stream().map(ChatMessage::getId).collect(Collectors.toList());
+        Map<Long, List<ReactionResponse>> reactionsMap = new java.util.HashMap<>();
+        if (!msgIds.isEmpty()) {
+            List<ChatMessageReaction> allReactions = reactionRepository.findByMessageIdInAndMessageSource(msgIds, "DM");
+            for (ChatMessageReaction r : allReactions) {
+                reactionsMap.computeIfAbsent(r.getMessageId(), k -> new java.util.ArrayList<>())
+                        .add(ReactionResponse.builder().emoji(r.getEmoji()).userId(r.getUserId()).userName(r.getUserName()).build());
+            }
+        }
+
+        return messages.stream()
+                .map(msg -> {
+                    ChatMessageResponse resp = toMessageResponse(msg, userId);
+                    resp.setReactions(reactionsMap.getOrDefault(msg.getId(), java.util.Collections.emptyList()));
+                    return resp;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -182,6 +231,10 @@ public class ChatService {
                 .senderUserId(msg.getSender().getUserId())
                 .senderName(msg.getSender().getName())
                 .content(msg.getContent())
+                .messageType(msg.getMessageType())
+                .attachmentUrl(msg.getAttachmentUrl())
+                .fileName(msg.getFileName())
+                .fileSize(msg.getFileSize())
                 .isRead(Boolean.TRUE.equals(msg.getIsRead()))
                 .sentAt(msg.getSentAt())
                 .completelyDeleted(Boolean.TRUE.equals(msg.getCompletelyDeleted()))

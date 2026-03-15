@@ -1,7 +1,16 @@
 import { Platform } from 'react-native';
 
-// Android emulator uses 10.0.2.2 to reach host localhost
-const HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+// 서버 주소 설정
+// - web: localhost
+// - android 에뮬레이터: 10.0.2.2
+// - 실제 기기(APK): PC의 실제 IP 또는 ngrok 주소로 변경
+const getHost = () => {
+  if (Platform.OS === 'web') return 'localhost';
+  // 실제 기기 테스트 시 아래 주소를 ngrok 또는 서버 주소로 변경
+  return '192.168.45.75';
+};
+
+const HOST = getHost();
 
 export const API_BASE_URL = `http://${HOST}:8080/api`;
 export const WS_BASE_URL = `http://${HOST}:8080/ws`;

@@ -15,12 +15,13 @@ import {
   Dimensions,
   Platform,
   KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
 import { Colors, Fonts } from '../constants/colors';
 import { HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
 import { messageAPI, MessageResponse } from '../api/message';
-import { userAPI, ClassmateInfo } from '../api/user';
+import { ClassmateInfo } from '../api/user';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../components/Avatar';
@@ -63,14 +64,11 @@ export default function MessagesScreen() {
   // Compose modal state
   const [composeVisible, setComposeVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<ClassmateInfo[]>([]);
-  const [searching, setSearching] = useState(false);
   const [selectedUser, setSelectedUser] = useState<ClassmateInfo | null>(null);
   const [composeContent, setComposeContent] = useState('');
   const [sending, setSending] = useState(false);
   const [fromExternal, setFromExternal] = useState(false);
 
-  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tabIndicator = useRef(new Animated.Value(0)).current;
 
   const messages = activeTab === 'received' ? receivedMessages : sentMessages;
@@ -112,7 +110,6 @@ export default function MessagesScreen() {
       } as ClassmateInfo);
       setComposeContent('');
       setSearchQuery(composeToName);
-      setSearchResults([]);
       setFromExternal(true);
       setComposeVisible(true);
       // 파라미터 초기화 (뒤로 갔다 다시 왔을 때 중복 방지)
@@ -275,49 +272,8 @@ export default function MessagesScreen() {
 
   // ── Compose ────────────────────────────────────────────────────
 
-  const openCompose = () => {
-    setComposeVisible(true);
-    setSearchQuery('');
-    setSearchResults([]);
-    setSelectedUser(null);
-    setComposeContent('');
-  };
-
   const closeCompose = () => {
     setComposeVisible(false);
-    Keyboard.dismiss();
-  };
-
-  const handleSearchUser = (text: string) => {
-    setSearchQuery(text);
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-
-    if (text.trim().length < 1) {
-      setSearchResults([]);
-      return;
-    }
-
-    searchTimeout.current = setTimeout(async () => {
-      if (!user) return;
-      setSearching(true);
-      try {
-        const result = await userAPI.searchUsers({
-          currentUserId: user.userId,
-          name: text.trim(),
-        });
-        setSearchResults(result.classmates.filter((c) => c.userId !== user.userId));
-      } catch {
-        setSearchResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 400);
-  };
-
-  const handleSelectUser = (u: ClassmateInfo) => {
-    setSelectedUser(u);
-    setSearchQuery(u.name);
-    setSearchResults([]);
     Keyboard.dismiss();
   };
 
@@ -378,6 +334,13 @@ export default function MessagesScreen() {
                   {person.name}
                 </Text>
                 {isUnread && <View style={styles.unreadDot} />}
+                {!isReceived && (
+                  <View style={[styles.readBadge, item.read ? styles.readBadgeRead : styles.readBadgeUnread]}>
+                    <Text style={[styles.readBadgeText, item.read ? styles.readBadgeTextRead : styles.readBadgeTextUnread]}>
+                      {item.read ? '확인' : '미확인'}
+                    </Text>
+                  </View>
+                )}
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text style={styles.messageTime}>{formatTime(item.sentAt)}</Text>
@@ -418,7 +381,6 @@ export default function MessagesScreen() {
                           school: { schoolType: '', schoolName: '', graduationYear: '' },
                         } as ClassmateInfo);
                         setSearchQuery(item.sender.name);
-                        setSearchResults([]);
                         setComposeContent('');
                         setFromExternal(false);
                         setComposeVisible(true);
@@ -507,7 +469,7 @@ export default function MessagesScreen() {
         contentContainerStyle={messages.length === 0 ? styles.emptyList : styles.listContent}
         ListEmptyComponent={
           <EmptyState
-            icon={activeTab === 'received' ? '📬' : '📤'}
+            ionIcon={activeTab === 'received' ? 'mail-open-outline' : 'paper-plane-outline'}
             title={activeTab === 'received' ? '받은 쪽지가 없습니다' : '보낸 쪽지가 없습니다'}
             subtitle="쪽지를 보내 동창들과 소통해 보세요"
           />
@@ -517,11 +479,6 @@ export default function MessagesScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
-
-      {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={openCompose} activeOpacity={0.85}>
-        <Text style={styles.fabIcon}>+</Text>
-      </TouchableOpacity>
 
       {/* Compose Modal */}
       <Modal visible={composeVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={closeCompose}>
@@ -547,75 +504,34 @@ export default function MessagesScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Receiver search */}
-          <View style={styles.receiverSection}>
-            <Text style={styles.receiverLabel}>받는 사람</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="이름으로 검색..."
-              placeholderTextColor={Colors.gray400}
-              value={searchQuery}
-              onChangeText={handleSearchUser}
-              autoCorrect={false}
-              returnKeyType="search"
-            />
-            {selectedUser && (
-              <View style={styles.selectedChip}>
-                <Avatar uri={selectedUser.profileImageUrl} name={selectedUser.name} size={20} />
-                <Text style={styles.selectedChipText}>{selectedUser.name}</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedUser(null);
-                    setSearchQuery('');
-                  }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.selectedChipRemove}>x</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-
-          {/* Search results dropdown */}
-          {searchResults.length > 0 && !selectedUser && (
-            <View style={styles.searchDropdown}>
-              {searchResults.map((u) => (
-                <TouchableOpacity key={u.userId} style={styles.searchResultItem} onPress={() => handleSelectUser(u)}>
-                  <Avatar uri={u.profileImageUrl} name={u.name} size={32} />
-                  <View style={styles.searchResultInfo}>
-                    <Text style={styles.searchResultName}>{u.name}</Text>
-                    {u.school && (
-                      <Text style={styles.searchResultSchool}>
-                        {u.school.schoolName} {u.school.graduationYear}
-                      </Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+          <ScrollView style={styles.composeBody}>
+            {/* 받는 사람 카드 */}
+            <View style={styles.composeCard}>
+              <Text style={styles.composeCardLabel}>받는 사람</Text>
+              {selectedUser && (
+                <View style={styles.recipientDisplay}>
+                  <Avatar uri={selectedUser.profileImageUrl} name={selectedUser.name} size={36} />
+                  <Text style={styles.recipientName}>{selectedUser.name}</Text>
+                </View>
+              )}
             </View>
-          )}
 
-          {searching && (
-            <View style={styles.searchingRow}>
-              <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={styles.searchingText}>검색 중...</Text>
+            {/* 내용 카드 */}
+            <View style={styles.composeCard}>
+              <Text style={styles.composeCardLabel}>내용</Text>
+              <TextInput
+                style={styles.contentInput}
+                placeholder="쪽지 내용을 입력하세요..."
+                placeholderTextColor={Colors.gray400}
+                value={composeContent}
+                onChangeText={setComposeContent}
+                multiline
+                textAlignVertical="top"
+                maxLength={1000}
+              />
+              <Text style={styles.charCount}>{composeContent.length}/1000</Text>
             </View>
-          )}
-
-          {/* Content input */}
-          <View style={styles.contentSection}>
-            <TextInput
-              style={styles.contentInput}
-              placeholder="쪽지 내용을 입력하세요..."
-              placeholderTextColor={Colors.gray400}
-              value={composeContent}
-              onChangeText={setComposeContent}
-              multiline
-              textAlignVertical="top"
-              maxLength={1000}
-            />
-            <Text style={styles.charCount}>{composeContent.length}/1000</Text>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
     </View>
@@ -674,12 +590,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: '#fef2f2',
   },
   deleteAllBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFE156',
+    color: '#FF6B6B',
   },
 
   // Tabs
@@ -855,7 +771,7 @@ const styles = StyleSheet.create({
   // Modal
   modalContainer: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -864,8 +780,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 16 : 16,
     paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.goldBorder,
+    backgroundColor: Colors.backgroundDeep,
   },
   modalCancel: {
     fontSize: 16,
@@ -887,14 +804,29 @@ const styles = StyleSheet.create({
     color: Colors.gray300,
   },
 
-  // Receiver section
-  receiverSection: {
+  // Compose body
+  composeBody: {
+    flex: 1,
+    padding: 16,
+  },
+  composeCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.goldBorder,
+    padding: 16,
+    marginBottom: 12,
+  },
+  composeCardLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.primary,
+    fontFamily: Fonts.bold,
+    marginBottom: 10,
+  },
+  receiverRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
     flexWrap: 'wrap',
     gap: 8,
   },
@@ -935,9 +867,9 @@ const styles = StyleSheet.create({
 
   // Search dropdown
   searchDropdown: {
-    backgroundColor: Colors.white,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
+    backgroundColor: Colors.gray50,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.goldBorder,
     maxHeight: 200,
   },
   searchResultItem: {
@@ -975,20 +907,58 @@ const styles = StyleSheet.create({
   },
 
   // Content section
-  contentSection: {
-    flex: 1,
-    padding: 16,
-  },
   contentInput: {
-    flex: 1,
     fontSize: 15,
     color: Colors.text,
     lineHeight: 22,
+    minHeight: 150,
+    maxHeight: 300,
+    backgroundColor: Colors.gray50,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 12,
+    textAlignVertical: 'top',
   },
   charCount: {
     textAlign: 'right',
     fontSize: 12,
     color: Colors.textMuted,
     marginTop: 8,
+  },
+  recipientDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  recipientName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    fontFamily: Fonts.bold,
+  },
+  readBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 6,
+  },
+  readBadgeRead: {
+    backgroundColor: Colors.greenLight,
+  },
+  readBadgeUnread: {
+    backgroundColor: Colors.redLight,
+  },
+  readBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: Fonts.bold,
+  },
+  readBadgeTextRead: {
+    color: Colors.green,
+  },
+  readBadgeTextUnread: {
+    color: Colors.red,
   },
 });
