@@ -19,7 +19,25 @@
       "Bash(killall:*)",
       "Bash(PGPASSWORD=postgres psql:*)",
       "Bash(psql:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npx expo export --platform android)",
+      "Bash(npx expo start --web --port 8081)",
+      "Bash(npm install react-native-web react-dom --legacy-peer-deps)",
+      "Bash(npm install --save-dev @types/react-native --legacy-peer-deps)",
+      "Bash(npx expo --version)",
+      "Bash(npm uninstall expo-cli --legacy-peer-deps)",
+      "Bash(node_modules/.bin/expo --version)",
+      "Bash(node node_modules/expo/bin/cli --version)",
+      "Bash(npm install react-native-web react-dom @expo/metro-runtime --legacy-peer-deps)",
+      "Bash(node node_modules/expo/bin/cli start --web --port 8082)",
+      "Bash(npm install react-native-worklets --legacy-peer-deps)",
+      "Bash(pkill -f \"expo.*start\")",
+      "Bash(ls /Users/leesangpyoung/workspace/damoim/damoim-mobile/index.*)",
+      "Bash(node node_modules/expo/bin/cli start --web --port 8082 --clear)",
+      "Bash(npm install react-dom@19.2.0 --legacy-peer-deps)",
+      "Bash(node -e \"const p=require\\(''./package.json''\\); console.log\\(''react:'', p.dependencies.react, ''react-dom:'', p.dependencies[''react-dom'']\\)\")",
+      "Bash(node -e \"console.log\\(require\\(''react/package.json''\\).version, require\\(''react-dom/package.json''\\).version\\)\")",
+      "Bash(pkill -f \"node.*expo.*start\")"
     ]
   }
 }

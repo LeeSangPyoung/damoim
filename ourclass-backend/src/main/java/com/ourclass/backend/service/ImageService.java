@@ -1,5 +1,7 @@
 package com.ourclass.backend.service;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,6 +16,20 @@ import java.util.UUID;
 
 @Service
 public class ImageService {
+    @Autowired
+    private HttpServletRequest request;
+
+    private String getBaseUrl() {
+        // ngrok 등 프록시를 통한 요청인 경우 원래 호스트 사용
+        String forwardedHost = request.getHeader("X-Forwarded-Host");
+        String forwardedProto = request.getHeader("X-Forwarded-Proto");
+        if (forwardedHost != null) {
+            String proto = forwardedProto != null ? forwardedProto : "https";
+            return proto + "://" + forwardedHost;
+        }
+        return request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
+    }
+
     private static final String UPLOAD_DIR = "uploads/images/";
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif");
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -53,7 +69,7 @@ public class ImageService {
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
         // Return full URL (프론트엔드에서 직접 접근 가능하도록)
-        return "http://localhost:8080/uploads/images/" + newFilename;
+        return getBaseUrl() + "/uploads/images/" + newFilename;
     }
 
     // 채팅 파일 업로드 (이미지 + 일반 파일)
@@ -90,7 +106,7 @@ public class ImageService {
         Path filePath = uploadPath.resolve(newFilename);
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-        return "http://localhost:8080/uploads/files/" + newFilename;
+        return getBaseUrl() + "/uploads/files/" + newFilename;
     }
 
     public boolean isImageExtension(String filename) {
