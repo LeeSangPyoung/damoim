@@ -228,7 +228,7 @@ export default function DashboardScreen({ navigation, route }: any) {
           <Text style={[styles.filterTabText, filter === key && styles.filterTabTextActive]}>
             {FILTER_LABELS[key]}
           </Text>
-          {filter !== key && newCounts[key] > 0 && (
+          {false && filter !== key && newCounts[key] > 0 && (
             <View style={styles.tabNewBadge}>
               <Text style={styles.tabNewBadgeText}>N</Text>
             </View>
@@ -408,6 +408,7 @@ export default function DashboardScreen({ navigation, route }: any) {
         )}
         <Text style={styles.schoolInfo}>
           {primarySchool?.schoolName || '학교'} {primarySchool?.graduationYear ? `(${primarySchool.graduationYear})` : ''}
+          <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.4)' }}> </Text>
         </Text>
       </View>
       <HeaderActions navigation={navigation} />
@@ -568,7 +569,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#fff',
     marginTop: 2,
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.chalk,
     letterSpacing: 2,
   },
   filterContainer: {
@@ -679,7 +680,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   postCardAuthorName: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.text,
     fontFamily: Fonts.bold,

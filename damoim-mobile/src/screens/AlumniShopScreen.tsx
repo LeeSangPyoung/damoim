@@ -758,11 +758,11 @@ export default function AlumniShopScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF8E7' },
   screenHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#2D5016', paddingTop: HEADER_TOP_PADDING, paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 3, borderBottomColor: '#C49A2A' },
-  screenHeaderTitle: { fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
+  screenHeaderTitle: { fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.chalk, letterSpacing: 2 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, paddingTop: HEADER_TOP_PADDING, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A', gap: 10 },
   backBtn: { flexDirection: 'row', alignItems: 'center' },
   backBtnText: { fontSize: 13, color: '#FFE156', fontWeight: '600' },
-  headerTitle: { flex: 1, fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
+  headerTitle: { flex: 1, fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.chalk, letterSpacing: 2 },
 
   headerTabs: { flexDirection: 'row', backgroundColor: '#FFF8E7', borderBottomWidth: 1, borderBottomColor: '#F0E0B0' },
   headerTab: { flex: 1, paddingVertical: 14, alignItems: 'center' },

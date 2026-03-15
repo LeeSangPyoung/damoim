@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl,
@@ -111,7 +112,8 @@ export default function MySchoolScreen({ navigation }: any) {
     }
   }, [user]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // 화면에 돌아올 때마다 데이터 새로고침 (NEW 뱃지 갱신)
+  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -156,7 +158,7 @@ export default function MySchoolScreen({ navigation }: any) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Ionicons name="school" size={33} color="#fff" style={{ marginTop: -3 }} />
           <Text style={styles.headerTitle}>우리학교</Text>
-        </View>
+                  </View>
         <HeaderActions navigation={navigation} />
       </View>
 
@@ -288,7 +290,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     letterSpacing: 2,
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.chalk,
   },
   headerActions: {
     flexDirection: 'row',

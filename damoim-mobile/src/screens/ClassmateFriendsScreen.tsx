@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, TextInput, Alert,
+  ActivityIndicator, RefreshControl, TextInput, Alert, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
@@ -150,6 +150,27 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
     try { await friendAPI.removeFriendship(friendshipId, user.userId); loadData(); } catch {}
   };
 
+  const handleCancelRequest = async (targetUserId: string, statusMap: Record<string, FriendshipStatus>) => {
+    if (!user) return;
+    const status = statusMap[targetUserId];
+    if (!status?.friendshipId) return;
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm('친구 요청을 취소하시겠습니까?')
+      : await new Promise<boolean>(resolve => {
+          Alert.alert('친구 요청 취소', '요청을 취소하시겠습니까?', [
+            { text: '아니요', style: 'cancel', onPress: () => resolve(false) },
+            { text: '취소하기', style: 'destructive', onPress: () => resolve(true) },
+          ]);
+        });
+    if (!confirmed) return;
+    try {
+      await friendAPI.removeFriendship(status.friendshipId, user.userId);
+      loadData();
+    } catch {
+      Platform.OS === 'web' ? window.alert('취소 실패') : Alert.alert('실패', '요청 취소에 실패했습니다');
+    }
+  };
+
   const handleStartChat = async (targetUserId: string) => {
     if (!user) return;
     try {
@@ -267,9 +288,9 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
     }
     if (isSent) {
       return (
-        <View style={styles.actionBtnDisabled}>
-          <Text style={styles.actionBtnDisabledText}>요청됨</Text>
-        </View>
+        <TouchableOpacity style={styles.actionBtnDisabled} onPress={() => handleCancelRequest(userId, statusMap)}>
+          <Text style={styles.actionBtnDisabledText}>요청됨 ✕</Text>
+        </TouchableOpacity>
       );
     }
     if (isReceived) {
@@ -429,9 +450,9 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                               </TouchableOpacity>
                             </>
                           ) : isSent ? (
-                            <View style={styles.actionBtnDisabled}>
-                              <Text style={styles.actionBtnDisabledText}>요청됨</Text>
-                            </View>
+                            <TouchableOpacity style={styles.actionBtnDisabled} onPress={() => handleCancelRequest(cm.userId, friendStatusMap)}>
+                              <Text style={styles.actionBtnDisabledText}>요청됨 ✕</Text>
+                            </TouchableOpacity>
                           ) : (
                             <TouchableOpacity style={styles.actionBtnOutline} onPress={() => handleSendFriendRequest(cm.userId)}>
                               <Ionicons name="person-add" size={16} color="#2D5016" />
@@ -696,9 +717,9 @@ export default function ClassmateFriendsScreen({ navigation }: any) {
                             <Text style={styles.acceptBtnText}>수락</Text>
                           </TouchableOpacity>
                         ) : isSent ? (
-                          <View style={[styles.actionBtnOutline, { borderColor: Colors.gray300, backgroundColor: Colors.gray100 }]}>
+                          <TouchableOpacity style={[styles.actionBtnOutline, { borderColor: Colors.gray300, backgroundColor: Colors.gray100 }]} onPress={() => handleCancelRequest(cm.userId, searchFriendStatuses)}>
                             <Ionicons name="hourglass-outline" size={14} color={Colors.gray400} />
-                          </View>
+                          </TouchableOpacity>
                         ) : (
                           <TouchableOpacity style={styles.actionBtnOutline} onPress={() => handleSearchFriendAction(cm.userId, cm.name)}>
                             <Ionicons name="person-add" size={16} color="#2D5016" />
@@ -743,7 +764,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: '#C49A2A',
   },
-  screenHeaderTitle: { fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
+  screenHeaderTitle: { fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.chalk, letterSpacing: 2 },
 
   // Main tabs (동창이네 스타일)
   mainTabBar: {

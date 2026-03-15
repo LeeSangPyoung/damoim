@@ -1490,7 +1490,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.chalk,
     letterSpacing: 2,
   },
   leaveRoomBtn: {
@@ -1671,7 +1671,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.chalk,
     letterSpacing: 2,
   },
 

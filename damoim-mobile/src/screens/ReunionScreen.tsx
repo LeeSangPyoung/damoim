@@ -66,6 +66,7 @@ export default function ReunionScreen() {
   const [dateOptions, setDateOptions] = useState<string[]>(['']);
   const [locationOptions, setLocationOptions] = useState<string[]>(['']);
   const [shopList, setShopList] = useState<ShopResponse[]>([]);
+  const [showAllShops, setShowAllShops] = useState(false);
   const [mySchools, setMySchools] = useState<{ schoolName: string; grade: string; classNumber: string }[]>([]);
 
   // Fees
@@ -597,7 +598,7 @@ export default function ReunionScreen() {
                             </View>
                           )}
                           <TouchableOpacity
-                            style={{ position: 'absolute', top: -6, right: -6, zIndex: 10 }}
+                            style={{ position: 'absolute', top: 4, right: 4, zIndex: 10 }}
                             onPress={() => setEditImages(prev => prev.filter((_, i) => i !== index))}
                             activeOpacity={0.7}
                           >
@@ -981,7 +982,7 @@ export default function ReunionScreen() {
                         </View>
                       )}
                       <TouchableOpacity
-                        style={{ position: 'absolute', top: -6, right: -6, zIndex: 10 }}
+                        style={{ position: 'absolute', top: 4, right: 4, zIndex: 10 }}
                         onPress={() => setNewPostImages(prev => prev.filter((_, i) => i !== index))}
                         activeOpacity={0.7}
                       >
@@ -1087,7 +1088,7 @@ export default function ReunionScreen() {
                 {shopList.length > 0 && (
                   <View style={styles.shopRecommend}>
                     <Text style={styles.shopRecommendTitle}>🏪 동창이네 추천</Text>
-                    {shopList.slice(0, 5).map(shop => {
+                    {(showAllShops ? shopList : shopList.slice(0, 3)).map(shop => {
                       const label = `${shop.shopName} (${shop.address})`;
                       const added = locationOptions.includes(label);
                       return (
@@ -1136,6 +1137,13 @@ export default function ReunionScreen() {
                         </TouchableOpacity>
                       );
                     })}
+                    {shopList.length > 3 && (
+                      <TouchableOpacity onPress={() => setShowAllShops(!showAllShops)} style={{ alignItems: 'center', paddingVertical: 6 }}>
+                        <Text style={{ fontSize: 12, color: '#92400e', fontFamily: Fonts.bold }}>
+                          {showAllShops ? '접기 ▲' : `더보기 (${shopList.length - 3}개) ▼`}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 )}
               </ScrollView>
@@ -1213,7 +1221,7 @@ export default function ReunionScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>찐모임 만들기</Text>
             <Text style={styles.inputLabel}>사진 (첫 번째가 대표 사진)</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8, paddingTop: 6 }}>
               {coverImageUris.map((uri, idx) => (
                 <View key={idx} style={styles.imageThumbWrap}>
                   <Image source={{ uri }} style={styles.imageThumb} />
@@ -1246,7 +1254,7 @@ export default function ReunionScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>모임 수정</Text>
             <Text style={styles.inputLabel}>대표 사진</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8, paddingTop: 6 }}>
               {editReunionCoverUris.map((uri, idx) => (
                 <View key={idx} style={styles.imageThumbWrap}>
                   <Image source={{ uri }} style={styles.imageThumb} />
@@ -1337,7 +1345,7 @@ const styles = StyleSheet.create({
 
   // List
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: HEADER_TOP_PADDING, paddingBottom: 12, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A' },
-  screenTitle: { fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
+  screenTitle: { fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.chalk, letterSpacing: 2 },
   headerBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: Colors.gray100 },
   headerBtnText: { fontSize: 13, fontWeight: '600', color: Colors.gray700 },
 
@@ -1514,7 +1522,7 @@ const styles = StyleSheet.create({
   imageThumb: { width: 80, height: 80, borderRadius: 8 },
   repBadge: { position: 'absolute', top: 4, left: 4, backgroundColor: Colors.primary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   repBadgeText: { fontSize: 9, fontWeight: '700', color: Colors.white },
-  imageRemoveBtn: { position: 'absolute', top: -2, right: -2 },
+  imageRemoveBtn: { position: 'absolute', top: 2, right: 2 },
   coverPlaceholder: { width: 80, height: 80, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.gray50, borderRadius: 8, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed', gap: 2 },
   coverPlaceholderText: { fontSize: 11, color: Colors.gray400, fontFamily: Fonts.regular },
   createPostHeader: {

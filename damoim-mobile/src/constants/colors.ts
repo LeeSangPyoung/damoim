@@ -67,7 +67,9 @@ export const Colors = {
 
 // 폰트 패밀리 상수
 export const Fonts = {
-  light: 'Gaegu_300Light',
-  regular: 'Gaegu_400Regular',
-  bold: 'Gaegu_700Bold',
+  light: undefined,
+  regular: undefined,
+  bold: undefined,
+  // 칠판 헤더 전용 폰트
+  chalk: 'Gaegu_700Bold',
 };

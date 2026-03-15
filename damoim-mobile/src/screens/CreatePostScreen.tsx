@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.chalk,
     letterSpacing: 2,
   },
   submitButton: {
@@ -521,6 +521,7 @@ const styles = StyleSheet.create({
   },
   imageList: {
     paddingHorizontal: 16,
+    paddingTop: 8,
     gap: 10,
   },
   imagePreviewWrap: {
@@ -552,15 +553,15 @@ const styles = StyleSheet.create({
   },
   imageRemoveButton: {
     position: 'absolute',
-    top: -6,
-    right: -6,
+    top: 4,
+    right: 4,
     zIndex: 10,
   },
   imageRemoveCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -5,8 +5,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors, Fonts } from '../constants/colors';
-import { HEADER_TOP_PADDING } from '../constants/config';
+import { API_BASE_URL, HEADER_TOP_PADDING } from '../constants/config';
 import { useAuth } from '../hooks/useAuth';
 import { userAPI, ProfileResponse, SchoolUpdateInfo } from '../api/user';
 import { friendAPI, FriendshipStatus } from '../api/friend';
@@ -434,8 +436,56 @@ export default function ProfileScreen() {
                 <TextInput style={[styles.editInput, { minHeight: 60, textAlignVertical: 'top' }]} value={editBio} onChangeText={setEditBio} placeholder="자기소개를 입력하세요" multiline />
               </View>
               <View style={styles.editField}>
-                <Text style={styles.editLabel}>프로필 이미지 URL</Text>
-                <TextInput style={styles.editInput} value={editImageUrl} onChangeText={setEditImageUrl} placeholder="이미지 URL (선택)" autoCapitalize="none" keyboardType="url" />
+                <Text style={styles.editLabel}>프로필 사진</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  {editImageUrl ? (
+                    <Image source={{ uri: editImageUrl }} style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#f0f0f0' }} />
+                  ) : (
+                    <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: Colors.primaryLight, justifyContent: 'center', alignItems: 'center' }}>
+                      <Ionicons name="person" size={28} color={Colors.primary} />
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+                    onPress={async () => {
+                      if (Platform.OS === 'web') {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = async (e: any) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const formData = new FormData();
+                          formData.append('file', file, file.name);
+                          try {
+                            const res = await fetch(`${API_BASE_URL}/chat/upload`, {
+                              method: 'POST',
+                              headers: { 'ngrok-skip-browser-warning': 'true' },
+                              body: formData,
+                            });
+                            const data = await res.json();
+                            setEditImageUrl(data.url);
+                          } catch { Alert.alert('오류', '업로드 실패'); }
+                        };
+                        input.click();
+                      } else {
+                        const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
+                        if (result.canceled || !result.assets?.[0]) return;
+                        try {
+                          const uploaded = await chatAPI.uploadFile(result.assets[0].uri);
+                          setEditImageUrl(uploaded.url);
+                        } catch { Alert.alert('오류', '업로드 실패'); }
+                      }
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>사진 변경</Text>
+                  </TouchableOpacity>
+                  {editImageUrl ? (
+                    <TouchableOpacity onPress={() => setEditImageUrl('')}>
+                      <Text style={{ color: '#FF6B6B', fontSize: 13 }}>삭제</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
               </View>
 
               {/* Schools */}
@@ -613,7 +663,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A',
   },
   backBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 1 },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff', fontFamily: Fonts.chalk, letterSpacing: 1 },
 
   // Profile card (centered)
   profileCard: {
