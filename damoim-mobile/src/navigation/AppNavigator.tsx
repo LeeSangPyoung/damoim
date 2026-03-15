@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
@@ -108,6 +109,7 @@ const TAB_CONFIG = [
 
 // 커스텀 탭바: 탭 클릭 시 해당 탭의 중첩 스택 상태를 완전히 초기화
 function CustomTabBar({ state, navigation, chatUnread }: any) {
+  const insets = useSafeAreaInsets();
   const handleTabPress = (tabName: string, tabIndex: number) => {
     // 모든 탭의 key를 새로 생성 → React Navigation이 완전히 새 라우트로 인식
     navigation.reset({
@@ -120,7 +122,7 @@ function CustomTabBar({ state, navigation, chatUnread }: any) {
   };
 
   return (
-    <View style={tabStyles.bar}>
+    <View style={[tabStyles.bar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       {state.routes.map((route: any, index: number) => {
         const config = TAB_CONFIG.find(t => t.name === route.name);
         if (!config) return null;
@@ -155,8 +157,7 @@ const tabStyles = StyleSheet.create({
     backgroundColor: '#2D5016',
     borderTopColor: '#C49A2A',
     borderTopWidth: 4,
-    paddingBottom: 4,
-    height: 60,
+    paddingBottom: 8,
   },
   tab: {
     flex: 1,
