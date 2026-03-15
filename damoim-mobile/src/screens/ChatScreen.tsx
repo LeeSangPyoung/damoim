@@ -152,48 +152,50 @@ export default function ChatScreen() {
   // Data fetching
   // =========================================================================
 
-  const fetchDmRooms = useCallback(async () => {
+  const fetchDmRooms = useCallback(async (silent = false) => {
     if (!userId) return;
-    setDmLoading(true);
+    if (!silent) setDmLoading(true);
     try {
       const rooms = await chatAPI.getMyChatRooms(userId);
       setDmRooms(rooms);
-      // 학교 정보 로드
-      const schoolMap: Record<string, string> = {};
-      await Promise.all(rooms.map(async (r) => {
-        try {
-          const profile = await userAPI.getProfile(r.otherUser.userId);
-          if (profile.schools?.length > 0) {
-            const s = profile.schools[0];
-            const shortName = s.schoolName.replace(/(초등학교|중학교|고등학교|대학교)/, (m: string) => {
-              if (m === '초등학교') return '초';
-              if (m === '중학교') return '중';
-              if (m === '고등학교') return '고';
-              return '대';
-            });
-            const cls = s.grade && s.classNumber ? ` ${s.grade}-${s.classNumber}반` : '';
-            schoolMap[r.otherUser.userId] = `${shortName}${cls}`;
-          }
-        } catch {}
-      }));
-      setUserSchools(prev => ({ ...prev, ...schoolMap }));
+      // 학교 정보 로드 (최초만)
+      if (!silent) {
+        const schoolMap: Record<string, string> = {};
+        await Promise.all(rooms.map(async (r) => {
+          try {
+            const profile = await userAPI.getProfile(r.otherUser.userId);
+            if (profile.schools?.length > 0) {
+              const s = profile.schools[0];
+              const shortName = s.schoolName.replace(/(초등학교|중학교|고등학교|대학교)/, (m: string) => {
+                if (m === '초등학교') return '초';
+                if (m === '중학교') return '중';
+                if (m === '고등학교') return '고';
+                return '대';
+              });
+              const cls = s.grade && s.classNumber ? ` ${s.grade}-${s.classNumber}반` : '';
+              schoolMap[r.otherUser.userId] = `${shortName}${cls}`;
+            }
+          } catch {}
+        }));
+        setUserSchools(prev => ({ ...prev, ...schoolMap }));
+      }
     } catch (e) {
       console.warn('[ChatScreen] fetchDmRooms error', e);
     } finally {
-      setDmLoading(false);
+      if (!silent) setDmLoading(false);
     }
   }, [userId]);
 
-  const fetchGroupRooms = useCallback(async () => {
+  const fetchGroupRooms = useCallback(async (silent = false) => {
     if (!userId) return;
-    setGroupLoading(true);
+    if (!silent) setGroupLoading(true);
     try {
       const rooms = await groupChatAPI.getMyRooms(userId);
       setGroupRooms(rooms);
     } catch (e) {
       console.warn('[ChatScreen] fetchGroupRooms error', e);
     } finally {
-      setGroupLoading(false);
+      if (!silent) setGroupLoading(false);
     }
   }, [userId]);
 
@@ -241,12 +243,12 @@ export default function ChatScreen() {
     }
   }, [tab, fetchDmRooms, fetchGroupRooms]);
 
-  // 채팅 목록 화면에서 5초마다 자동 새로고침 (unreadCount 반영)
+  // 채팅 목록 화면에서 5초마다 자동 새로고침 (unreadCount 반영, 깜빡임 없이)
   useEffect(() => {
     if (view.kind !== 'list') return;
     const interval = setInterval(() => {
-      if (tab === 'dm') fetchDmRooms();
-      else fetchGroupRooms();
+      if (tab === 'dm') fetchDmRooms(true);
+      else fetchGroupRooms(true);
     }, 5000);
     return () => clearInterval(interval);
   }, [view.kind, tab, fetchDmRooms, fetchGroupRooms]);
