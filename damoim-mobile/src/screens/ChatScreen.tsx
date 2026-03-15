@@ -491,6 +491,7 @@ export default function ChatScreen() {
       formData.append('file', file, file.name);
       const res = await fetch(`${API_BASE_URL}/chat/upload`, {
         method: 'POST',
+        headers: { 'ngrok-skip-browser-warning': 'true' },
         body: formData,
       });
       if (!res.ok) {
