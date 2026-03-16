@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 // 서버 주소 설정
-const NGROK_URL = 'https://ce56-118-220-67-122.ngrok-free.app';
+const NGROK_URL = 'https://fast-suns-run.loca.lt';
 
 const getBaseUrl = () => {
   if (Platform.OS === 'web') return 'http://localhost:8080';
