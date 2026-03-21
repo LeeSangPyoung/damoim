@@ -19,6 +19,7 @@
       "package": "com.damoim.mobile",
       "versionCode": 1,
       "softwareKeyboardLayoutMode": "pan",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#3b82f6",
         "foregroundImage": "./assets/android-icon-foreground.png",
