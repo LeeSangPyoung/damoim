@@ -11,6 +11,7 @@ export interface GroupChatRoomResponse {
   name: string;
   createdBy?: string;
   memberCount: number;
+  unreadCount?: number;
   members: GroupMemberInfo[];
   lastMessage?: string;
   lastMessageAt?: string;

@@ -31,7 +31,10 @@ public class DatabaseMigration implements CommandLineRunner {
             stmt.execute("ALTER TABLE group_chat_messages ADD COLUMN IF NOT EXISTS file_name varchar(255)");
             stmt.execute("ALTER TABLE group_chat_messages ADD COLUMN IF NOT EXISTS file_size bigint");
 
-            System.out.println("[Migration] chat_messages, group_chat_messages 컬럼 추가 완료");
+            // reunions 테이블에 chat_room_id 컬럼 추가
+            stmt.execute("ALTER TABLE reunions ADD COLUMN IF NOT EXISTS chat_room_id bigint");
+
+            System.out.println("[Migration] chat_messages, group_chat_messages, reunions 컬럼 추가 완료");
         } catch (Exception e) {
             System.err.println("[Migration] 컬럼 추가 실패 (이미 존재할 수 있음): " + e.getMessage());
         }

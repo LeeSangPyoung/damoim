@@ -122,11 +122,17 @@ public class ReunionService {
     public ReunionResponse updateReunion(Long reunionId, String userId, CreateReunionRequest request) {
         Reunion reunion = reunionRepository.findById(reunionId)
                 .orElseThrow(() -> new RuntimeException("동창회를 찾을 수 없습니다"));
+        // chatRoomId는 멤버도 설정 가능 (최초 채팅방 생성 시)
+        if (request.getChatRoomId() != null && reunion.getChatRoomId() == null) {
+            reunion.setChatRoomId(request.getChatRoomId());
+            reunionRepository.save(reunion);
+            return getReunionDetail(reunionId, userId);
+        }
         if (!reunion.getCreatedBy().getUserId().equals(userId)) {
             throw new RuntimeException("개설자만 수정할 수 있습니다");
         }
-        reunion.setName(request.getName());
-        reunion.setDescription(request.getDescription());
+        if (request.getName() != null) reunion.setName(request.getName());
+        if (request.getDescription() != null) reunion.setDescription(request.getDescription());
         if (request.getCoverImageUrl() != null) {
             reunion.setCoverImageUrl(request.getCoverImageUrl());
         }
@@ -890,6 +896,7 @@ public class ReunionService {
                 .graduationYear(reunion.getGraduationYear())
                 .coverImageUrl(reunion.getCoverImageUrl())
                 .inviteCode(reunion.getInviteCode())
+                .chatRoomId(reunion.getChatRoomId())
                 .createdByUserId(reunion.getCreatedBy().getUserId())
                 .createdByName(reunion.getCreatedBy().getName())
                 .memberCount(members.size())

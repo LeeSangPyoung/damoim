@@ -22,6 +22,7 @@ import { useAuth } from '../hooks/useAuth';
 import { postAPI, PostResponse, CommentResponse } from '../api/post';
 import { reunionAPI, ReunionPostResponse, ReunionCommentResponse } from '../api/reunion';
 import Avatar from '../components/Avatar';
+import LinkedText from '../components/LinkedText';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -147,9 +148,20 @@ export default function PostDetailScreen({ navigation, route }: any) {
   const handleToggleLike = useCallback(async () => {
     if (!user?.userId) return;
     if (isReunion) {
+      setPost(prev => prev ? {
+        ...prev,
+        liked: !prev.liked,
+        likeCount: prev.liked ? prev.likeCount - 1 : prev.likeCount + 1,
+      } : prev);
       try {
         await reunionAPI.togglePostLike(actualPostId, user.userId);
-      } catch {}
+      } catch {
+        setPost(prev => prev ? {
+          ...prev,
+          liked: !prev.liked,
+          likeCount: prev.liked ? prev.likeCount - 1 : prev.likeCount + 1,
+        } : prev);
+      }
       return;
     }
     if (!post) return;
@@ -313,7 +325,7 @@ export default function PostDetailScreen({ navigation, route }: any) {
         </View>
 
         {/* Content */}
-        <Text style={styles.content}>{activePost.content}</Text>
+        <LinkedText style={styles.content}>{activePost.content}</LinkedText>
 
         {/* Images */}
         {activePost.imageUrls && activePost.imageUrls.length > 0 && (
@@ -368,7 +380,7 @@ export default function PostDetailScreen({ navigation, route }: any) {
                   <Avatar uri={c.author.profileImageUrl} name={c.author.name} size={30} />
                   <View style={styles.commentBody}>
                     <Text style={styles.commentAuthor}>{c.author.name}</Text>
-                    <Text style={styles.commentContent}>{c.content}</Text>
+                    <LinkedText style={styles.commentContent}>{c.content}</LinkedText>
                     <View style={styles.commentMeta}>
                       <Text style={styles.commentTime}>{formatTimeAgo(c.createdAt)}</Text>
                       <TouchableOpacity onPress={() => setReplyTo({ id: c.id, name: c.author.name })}>
@@ -387,7 +399,7 @@ export default function PostDetailScreen({ navigation, route }: any) {
                     <Avatar uri={r.author.profileImageUrl} name={r.author.name} size={24} />
                     <View style={styles.commentBody}>
                       <Text style={styles.commentAuthor}>{r.author.name}</Text>
-                      <Text style={styles.commentContent}>{r.content}</Text>
+                      <LinkedText style={styles.commentContent}>{r.content}</LinkedText>
                       <View style={styles.commentMeta}>
                         <Text style={styles.commentTime}>{formatTimeAgo(r.createdAt)}</Text>
                         {r.canDelete && (

@@ -16,6 +16,7 @@ public class GroupChatRoomResponse {
     private String name;
     private String createdBy;
     private int memberCount;
+    private long unreadCount;
     private List<MemberInfo> members;
     private String lastMessage;
     private String lastMessageAt;

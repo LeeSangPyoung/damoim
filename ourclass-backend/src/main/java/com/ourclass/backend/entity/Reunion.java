@@ -44,6 +44,9 @@ public class Reunion {
     @Column(unique = true, length = 6)
     private String inviteCode;
 
+    @Column(name = "chat_room_id")
+    private Long chatRoomId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;

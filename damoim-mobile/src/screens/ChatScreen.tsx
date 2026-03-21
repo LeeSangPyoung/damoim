@@ -27,6 +27,8 @@ import { userAPI } from '../api/user';
 import Avatar from '../components/Avatar';
 import Badge from '../components/Badge';
 import EmptyState from '../components/EmptyState';
+import LinkedText from '../components/LinkedText';
+import GroupAvatar from '../components/GroupAvatar';
 import NoticeBanner from '../components/NoticeBanner';
 import HeaderActions from '../components/HeaderActions';
 import { API_BASE_URL, WS_BASE_URL, HEADER_TOP_PADDING } from '../constants/config';
@@ -104,7 +106,7 @@ function formatTime(dateStr?: string): string {
 
   const month = d.getMonth() + 1;
   const day = d.getDate();
-  return `${month}/${day}`;
+  return `${month}월 ${day}일`;
 }
 
 // ---------------------------------------------------------------------------
@@ -800,9 +802,7 @@ export default function ChatScreen() {
 
   const renderGroupRoomItem = ({ item }: { item: GroupChatRoomResponse }) => (
     <TouchableOpacity style={styles.roomRow} onPress={() => openGroupRoom(item)} activeOpacity={0.6}>
-      <View style={styles.groupAvatar}>
-        <Text style={styles.groupAvatarText}>{item.name.charAt(0)}</Text>
-      </View>
+      <GroupAvatar members={item.members || []} size={48} />
       <View style={styles.roomInfo}>
         <View style={styles.roomHeader}>
           <View style={styles.groupNameRow}>
@@ -906,7 +906,7 @@ export default function ChatScreen() {
                 <Text style={{ fontSize: 36, lineHeight: 44 }}>{item.content}</Text>
               ) : (
                 <View style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther]}>
-                  <Text style={[styles.msgText, isMine && styles.msgTextMine]}>{item.content}</Text>
+                  <LinkedText style={[styles.msgText, isMine && styles.msgTextMine]} linkColor={isMine ? '#90caf9' : '#1d4ed8'}>{item.content}</LinkedText>
                 </View>
               )}
             </TouchableOpacity>
@@ -1115,7 +1115,7 @@ export default function ChatScreen() {
                 <Text style={{ fontSize: 36, lineHeight: 44 }}>{item.content}</Text>
               ) : (
                 <View style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther]}>
-                  <Text style={[styles.msgText, isMine && styles.msgTextMine]}>{item.content}</Text>
+                  <LinkedText style={[styles.msgText, isMine && styles.msgTextMine]} linkColor={isMine ? '#90caf9' : '#1d4ed8'}>{item.content}</LinkedText>
                 </View>
               )}
             </TouchableOpacity>

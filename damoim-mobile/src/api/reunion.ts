@@ -19,6 +19,7 @@ export interface ReunionResponse {
   graduationYear?: string;
   coverImageUrl?: string;
   inviteCode?: string;
+  chatRoomId?: number;
   createdByUserId: string;
   createdByName: string;
   memberCount: number;
@@ -155,7 +156,7 @@ export const reunionAPI = {
     return response.data;
   },
 
-  updateReunion: async (reunionId: number, userId: string, data: { name: string; description?: string; coverImageUrl?: string }): Promise<ReunionResponse> => {
+  updateReunion: async (reunionId: number, userId: string, data: { name?: string; description?: string; coverImageUrl?: string; chatRoomId?: number }): Promise<ReunionResponse> => {
     const response = await apiClient.put(`/reunions/${reunionId}`, data, { params: { userId } });
     return response.data;
   },

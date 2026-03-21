@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import LoadingScreen from '../components/LoadingScreen';
 import { chatAPI } from '../api/chat';
+import { reunionAPI } from '../api/reunion';
+import { groupChatAPI } from '../api/groupChat';
 
 // Screens
 import LoginScreen from '../screens/LoginScreen';
@@ -108,7 +110,7 @@ const TAB_CONFIG = [
 ];
 
 // 커스텀 탭바: 탭 클릭 시 해당 탭의 중첩 스택 상태를 완전히 초기화
-function CustomTabBar({ state, navigation, chatUnread }: any) {
+function CustomTabBar({ state, navigation, chatUnread, reunionUnread }: any) {
   const insets = useSafeAreaInsets();
   const handleTabPress = (tabName: string, tabIndex: number) => {
     // 모든 탭의 key를 새로 생성 → React Navigation이 완전히 새 라우트로 인식
@@ -138,6 +140,11 @@ function CustomTabBar({ state, navigation, chatUnread }: any) {
             <View>
               <Ionicons name={config.icon} size={24} color={color} />
               {config.name === 'Chat' && chatUnread && (
+                <View style={tabStyles.badge}>
+                  <Text style={tabStyles.badgeText}>N</Text>
+                </View>
+              )}
+              {config.name === 'Reunion' && reunionUnread && (
                 <View style={tabStyles.badge}>
                   <Text style={tabStyles.badgeText}>N</Text>
                 </View>
@@ -192,25 +199,61 @@ const tabStyles = StyleSheet.create({
 function MainTabs() {
   const { user } = useAuth();
   const [chatUnread, setChatUnread] = useState(false);
+  const [reunionUnread, setReunionUnread] = useState(false);
+  const initialTab = Platform.OS === 'web' && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('inviteCode')
+    ? 'Reunion' : null;
 
   useEffect(() => {
     if (!user?.userId) return;
-    let prev = false;
+    let prevChat = false;
+    let prevReunion = false;
     const check = async () => {
       try {
+        // 채팅 unread
         const rooms = await chatAPI.getMyChatRooms(user.userId);
         const hasUnread = rooms.some(r => r.unreadCount > 0);
-        if (prev !== hasUnread) { prev = hasUnread; setChatUnread(hasUnread); }
+        if (prevChat !== hasUnread) { prevChat = hasUnread; setChatUnread(hasUnread); }
+
+        // 찐모임 unread (채팅 + 게시글 + 가입요청)
+        try {
+          const reunions = await reunionAPI.getMyReunions(user.userId);
+          const groupRooms = await groupChatAPI.getMyRooms(user.userId);
+          let hasReunionUnread = false;
+          for (const r of reunions) {
+            // 채팅 unread
+            if (r.chatRoomId) {
+              const room = groupRooms.find(gr => gr.id === r.chatRoomId);
+              if ((room?.unreadCount || 0) > 0) { hasReunionUnread = true; break; }
+            }
+            // 게시글 unread
+            try {
+              const posts = await reunionAPI.getPosts(r.id, user.userId);
+              const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+              const lastStr = await AsyncStorage.getItem(`reunion_feed_${r.id}`);
+              const last = lastStr ? parseInt(lastStr, 10) : 0;
+              if (posts.some((p: any) => new Date(p.createdAt).getTime() > last)) { hasReunionUnread = true; break; }
+            } catch {}
+            // 가입요청
+            if (r.myRole === 'LEADER' || r.myRole === 'ADMIN') {
+              try {
+                const reqs = await reunionAPI.getJoinRequests(r.id, user.userId);
+                if (reqs.some((req: any) => req.status === 'PENDING')) { hasReunionUnread = true; break; }
+              } catch {}
+            }
+          }
+          if (prevReunion !== hasReunionUnread) { prevReunion = hasReunionUnread; setReunionUnread(hasReunionUnread); }
+        } catch {}
       } catch {}
     };
     check();
-    const interval = setInterval(check, 5000);
+    const interval = setInterval(check, 10000);
     return () => clearInterval(interval);
   }, [user?.userId]);
 
   return (
     <Tab.Navigator
-      tabBar={(props) => <CustomTabBar {...props} chatUnread={chatUnread} />}
+      initialRouteName={initialTab || 'MySchool'}
+      tabBar={(props) => <CustomTabBar {...props} chatUnread={chatUnread} reunionUnread={reunionUnread} />}
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="MySchool" component={MySchoolStack} />

@@ -21,6 +21,7 @@ import { postAPI, PostResponse } from '../api/post';
 import { userAPI, ProfileResponse, SchoolInfo } from '../api/user';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
+import LinkedText from '../components/LinkedText';
 import HeaderActions from '../components/HeaderActions';
 
 type FilterType = 'all' | 'myGrade' | 'myClass';
@@ -353,9 +354,7 @@ export default function DashboardScreen({ navigation, route }: any) {
             </View>
 
             {/* Content preview */}
-            <Text style={styles.postCardContent} numberOfLines={2}>
-              {item.content}
-            </Text>
+            <LinkedText style={styles.postCardContent}>{item.content}</LinkedText>
 
             {/* Stats */}
             <View style={styles.postCardStats}>

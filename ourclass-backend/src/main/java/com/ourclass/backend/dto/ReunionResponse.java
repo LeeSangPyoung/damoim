@@ -24,6 +24,7 @@ public class ReunionResponse {
     private List<MemberInfo> members;
     private String coverImageUrl;
     private String inviteCode;
+    private Long chatRoomId;
     private String createdAt;
     private String myRole;
 

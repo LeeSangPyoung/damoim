@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../constants/colors';
@@ -16,14 +17,25 @@ import {
 } from '../api/reunion';
 import { alumniShopAPI, ShopResponse, CATEGORY_ICONS, OwnerSchoolDetail } from '../api/alumniShop';
 import { userAPI } from '../api/user';
+import { groupChatAPI, GroupChatRoomResponse, GroupChatMessageResponse } from '../api/groupChat';
+import { chatAPI } from '../api/chat';
+import { API_BASE_URL } from '../constants/config';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
+import LinkedText from '../components/LinkedText';
 import HeaderActions from '../components/HeaderActions';
 import NoticeBanner from '../components/NoticeBanner';
 import LoadingScreen from '../components/LoadingScreen';
 
+const EMOJI_LIST = [
+  '😀','😂','🤣','😍','🥰','😘','😊','😎','🤔','😢',
+  '😭','😡','🥺','👍','👎','👏','🙏','❤️','🔥','💯',
+  '🎉','✨','💪','🤝','👋','😱','🤗','😴','🤮','💕',
+  '🙄','😏','🥳','😈','💀','🤡','👀','💬','📸','🎵',
+];
+
 type ScreenView = 'list' | 'detail';
-type Tab = 'feed' | 'meetings' | 'fees' | 'members';
+type Tab = 'feed' | 'chat' | 'meetings' | 'fees' | 'members';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -65,9 +77,26 @@ export default function ReunionScreen() {
   const [meetingDesc, setMeetingDesc] = useState('');
   const [dateOptions, setDateOptions] = useState<string[]>(['']);
   const [locationOptions, setLocationOptions] = useState<string[]>(['']);
+  const [voteDeadline, setVoteDeadline] = useState('');
   const [shopList, setShopList] = useState<ShopResponse[]>([]);
   const [showAllShops, setShowAllShops] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState<MeetingResponse | null>(null);
+  const [confirmDate, setConfirmDate] = useState('');
+  const [confirmLocation, setConfirmLocation] = useState('');
   const [mySchools, setMySchools] = useState<{ schoolName: string; grade: string; classNumber: string }[]>([]);
+
+  // Chat
+  const [chatRoomId, setChatRoomId] = useState<number | null>(null);
+  const [chatMessages, setChatMessages] = useState<GroupChatMessageResponse[]>([]);
+  const [chatMsgLoading, setChatMsgLoading] = useState(false);
+  const [chatText, setChatText] = useState('');
+  const [chatSending, setChatSending] = useState(false);
+  const chatListRef = React.useRef<FlatList>(null);
+  const [showChatEmoji, setShowChatEmoji] = useState(false);
+  const [copiedToast, setCopiedToast] = useState(false);
+  const [reunionUnreadMap, setReunionUnreadMap] = useState<Record<number, boolean>>({});
+  // 내부 탭별 새 글 수
+  const [tabUnread, setTabUnread] = useState<{ feed: number; chat: number; meetings: number; members: number }>({ feed: 0, chat: 0, meetings: 0, members: 0 });
 
   // Fees
   const [feeGroups, setFeeGroups] = useState<FeeGroupResponse[]>([]);
@@ -96,11 +125,97 @@ export default function ReunionScreen() {
 
   useEffect(() => { if (user) loadReunions(); }, [user]);
 
+  // URL 파라미터로 초대코드가 들어온 경우 자동 처리
+  useEffect(() => {
+    if (Platform.OS === 'web' && user) {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('inviteCode');
+      if (code) {
+        window.history.replaceState({}, '', window.location.pathname);
+        // 이미 가입된 모임인지 확인
+        (async () => {
+          try {
+            const myReunions = await reunionAPI.getMyReunions(user.userId);
+            const found = myReunions.find((r: any) => r.inviteCode === code);
+            if (found) {
+              // 이미 가입됨 → 바로 상세로 이동
+              loadDetail(found);
+            } else {
+              // 미가입 → 가입 모달
+              setJoinCode(code);
+              setShowJoinModal(true);
+            }
+          } catch {
+            setJoinCode(code);
+            setShowJoinModal(true);
+          }
+        })();
+      }
+    }
+  }, [user]);
+
+  // 채팅 탭 활성화 시 3초마다 자동 새로고침
+  useEffect(() => {
+    if (tab !== 'chat' || !chatRoomId || !user) return;
+    setTabUnread(prev => ({ ...prev, chat: 0 }));
+    const interval = setInterval(async () => {
+      try {
+        const msgs = await groupChatAPI.getMessages(chatRoomId, user.userId);
+        setChatMessages(msgs);
+      } catch {}
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [tab, chatRoomId, user]);
+
+  // 채팅 탭이 아닐 때 unread 체크 (읽음 처리 없이)
+  useEffect(() => {
+    if (tab === 'chat' || !chatRoomId || !user) return;
+    const checkUnread = async () => {
+      try {
+        const rooms = await groupChatAPI.getMyRooms(user.userId);
+        const room = rooms.find(r => r.id === chatRoomId);
+        setTabUnread(prev => ({ ...prev, chat: room?.unreadCount || 0 }));
+      } catch {}
+    };
+    checkUnread();
+    const interval = setInterval(checkUnread, 5000);
+    return () => clearInterval(interval);
+  }, [tab, chatRoomId, user]);
+
   const loadReunions = async () => {
     if (!user) return;
     try {
       const data = await reunionAPI.getMyReunions(user.userId);
       setReunions(data);
+      // 각 찐모임별 unread 체크 (채팅 + 게시글 + 가입요청)
+      const rooms = await groupChatAPI.getMyRooms(user.userId);
+      const unreadMap: Record<number, boolean> = {};
+      for (const r of data) {
+        let hasUnread = false;
+        // 채팅 unread
+        if (r.chatRoomId) {
+          const room = rooms.find(gr => gr.id === r.chatRoomId);
+          if ((room?.unreadCount || 0) > 0) hasUnread = true;
+        }
+        // 게시글 unread
+        if (!hasUnread) {
+          try {
+            const posts = await reunionAPI.getPosts(r.id, user.userId);
+            const lastSeenStr = await AsyncStorage.getItem(`reunion_feed_${r.id}`);
+            const lastSeen = lastSeenStr ? parseInt(lastSeenStr, 10) : 0;
+            if (posts.some(p => new Date(p.createdAt).getTime() > lastSeen)) hasUnread = true;
+          } catch {}
+        }
+        // 가입요청 (리더/관리자만)
+        if (!hasUnread && (r.myRole === 'LEADER' || r.myRole === 'ADMIN')) {
+          try {
+            const reqs = await reunionAPI.getJoinRequests(r.id, user.userId);
+            if (reqs.some((req: any) => req.status === 'PENDING')) hasUnread = true;
+          } catch {}
+        }
+        unreadMap[r.id] = hasUnread;
+      }
+      setReunionUnreadMap(unreadMap);
     } catch {} finally {
       setLoading(false);
       setRefreshing(false);
@@ -112,6 +227,8 @@ export default function ReunionScreen() {
     setSelected(reunion);
     setView('detail');
     setTab('feed');
+    // 게시판 탭으로 진입하므로 lastSeen 저장
+    AsyncStorage.setItem(`reunion_feed_${reunion.id}`, String(Date.now()));
     try {
       const [detail, p, m, fg, fs] = await Promise.all([
         reunionAPI.getReunionDetail(reunion.id, user.userId),
@@ -134,8 +251,167 @@ export default function ReunionScreen() {
       userAPI.getProfile(user.userId).then(p => {
         if (p.schools) setMySchools(p.schools.map((s: any) => ({ schoolName: s.schoolName, grade: s.grade, classNumber: s.classNumber })));
       }).catch(() => {});
+      // Load or create reunion chat room
+      loadReunionChat(reunion);
+      // 탭별 unread 계산
+      updateTabUnread(reunion, detail, p, m);
     } catch {}
   };
+
+  const updateTabUnread = async (reunion: ReunionResponse, detail: any, posts: any[], meetings: any[]) => {
+    if (!user) return;
+    const result = { feed: 0, chat: 0, meetings: 0, members: 0 };
+
+    // 게시판: 마지막 본 시간 이후 새 글
+    const feedLastStr = await AsyncStorage.getItem(`reunion_feed_${reunion.id}`);
+    const feedLast = feedLastStr ? parseInt(feedLastStr, 10) : 0;
+    result.feed = posts.filter(p => new Date(p.createdAt).getTime() > feedLast).length;
+
+    // 모임: 마지막 본 시간 이후 새 모임
+    const meetingLastStr = await AsyncStorage.getItem(`reunion_meetings_${reunion.id}`);
+    const meetingLast = meetingLastStr ? parseInt(meetingLastStr, 10) : 0;
+    result.meetings = meetings.filter(m => new Date(m.createdAt).getTime() > meetingLast).length;
+
+    // 멤버: 대기 중 가입요청
+    if (detail.myRole === 'LEADER' || detail.myRole === 'ADMIN') {
+      try {
+        const reqs = await reunionAPI.getJoinRequests(reunion.id, user.userId);
+        result.members = reqs.filter((r: any) => r.status === 'PENDING').length;
+      } catch {}
+    }
+
+    // 채팅: getMyRooms의 unreadCount
+    if (reunion.chatRoomId) {
+      try {
+        const rooms = await groupChatAPI.getMyRooms(user.userId);
+        const room = rooms.find(r => r.id === reunion.chatRoomId);
+        result.chat = room?.unreadCount || 0;
+      } catch {}
+    }
+
+    setTabUnread(result);
+  };
+
+  const loadReunionChat = async (reunion: ReunionResponse) => {
+    if (!user) return;
+    try {
+      if (reunion.chatRoomId) {
+        // 이미 채팅방이 연결됨 → 내가 멤버인지 확인, 아니면 초대
+        const rooms = await groupChatAPI.getMyRooms(user.userId);
+        const myRoom = rooms.find(r => r.id === reunion.chatRoomId);
+        if (!myRoom) {
+          // 채팅방에 아직 안 들어가 있음 → 초대 (리더가 초대하는 방식 대신, 자동 참여)
+          try {
+            await groupChatAPI.inviteMember(reunion.chatRoomId, reunion.createdByUserId, user.userId);
+          } catch {} // 이미 멤버인 경우 무시
+        }
+        setChatRoomId(reunion.chatRoomId);
+        const msgs = await groupChatAPI.getMessages(reunion.chatRoomId, user.userId);
+        setChatMessages(msgs);
+      } else {
+        // 채팅방 없음 → 새로 생성하고 reunion에 저장
+        const roomName = `[찐모임] ${reunion.name}`;
+        const memberIds = reunion.members?.map(m => m.userId) || [];
+        const created = await groupChatAPI.createRoom(user.userId, roomName, memberIds);
+        setChatRoomId(created.id);
+        // 백엔드에 chatRoomId 저장
+        try {
+          await reunionAPI.updateReunion(reunion.id, user.userId, { chatRoomId: created.id });
+        } catch {}
+        const msgs = await groupChatAPI.getMessages(created.id, user.userId);
+        setChatMessages(msgs);
+      }
+    } catch (e) {
+      console.warn('Reunion chat load error:', e);
+    }
+  };
+
+  const loadChatMessages = async () => {
+    if (!chatRoomId || !user) return;
+    setChatMsgLoading(true);
+    try {
+      const msgs = await groupChatAPI.getMessages(chatRoomId, user.userId);
+      setChatMessages(msgs);
+    } catch {} finally {
+      setChatMsgLoading(false);
+    }
+  };
+
+  const handleSendChat = async () => {
+    const text = chatText.trim();
+    if (!text || !chatRoomId || !user) return;
+    setChatSending(true);
+    setChatText('');
+    try {
+      const msg = await groupChatAPI.sendMessage(chatRoomId, user.userId, text);
+      setChatMessages(prev => {
+        if (prev.find(m => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    } catch {
+      if (Platform.OS === 'web') window.alert('전송 실패');
+      else Alert.alert('전송 실패');
+    } finally {
+      setChatSending(false);
+    }
+  };
+
+  const [showChatAttach, setShowChatAttach] = useState(false);
+  const [chatUploading, setChatUploading] = useState(false);
+
+  const sendChatFile = async (accept?: string) => {
+    if (!chatRoomId || !user) return;
+    setShowChatAttach(false);
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      if (accept) input.accept = accept;
+      input.onchange = async (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setChatUploading(true);
+        const formData = new FormData();
+        formData.append('file', file, file.name);
+        try {
+          const res = await fetch(`${API_BASE_URL}/chat/upload`, {
+            method: 'POST',
+            headers: { 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' },
+            body: formData,
+          });
+          const uploaded = await res.json();
+          const attachment = { messageType: uploaded.messageType, attachmentUrl: uploaded.url, fileName: uploaded.fileName, fileSize: uploaded.fileSize };
+          const msg = await groupChatAPI.sendMessage(chatRoomId, user.userId, uploaded.messageType === 'IMAGE' ? '사진' : uploaded.fileName, attachment);
+          setChatMessages(prev => prev.find(m => m.id === msg.id) ? prev : [...prev, msg]);
+        } catch { if (Platform.OS === 'web') window.alert('업로드 실패'); }
+        finally { setChatUploading(false); }
+      };
+      input.click();
+    } else {
+      if (accept === 'image/*') {
+        const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
+        if (result.canceled || !result.assets?.[0]) return;
+        setChatUploading(true);
+        try {
+          const uploaded = await chatAPI.uploadFile(result.assets[0].uri);
+          const attachment = { messageType: uploaded.messageType, attachmentUrl: uploaded.url, fileName: uploaded.fileName, fileSize: uploaded.fileSize };
+          const msg = await groupChatAPI.sendMessage(chatRoomId, user.userId, uploaded.messageType === 'IMAGE' ? '사진' : uploaded.fileName, attachment);
+          setChatMessages(prev => prev.find(m => m.id === msg.id) ? prev : [...prev, msg]);
+        } catch { Alert.alert('업로드 실패'); }
+        finally { setChatUploading(false); }
+      }
+    }
+  };
+
+  function isEmojiOnlyChat(text: string): boolean {
+    const emojiRegex = /^(\p{Emoji_Presentation}|\p{Extended_Pictographic}){1,3}$/u;
+    return emojiRegex.test(text.trim());
+  }
+
+  function formatFileSizeChat(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
 
   const pickCoverImage = async () => {
     if (Platform.OS === 'web') {
@@ -279,16 +555,56 @@ export default function ReunionScreen() {
         description: meetingDesc.trim() || undefined,
         dateOptions: dateOptions.filter(d => d.trim()),
         locationOptions: locationOptions.filter(l => l.trim()),
+        voteDeadline: voteDeadline.trim() || undefined,
       });
       setShowCreateMeeting(false);
       setMeetingTitle('');
       setMeetingDesc('');
       setDateOptions(['']);
       setLocationOptions(['']);
+      setVoteDeadline('');
       const m = await reunionAPI.getMeetings(selected.id, user.userId);
       setMeetings(m);
     } catch (e: any) {
       Alert.alert('오류', e?.response?.data?.error || '생성 실패');
+    }
+  };
+
+  const handleConfirmMeeting = async () => {
+    if (!showConfirmModal || !user || !selected) return;
+    if (!confirmDate || !confirmLocation) {
+      if (Platform.OS === 'web') window.alert('날짜와 장소를 모두 선택해주세요');
+      else Alert.alert('안내', '날짜와 장소를 모두 선택해주세요');
+      return;
+    }
+    try {
+      await reunionAPI.confirmMeeting(showConfirmModal.id, user.userId, confirmDate, confirmLocation);
+      setShowConfirmModal(null);
+      const m = await reunionAPI.getMeetings(selected.id, user.userId);
+      setMeetings(m);
+    } catch (e: any) {
+      Alert.alert('오류', e?.response?.data?.error || '확정 실패');
+    }
+  };
+
+  const handleCancelMeeting = async (meetingId: number) => {
+    if (!user || !selected) return;
+    const doCancel = async () => {
+      try {
+        await reunionAPI.cancelMeeting(meetingId, user.userId);
+        const m = await reunionAPI.getMeetings(selected.id, user.userId);
+        setMeetings(m);
+      } catch (e: any) {
+        Alert.alert('오류', e?.response?.data?.error || '취소 실패');
+      }
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm('이 모임을 취소하시겠습니까?')) doCancel();
+    } else {
+      Alert.alert('모임 취소', '이 모임을 취소하시겠습니까?', [
+        { text: '아니요', style: 'cancel' },
+        { text: '취소하기', style: 'destructive', onPress: doCancel },
+      ]);
     }
   };
 
@@ -400,7 +716,7 @@ export default function ReunionScreen() {
   // ===== Detail View =====
   if (view === 'detail' && selected) {
     const isLeader = selected.myRole === 'LEADER' || selected.myRole === 'ADMIN';
-    const pendingCount = joinRequests.filter(r => r.status === 'PENDING').length;
+    // pendingCount는 tabUnread.members로 대체됨
 
     return (
       <View style={styles.container}>
@@ -410,17 +726,37 @@ export default function ReunionScreen() {
             <Ionicons name="chevron-back" size={26} color="#FFE156" />
           </TouchableOpacity>
           <Text style={styles.detailTitle} numberOfLines={1}>{selected.name}</Text>
-          <Text style={styles.memberCount}>{selected.memberCount}명</Text>
+          <TouchableOpacity onPress={() => setTab('members')}>
+            <Text style={styles.memberCount}>{selected.memberCount}명</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Tabs */}
         <View style={styles.tabRow}>
-          {(['feed', 'meetings', 'fees', 'members'] as Tab[]).map(t => (
-            <TouchableOpacity key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
-              <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-                {t === 'feed' ? '피드' : t === 'meetings' ? '모임' : t === 'fees' ? '회비' : '멤버'}
-                {t === 'members' && pendingCount > 0 && ` (${pendingCount})`}
-              </Text>
+          {(['feed', 'chat', 'meetings', 'fees', 'members'] as Tab[]).map(t => (
+            <TouchableOpacity key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => {
+              setTab(t);
+              if (t === 'chat' && chatRoomId) loadChatMessages();
+              // 탭 진입 시 lastSeen 저장 + unread 초기화
+              if (selected) {
+                if (t === 'feed') { AsyncStorage.setItem(`reunion_feed_${selected.id}`, String(Date.now())); setTabUnread(prev => ({ ...prev, feed: 0 })); }
+                if (t === 'meetings') { AsyncStorage.setItem(`reunion_meetings_${selected.id}`, String(Date.now())); setTabUnread(prev => ({ ...prev, meetings: 0 })); }
+                if (t === 'chat') { setTabUnread(prev => ({ ...prev, chat: 0 })); }
+                if (t === 'members') { setTabUnread(prev => ({ ...prev, members: 0 })); }
+              }
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+                  {t === 'feed' ? '게시판' : t === 'chat' ? '채팅' : t === 'meetings' ? '모임' : t === 'fees' ? '회비' : '멤버'}
+                </Text>
+                {tab !== t && ((t === 'feed' && tabUnread.feed > 0) || (t === 'chat' && tabUnread.chat > 0) || (t === 'meetings' && tabUnread.meetings > 0) || (t === 'members' && tabUnread.members > 0)) && (
+                  <View style={{ backgroundColor: '#FF3B30', minWidth: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>
+                      {t === 'feed' ? tabUnread.feed : t === 'chat' ? 'N' : t === 'meetings' ? tabUnread.meetings : tabUnread.members}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -455,7 +791,7 @@ export default function ReunionScreen() {
                       </TouchableOpacity>
                     )}
                   </View>
-                  <Text style={styles.postContent}>{item.content}</Text>
+                  <LinkedText style={styles.postContent}>{item.content}</LinkedText>
                   {item.imageUrls.length > 0 && (
                     <ScrollView horizontal style={{ marginTop: 8 }}>
                       {item.imageUrls.map((url, i) => (
@@ -629,6 +965,147 @@ export default function ReunionScreen() {
           </View>
         )}
 
+        {/* Chat Tab */}
+        {tab === 'chat' && (
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+            {chatMsgLoading ? (
+              <ActivityIndicator style={{ flex: 1, justifyContent: 'center' }} size="large" color={Colors.primary} />
+            ) : (
+              <FlatList
+                ref={chatListRef}
+                data={[...chatMessages].reverse()}
+                keyExtractor={item => String(item.id)}
+                inverted
+                contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8 }}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => {
+                  const isMine = item.senderUserId === user?.userId;
+                  if (item.messageType === 'SYSTEM') {
+                    return (
+                      <View style={{ alignItems: 'center', marginVertical: 8 }}>
+                        <Text style={{ fontSize: 12, color: Colors.textMuted, backgroundColor: Colors.gray100, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, overflow: 'hidden' }}>{item.content}</Text>
+                      </View>
+                    );
+                  }
+                  const timeStr = item.sentAt ? new Date(item.sentAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
+                  return (
+                    <View style={{ flexDirection: 'row', marginVertical: 4, justifyContent: isMine ? 'flex-end' : 'flex-start' }}>
+                      {!isMine && <Avatar name={item.senderName} size={40} />}
+                      <View style={{ marginLeft: isMine ? 0 : 8, maxWidth: '75%', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
+                        {!isMine && <Text style={{ fontSize: 12, color: Colors.textSecondary, marginBottom: 2, fontWeight: '500' }}>{item.senderName}</Text>}
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
+                          {isMine && (
+                            <View style={{ marginRight: 4, alignItems: 'flex-end' }}>
+                              {item.unreadCount > 0 && <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: '700' }}>{item.unreadCount}</Text>}
+                              <Text style={{ fontSize: 10, color: Colors.textMuted }}>{timeStr}</Text>
+                            </View>
+                          )}
+                          {item.messageType === 'IMAGE' && item.attachmentUrl ? (
+                            <Image source={{ uri: item.attachmentUrl }} style={{ width: 200, height: 200, borderRadius: 12, backgroundColor: '#f0f0f0' }} resizeMode="cover" />
+                          ) : item.messageType === 'FILE' && item.attachmentUrl ? (
+                            <TouchableOpacity
+                              style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: isMine ? '#2D5016' : '#fff', borderWidth: isMine ? 0 : 1, borderColor: '#F0E0B0', minWidth: 180 }}
+                              onPress={() => require('react-native').Linking.openURL(item.attachmentUrl!)}
+                            >
+                              <Ionicons name="document-attach-outline" size={24} color={isMine ? '#fff' : Colors.primary} />
+                              <View style={{ flex: 1, marginLeft: 8 }}>
+                                <Text style={{ fontSize: 13, fontWeight: '600', color: isMine ? '#fff' : Colors.text }} numberOfLines={1}>{item.fileName || '파일'}</Text>
+                                {item.fileSize != null && <Text style={{ fontSize: 11, color: isMine ? 'rgba(255,255,255,0.7)' : Colors.gray400, marginTop: 2 }}>{formatFileSizeChat(item.fileSize)}</Text>}
+                              </View>
+                              <Ionicons name="download-outline" size={20} color={isMine ? 'rgba(255,255,255,0.7)' : Colors.gray400} />
+                            </TouchableOpacity>
+                          ) : isEmojiOnlyChat(item.content) ? (
+                            <Text style={{ fontSize: 36, lineHeight: 44 }}>{item.content}</Text>
+                          ) : (
+                            <View style={{ borderRadius: 16, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: isMine ? '#2D5016' : '#fff', borderWidth: isMine ? 0 : 1, borderColor: '#F0E0B0', borderBottomRightRadius: isMine ? 4 : 16, borderBottomLeftRadius: isMine ? 16 : 4 }}>
+                              <LinkedText style={{ fontSize: 14, color: isMine ? '#fff' : Colors.text, lineHeight: 20 }} linkColor={isMine ? '#90caf9' : '#1d4ed8'}>{item.content}</LinkedText>
+                            </View>
+                          )}
+                          {!isMine && (
+                            <View style={{ marginLeft: 4, alignItems: 'flex-end' }}>
+                              {item.unreadCount > 0 && <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: '700' }}>{item.unreadCount}</Text>}
+                              <Text style={{ fontSize: 10, color: Colors.textMuted }}>{timeStr}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  );
+                }}
+                ListEmptyComponent={<EmptyState ionIcon="chatbubble-outline" title="아직 대화가 없어요" subtitle="첫 메시지를 보내보세요!" />}
+              />
+            )}
+            {/* Chat Attach Menu */}
+            {showChatAttach && (
+              <View style={{ flexDirection: 'row', backgroundColor: '#FFF8E7', paddingVertical: 16, paddingHorizontal: 24, gap: 32, borderTopWidth: 1, borderTopColor: '#F0E0B0' }}>
+                <TouchableOpacity style={{ alignItems: 'center', gap: 6 }} onPress={() => sendChatFile('image/*')}>
+                  <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#4CAF50', justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="image" size={22} color="#fff" />
+                  </View>
+                  <Text style={{ fontSize: 12, color: Colors.text }}>사진</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={{ alignItems: 'center', gap: 6 }} onPress={() => sendChatFile()}>
+                  <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#FF9800', justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="document" size={22} color="#fff" />
+                  </View>
+                  <Text style={{ fontSize: 12, color: Colors.text }}>파일</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Chat Uploading */}
+            {chatUploading && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 8, backgroundColor: '#FFF8E7', borderTopWidth: 1, borderTopColor: '#F0E0B0' }}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={{ fontSize: 13, color: Colors.textMuted }}>파일 전송 중...</Text>
+              </View>
+            )}
+
+            {/* Chat Emoji Panel */}
+            {showChatEmoji && (
+              <View style={{ backgroundColor: '#FFF3D0', borderTopWidth: 1, borderTopColor: '#E8C84A', height: 150 }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 4, paddingVertical: 4 }}>
+                  {EMOJI_LIST.map((em, i) => (
+                    <TouchableOpacity key={i} style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }} onPress={() => setChatText(prev => prev + em)}>
+                      <Text style={{ fontSize: 26 }}>{em}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+            {/* Chat Input */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#F0E0B0', gap: 8 }}>
+              <TouchableOpacity onPress={() => { setShowChatAttach(v => !v); setShowChatEmoji(false); }} style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name={showChatAttach ? 'close-circle' : 'add-circle'} size={26} color={showChatAttach ? Colors.gray400 : Colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { setShowChatEmoji(v => !v); setShowChatAttach(false); }} style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name={showChatEmoji ? 'close-circle' : 'happy-outline'} size={24} color={showChatEmoji ? Colors.gray400 : Colors.primary} />
+              </TouchableOpacity>
+              <TextInput
+                style={{ flex: 1, maxHeight: 80, backgroundColor: '#fff', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: Colors.text, borderWidth: 1, borderColor: '#e5e7eb' }}
+                placeholder="메시지를 입력하세요..."
+                placeholderTextColor={Colors.gray400}
+                value={chatText}
+                onChangeText={setChatText}
+                multiline
+                maxLength={2000}
+                editable={!chatSending}
+              />
+              <TouchableOpacity
+                style={{ backgroundColor: chatText.trim() && !chatSending ? '#2D5016' : Colors.gray300, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 }}
+                onPress={handleSendChat}
+                disabled={!chatText.trim() || chatSending}
+              >
+                {chatSending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>전송</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        )}
+
         {/* Meetings Tab */}
         {tab === 'meetings' && (
           <FlatList
@@ -674,7 +1151,7 @@ export default function ReunionScreen() {
 
                   {isConfirmed && (
                     <View>
-                      <Text style={styles.confirmedDate}>📅 {mt.finalDate}</Text>
+                      <Text style={styles.confirmedDate}>📅 {mt.finalDate?.replace('T', ' ')}</Text>
 
                       {/* Rich Shop Card */}
                       {confirmedShop ? (
@@ -719,7 +1196,7 @@ export default function ReunionScreen() {
                                 <View key={opt.id} style={[styles.voteRow, isSel && styles.voteRowSelected]}>
                                   <View style={styles.voteRowTop}>
                                     {isSel && <View style={styles.voteCheck}><Text style={styles.voteCheckText}>✓</Text></View>}
-                                    <Text style={[styles.voteText, isSel && { fontWeight: '700' }]}>{opt.optionValue}</Text>
+                                    <Text style={[styles.voteText, isSel && { fontWeight: '700' }]}>{opt.optionValue?.replace('T', ' ')}</Text>
                                     <View style={[styles.voteBadge, opt.voteCount === 0 && styles.voteBadgeZero]}>
                                       <Text style={[styles.voteBadgeText, opt.voteCount === 0 && { color: Colors.gray400 }]}>{opt.voteCount}표</Text>
                                     </View>
@@ -787,13 +1264,39 @@ export default function ReunionScreen() {
                   {/* Voting state */}
                   {mt.status === 'VOTING' && (
                     <View>
+                      {/* 투표 마감일 + 확정/취소 버튼 */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        {mt.voteDeadline ? (
+                          <Text style={{ fontSize: 12, color: new Date(mt.voteDeadline) < new Date() ? '#dc2626' : Colors.textMuted }}>
+                            {new Date(mt.voteDeadline) < new Date() ? '⏰ 투표 마감됨' : `⏰ 마감: ${mt.voteDeadline.replace('T', ' ')}`}
+                          </Text>
+                        ) : (
+                          <Text style={{ fontSize: 12, color: Colors.textMuted }}>⏰ 수동 확정 대기</Text>
+                        )}
+                        {mt.createdByUserId === user?.userId && (
+                          <View style={{ flexDirection: 'row', gap: 6 }}>
+                            <TouchableOpacity
+                              style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12 }}
+                              onPress={() => { setShowConfirmModal(mt); setConfirmDate(''); setConfirmLocation(''); }}
+                            >
+                              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>확정</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={{ backgroundColor: '#fee2e2', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, borderWidth: 1, borderColor: '#fca5a5' }}
+                              onPress={() => handleCancelMeeting(mt.id)}
+                            >
+                              <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: '700' }}>취소</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
                       {mt.dateOptions.length > 0 && (
                         <View style={styles.voteSection}>
                           <Text style={styles.voteSectionTitle}>📅 날짜 투표</Text>
                           {mt.dateOptions.map(opt => (
                             <TouchableOpacity key={opt.id} style={[styles.voteOption, opt.myVote && styles.voteOptionVoted]} onPress={() => handleVote(opt.id)}>
                               {opt.myVote && <Text style={styles.voteOptCheck}>✓</Text>}
-                              <Text style={styles.voteOptText}>{opt.optionValue}</Text>
+                              <Text style={styles.voteOptText}>{opt.optionValue?.replace('T', ' ')}</Text>
                               <Text style={styles.voteOptCount}>{opt.voteCount}</Text>
                             </TouchableOpacity>
                           ))}
@@ -821,7 +1324,7 @@ export default function ReunionScreen() {
                                     </View>
                                   </View>
                                 ) : (
-                                  <Text style={styles.voteOptText}>{opt.optionValue}</Text>
+                                  <Text style={styles.voteOptText}>{opt.optionValue?.replace('T', ' ')}</Text>
                                 )}
                                 <Text style={styles.voteOptCount}>{opt.voteCount}</Text>
                               </TouchableOpacity>
@@ -831,10 +1334,58 @@ export default function ReunionScreen() {
                       )}
                     </View>
                   )}
+                  {/* Cancelled state */}
+                  {mt.status === 'CANCELLED' && (
+                    <View style={{ padding: 12, backgroundColor: '#fef2f2', borderRadius: 8, marginTop: 4 }}>
+                      <Text style={{ fontSize: 14, color: '#dc2626', textAlign: 'center' }}>이 모임은 취소되었습니다</Text>
+                    </View>
+                  )}
                 </View>
               );
             }}
           />
+        )}
+
+        {/* Confirm Meeting Modal */}
+        {showConfirmModal && (
+          <Modal visible={true} animationType="slide" transparent>
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>모임 확정</Text>
+
+                <Text style={styles.inputLabel}>확정 날짜 선택</Text>
+                {showConfirmModal.dateOptions.map(opt => (
+                  <TouchableOpacity
+                    key={opt.id}
+                    style={[styles.voteOption, confirmDate === opt.optionValue && styles.voteOptionVoted]}
+                    onPress={() => setConfirmDate(opt.optionValue)}
+                  >
+                    {confirmDate === opt.optionValue && <Text style={styles.voteOptCheck}>✓</Text>}
+                    <Text style={styles.voteOptText}>{opt.optionValue?.replace('T', ' ')}</Text>
+                    <Text style={styles.voteOptCount}>{opt.voteCount}표</Text>
+                  </TouchableOpacity>
+                ))}
+
+                <Text style={[styles.inputLabel, { marginTop: 12 }]}>확정 장소 선택</Text>
+                {showConfirmModal.locationOptions.map(opt => (
+                  <TouchableOpacity
+                    key={opt.id}
+                    style={[styles.voteOption, confirmLocation === opt.optionValue && styles.voteOptionVoted]}
+                    onPress={() => setConfirmLocation(opt.optionValue)}
+                  >
+                    {confirmLocation === opt.optionValue && <Text style={styles.voteOptCheck}>✓</Text>}
+                    <Text style={styles.voteOptText} numberOfLines={1}>{opt.optionValue?.replace('T', ' ')}</Text>
+                    <Text style={styles.voteOptCount}>{opt.voteCount}표</Text>
+                  </TouchableOpacity>
+                ))}
+
+                <View style={styles.modalBtns}>
+                  <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowConfirmModal(null)}><Text style={styles.cancelBtnText}>취소</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.submitBtn} onPress={handleConfirmMeeting}><Text style={styles.submitBtnText}>확정</Text></TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
         )}
 
         {/* Fees Tab */}
@@ -890,6 +1441,32 @@ export default function ReunionScreen() {
               <View style={styles.inviteCodeBox}>
                 <Text style={styles.inviteCodeLabel}>초대 코드</Text>
                 <Text style={styles.inviteCode}>{selected.inviteCode}</Text>
+                <TouchableOpacity
+                  style={{ marginTop: 10, backgroundColor: Colors.primary, paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  onPress={() => {
+                    const webUrl = Platform.OS === 'web'
+                      ? `${window.location.origin}?inviteCode=${selected.inviteCode}`
+                      : `http://ourclass.app?inviteCode=${selected.inviteCode}`;
+                    const msg = `🎓 [우리반] "${selected.name}" 찐모임에 초대합니다!\n\n아래 링크를 클릭하세요:\n${webUrl}\n\n또는 초대 코드 입력: ${selected.inviteCode}`;
+                    if (Platform.OS === 'web') {
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(msg);
+                        setCopiedToast(true);
+                        setTimeout(() => setCopiedToast(false), 2000);
+                      }
+                    } else {
+                      const { Share } = require('react-native');
+                      Share.share({ message: msg }).catch(() => {});
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="share-social" size={18} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>초대 링크 공유</Text>
+                </TouchableOpacity>
+                {copiedToast && (
+                  <Text style={{ marginTop: 8, fontSize: 13, color: Colors.primary, fontWeight: '600' }}>✓ 복사되었습니다</Text>
+                )}
               </View>
             )}
 
@@ -1068,6 +1645,25 @@ export default function ReunionScreen() {
                   <Text style={styles.addOption}>+ 날짜 추가</Text>
                 </TouchableOpacity>
 
+                <Text style={styles.inputLabel}>투표 마감일 (선택)</Text>
+                <View style={styles.optionRow}>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="datetime-local"
+                      value={voteDeadline}
+                      onChange={(e: any) => setVoteDeadline(e.target.value)}
+                      style={{
+                        flex: 1, padding: 12, fontSize: 14, borderRadius: 10,
+                        border: '1.5px solid #F0E0B0', backgroundColor: '#fff',
+                        fontFamily: 'inherit', color: '#3E2723',
+                      } as any}
+                    />
+                  ) : (
+                    <TextInput style={[styles.input, { flex: 1 }]} placeholder="예: 2026-03-25 18:00" value={voteDeadline} onChangeText={setVoteDeadline} />
+                  )}
+                </View>
+                <Text style={{ fontSize: 11, color: Colors.textMuted, marginBottom: 8, marginTop: -4 }}>미설정 시 수동으로 확정할 때까지 투표 가능</Text>
+
                 <Text style={styles.inputLabel}>장소 옵션</Text>
                 {locationOptions.map((l, i) => (
                   <View key={i} style={styles.optionRow}>
@@ -1195,7 +1791,14 @@ export default function ReunionScreen() {
               </View>
             )}
             <View style={styles.reunionInfo}>
-              <Text style={styles.reunionName}>{item.name}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.reunionName}>{item.name}</Text>
+                {reunionUnreadMap[item.id] && (
+                  <View style={{ backgroundColor: '#FF3B30', minWidth: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>N</Text>
+                  </View>
+                )}
+              </View>
               {item.description && <Text style={styles.reunionDesc} numberOfLines={1}>{item.description}</Text>}
               <View style={styles.reunionMeta}>
                 <Text style={styles.reunionMetaText}>{item.memberCount}명</Text>
@@ -1361,7 +1964,7 @@ const styles = StyleSheet.create({
   // Detail
   detailHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, paddingTop: HEADER_TOP_PADDING, backgroundColor: '#2D5016', borderBottomWidth: 3, borderBottomColor: '#C49A2A', gap: 10 },
   backBtn: { fontSize: 15, color: '#FFE156', fontWeight: '600' },
-  detailTitle: { flex: 1, fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.bold, letterSpacing: 2 },
+  detailTitle: { flex: 1, fontSize: 24, fontWeight: '700', color: '#fff', fontFamily: Fonts.chalk, letterSpacing: 2 },
   memberCount: { fontSize: 13, color: '#FFE156' },
 
   tabRow: { flexDirection: 'row', backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },

@@ -322,11 +322,31 @@ public class GroupChatService {
     private GroupChatRoomResponse toRoomResponse(GroupChatRoom room, String currentUserId) {
         List<GroupChatMember> members = memberRepository.findByRoom(room);
 
+        // 안 읽은 메시지 수 계산
+        long unreadCount = 0;
+        GroupChatMember currentMember = members.stream()
+                .filter(m -> m.getUser().getUserId().equals(currentUserId))
+                .findFirst().orElse(null);
+        if (currentMember != null) {
+            Long lastRead = currentMember.getLastReadMessageId();
+            List<GroupChatMessage> allMsgs = messageRepository.findByRoomOrderBySentAtAsc(room);
+            if (lastRead == null) {
+                unreadCount = allMsgs.stream()
+                        .filter(m -> !m.getSender().getUserId().equals(currentUserId))
+                        .count();
+            } else {
+                unreadCount = allMsgs.stream()
+                        .filter(m -> m.getId() > lastRead && !m.getSender().getUserId().equals(currentUserId))
+                        .count();
+            }
+        }
+
         return GroupChatRoomResponse.builder()
                 .id(room.getId())
                 .name(room.getName())
                 .createdBy(room.getCreator() != null ? room.getCreator().getUserId() : null)
                 .memberCount(members.size())
+                .unreadCount(unreadCount)
                 .members(members.stream().map(m -> GroupChatRoomResponse.MemberInfo.builder()
                         .userId(m.getUser().getUserId())
                         .name(m.getUser().getName())

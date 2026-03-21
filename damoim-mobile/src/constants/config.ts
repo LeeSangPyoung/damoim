@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 // 서버 주소 설정
 const getBaseUrl = () => {
   if (Platform.OS === 'web') return 'http://localhost:8080';
-  return 'http://192.168.1.100:8080';
+  return 'http://192.168.45.195:8080';
 };
 
 const BASE = getBaseUrl();

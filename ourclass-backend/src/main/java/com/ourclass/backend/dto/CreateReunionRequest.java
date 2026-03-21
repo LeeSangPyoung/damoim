@@ -13,4 +13,5 @@ public class CreateReunionRequest {
     private String graduationYear;
     private List<String> memberIds;
     private String coverImageUrl;
+    private Long chatRoomId;
 }
