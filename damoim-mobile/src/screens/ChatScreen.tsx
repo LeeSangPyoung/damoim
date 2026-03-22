@@ -394,6 +394,29 @@ export default function ChatScreen() {
     }
   }, [view, userId, stompConnected]);
 
+  // WebSocket 미연결 시 폴링 fallback (모바일 대응)
+  useEffect(() => {
+    if (stompConnected) return; // WS 연결되면 폴링 불필요
+    if (view.kind === 'dm-chat') {
+      const interval = setInterval(async () => {
+        try {
+          const msgs = await chatAPI.getMessages(view.room.id, userId);
+          setDmMessages(msgs);
+        } catch {}
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+    if (view.kind === 'group-chat') {
+      const interval = setInterval(async () => {
+        try {
+          const msgs = await groupChatAPI.getMessages(view.room.id, userId);
+          setGroupMessages(msgs);
+        } catch {}
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [view, userId, stompConnected]);
+
   // =========================================================================
   // Send message
   // =========================================================================
