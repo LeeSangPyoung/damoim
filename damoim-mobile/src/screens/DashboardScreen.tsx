@@ -406,8 +406,11 @@ export default function DashboardScreen({ navigation, route }: any) {
           </TouchableOpacity>
         )}
         <Text style={styles.schoolInfo}>
-          {primarySchool?.schoolName || '학교'} {primarySchool?.graduationYear ? `(${primarySchool.graduationYear})` : ''}
-          <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.4)' }}> </Text>
+          {primarySchool?.schoolName || '학교'}
+          {filter !== 'all' && primarySchool?.graduationYear ? ` (${primarySchool.graduationYear})` : ''}
+          {filter === 'myClass' && !isAllSelected && selectedClasses.length === 1
+            ? ` ${selectedClasses[0].grade}학년 ${selectedClasses[0].classNumber}반`
+            : ''}
         </Text>
       </View>
       <HeaderActions navigation={navigation} />

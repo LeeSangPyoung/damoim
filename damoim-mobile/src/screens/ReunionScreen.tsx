@@ -1455,8 +1455,12 @@ export default function ReunionScreen() {
                         setTimeout(() => setCopiedToast(false), 2000);
                       }
                     } else {
-                      const { Share } = require('react-native');
-                      Share.share({ message: msg }).catch(() => {});
+                      const { Clipboard } = require('react-native');
+                      if (Clipboard?.setString) {
+                        Clipboard.setString(msg);
+                      }
+                      setCopiedToast(true);
+                      setTimeout(() => setCopiedToast(false), 2000);
                     }
                   }}
                   activeOpacity={0.7}

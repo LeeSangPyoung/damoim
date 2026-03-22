@@ -199,7 +199,7 @@ export default function ChatScreen() {
     if (!silent) setGroupLoading(true);
     try {
       const rooms = await groupChatAPI.getMyRooms(userId);
-      setGroupRooms(rooms);
+      setGroupRooms(rooms.filter(r => !r.name.startsWith('[찐모임]')));
     } catch (e) {
       console.warn('[ChatScreen] fetchGroupRooms error', e);
     } finally {
