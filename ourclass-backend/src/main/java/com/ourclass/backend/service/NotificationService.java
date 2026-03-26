@@ -102,6 +102,17 @@ public class NotificationService {
     }
 
     @Transactional
+    public void markAsReadByReference(String userId, String type, Long referenceId) {
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        List<Notification> notifications = notificationRepository.findByRecipientAndTypeAndReferenceIdAndReadFalse(user, type, referenceId);
+        for (Notification n : notifications) {
+            n.setRead(true);
+        }
+        notificationRepository.saveAll(notifications);
+    }
+
+    @Transactional
     public void deleteAllNotifications(String userId) {
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));

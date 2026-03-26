@@ -15,8 +15,11 @@ import {
   ScrollView,
   Image,
   Linking,
+  AppState,
+  Animated,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../constants/colors';
 import { useAuth } from '../hooks/useAuth';
@@ -32,6 +35,8 @@ import GroupAvatar from '../components/GroupAvatar';
 import NoticeBanner from '../components/NoticeBanner';
 import HeaderActions from '../components/HeaderActions';
 import { API_BASE_URL, WS_BASE_URL, HEADER_TOP_PADDING } from '../constants/config';
+import { notificationAPI } from '../api/notification';
+import { useBadge } from '../navigation/AppNavigator';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Client } from '@stomp/stompjs';
 
@@ -110,6 +115,49 @@ function formatTime(dateStr?: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Typing Dots Animation (카카오톡 스타일)
+// ---------------------------------------------------------------------------
+const TypingDots = React.memo(() => {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animate = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: -6, duration: 250, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 250, useNativeDriver: true }),
+          Animated.delay(450 - delay),
+        ]),
+      );
+    const a1 = animate(dot1, 0);
+    const a2 = animate(dot2, 150);
+    const a3 = animate(dot3, 300);
+    a1.start(); a2.start(); a3.start();
+    return () => { a1.stop(); a2.stop(); a3.stop(); };
+  }, []);
+
+  const dotStyle = (anim: Animated.Value) => ({
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#8B7355',
+    marginHorizontal: 2,
+    transform: [{ translateY: anim }],
+  });
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
+      <Animated.View style={dotStyle(dot1)} />
+      <Animated.View style={dotStyle(dot2)} />
+      <Animated.View style={dotStyle(dot3)} />
+    </View>
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
 
@@ -117,6 +165,7 @@ export default function ChatScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { user, token } = useAuth();
+  const badge = useBadge();
   const [tab, setTab] = useState<TabType>('dm');
   const [view, setView] = useState<ScreenView>({ kind: 'list' });
 
@@ -133,7 +182,9 @@ export default function ChatScreen() {
   const [groupMsgLoading, setGroupMsgLoading] = useState(false);
 
   // ---- Input ----
-  const [messageText, setMessageText] = useState('');
+  const messageTextRef = useRef('');
+  const [hasText, setHasText] = useState(false);
+  const inputRef = useRef<TextInput>(null);
   const [sending, setSending] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
@@ -151,8 +202,15 @@ export default function ChatScreen() {
   // ---- WebSocket ----
   const stompClientRef = useRef<Client | null>(null);
   const subscriptionsRef = useRef<{ id: string; unsubscribe: () => void }[]>([]);
+  const appStateRef = useRef(AppState.currentState);
 
   const flatListRef = useRef<FlatList>(null);
+
+  // ---- Typing indicator ----
+  const [otherTyping, setOtherTyping] = useState(false);
+  const [groupTypingUsers, setGroupTypingUsers] = useState<{ userId: string; userName: string }[]>([]);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingSentRef = useRef<number>(0);
 
   const userId = user?.userId ?? '';
 
@@ -243,21 +301,19 @@ export default function ChatScreen() {
   // Initial load
   // =========================================================================
 
+  // 초기 로드: DM + 그룹 둘 다 (탭 N뱃지용)
   useEffect(() => {
-    if (tab === 'dm') {
-      fetchDmRooms();
-    } else {
-      fetchGroupRooms();
-    }
-  }, [tab, fetchDmRooms, fetchGroupRooms]);
+    fetchDmRooms();
+    fetchGroupRooms();
+  }, [fetchDmRooms, fetchGroupRooms]);
 
-  // 채팅 목록 화면에서 5초마다 자동 새로고침 (unreadCount 반영, 깜빡임 없이)
+  // 채팅 목록 화면에서 2초마다 자동 새로고침 (둘 다 — 탭 N뱃지 반영)
   useEffect(() => {
     if (view.kind !== 'list') return;
     const interval = setInterval(() => {
-      if (tab === 'dm') fetchDmRooms(true);
-      else fetchGroupRooms(true);
-    }, 5000);
+      fetchDmRooms(true);
+      fetchGroupRooms(true);
+    }, 2000);
     return () => clearInterval(interval);
   }, [view.kind, tab, fetchDmRooms, fetchGroupRooms]);
 
@@ -287,15 +343,19 @@ export default function ChatScreen() {
   const connectStomp = useCallback(() => {
     if (!userId || !token) return;
 
-    // Build native WebSocket URL (not SockJS)
+    // 기존 연결 정리
+    if (stompClientRef.current?.active) {
+      try { stompClientRef.current.deactivate(); } catch {}
+    }
+
     const wsUrl = WS_BASE_URL.replace(/^http/, 'ws') + '/websocket';
 
     const client = new Client({
       brokerURL: wsUrl,
       connectHeaders: { Authorization: `Bearer ${token}` },
-      reconnectDelay: 5000,
-      heartbeatIncoming: 10000,
-      heartbeatOutgoing: 10000,
+      reconnectDelay: 3000,
+      heartbeatIncoming: 15000,
+      heartbeatOutgoing: 15000,
       forceBinaryWSFrames: false,
       appendMissingNULLonIncoming: true,
       webSocketFactory: () => new WebSocket(wsUrl),
@@ -305,9 +365,18 @@ export default function ChatScreen() {
       },
       onStompError: (frame) => {
         console.warn('[ChatScreen] STOMP error', frame.headers?.message);
+        setStompConnected(false);
       },
       onDisconnect: () => {
         console.log('[ChatScreen] STOMP disconnected');
+        setStompConnected(false);
+      },
+      onWebSocketClose: () => {
+        console.log('[ChatScreen] WebSocket closed');
+        setStompConnected(false);
+      },
+      onWebSocketError: (evt) => {
+        console.warn('[ChatScreen] WebSocket error', evt);
         setStompConnected(false);
       },
     });
@@ -316,6 +385,7 @@ export default function ChatScreen() {
     stompClientRef.current = client;
   }, [userId, token]);
 
+  // WebSocket 연결 관리
   useEffect(() => {
     connectStomp();
     return () => {
@@ -328,6 +398,32 @@ export default function ChatScreen() {
       }
     };
   }, [connectStomp]);
+
+  // AppState: 앱이 백그라운드→포그라운드로 돌아오면 즉시 재연결 + 메시지 새로고침
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      const prev = appStateRef.current;
+      appStateRef.current = nextState;
+
+      if (prev.match(/inactive|background/) && nextState === 'active') {
+        console.log('[ChatScreen] App resumed → reconnecting & refreshing');
+        // WebSocket 재연결
+        if (!stompClientRef.current?.connected) {
+          connectStomp();
+        }
+        // 즉시 메시지 새로고침
+        if (view.kind === 'dm-chat') {
+          chatAPI.getMessages(view.room.id, userId).then(msgs => setDmMessages(msgs)).catch(() => {});
+        } else if (view.kind === 'group-chat') {
+          groupChatAPI.getMessages(view.room.id, userId).then(msgs => setGroupMessages(msgs)).catch(() => {});
+        } else {
+          if (tab === 'dm') fetchDmRooms(true);
+          else fetchGroupRooms(true);
+        }
+      }
+    });
+    return () => subscription.remove();
+  }, [view, userId, tab, connectStomp, fetchDmRooms, fetchGroupRooms]);
 
   // Subscribe / unsubscribe when entering / leaving a chat room
   useEffect(() => {
@@ -347,21 +443,46 @@ export default function ChatScreen() {
         try {
           const data = JSON.parse(message.body);
           console.log('[ChatScreen] WS DM received:', data.type || 'MESSAGE', data.id);
+          if (data.type === 'TYPING') {
+            // 상대방 타이핑 인디케이터
+            if (data.userId !== userId) {
+              if (data.typing) {
+                setOtherTyping(true);
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = setTimeout(() => setOtherTyping(false), 6000);
+              } else {
+                setOtherTyping(false);
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+              }
+            }
+            return;
+          }
           if (data.type === 'READ') {
             // Mark messages as read
             setDmMessages((prev) =>
               prev.map((m) => (m.senderUserId === userId ? { ...m, isRead: true } : m)),
             );
           } else {
-            // New message
+            // New message — 임시 메시지(음수 ID)가 있으면 교체, 아니면 추가
             const msg: ChatMessageResponse = data;
+            // 채팅방 보고 있으므로 모든 메시지 isRead: true로 표시
+            const displayMsg = { ...msg, isRead: true };
             setDmMessages((prev) => {
               if (prev.find((m) => m.id === msg.id)) return prev;
-              return [...prev, msg];
+              const tempIdx = prev.findIndex((m) => m.id < 0 && m.content === msg.content && m.senderUserId === msg.senderUserId);
+              if (tempIdx >= 0) {
+                const next = [...prev];
+                next[tempIdx] = displayMsg;
+                return next;
+              }
+              return [...prev, displayMsg];
             });
-            // 상대방이 보낸 메시지면 즉시 읽음 처리 (내가 이 채팅방을 보고 있으므로)
+            // 상대방이 보낸 메시지면 즉시 읽음 처리 + 알림도 읽음 + 하단 N뱃지 재확인
             if (msg.senderUserId !== userId) {
-              chatAPI.markRoomAsRead(roomId, userId).catch(() => {});
+              chatAPI.markRoomAsRead(roomId, userId).then(() => {
+                badge.recheckChatUnread();
+              }).catch(() => {});
+              notificationAPI.markAsReadByReference(userId, 'CHAT', roomId).catch(() => {});
             }
           }
         } catch (e) {
@@ -375,16 +496,48 @@ export default function ChatScreen() {
       const sub = client.subscribe(`/topic/group-chat/${roomId}`, (message) => {
         try {
           const data = JSON.parse(message.body);
+          if (data.type === 'TYPING') {
+            if (data.userId !== userId) {
+              if (data.typing) {
+                setGroupTypingUsers((prev) => {
+                  if (prev.find(u => u.userId === data.userId)) return prev;
+                  return [...prev, { userId: data.userId, userName: data.userName }];
+                });
+                // 6초 후 자동 제거
+                setTimeout(() => {
+                  setGroupTypingUsers((prev) => prev.filter(u => u.userId !== data.userId));
+                }, 6000);
+              } else {
+                setGroupTypingUsers((prev) => prev.filter(u => u.userId !== data.userId));
+              }
+            }
+            return;
+          }
           if (data.type === 'READ') {
-            setGroupMessages((prev) =>
-              prev.map((m) => ({ ...m, unreadCount: Math.max(0, m.unreadCount - 1) })),
-            );
+            // READ 이벤트 → 서버에서 정확한 카운트 가져옴
+            groupChatAPI.getMessages(roomId, userId, false).then(msgs => setGroupMessages(msgs)).catch(() => {});
           } else {
+            // 새 메시지: 채팅방에 있으므로 내가 읽은 만큼 -1 (내 메시지든 상대 메시지든)
             const msg: GroupChatMessageResponse = data;
+            const displayMsg = { ...msg, unreadCount: Math.max(0, msg.unreadCount - 1) };
             setGroupMessages((prev) => {
               if (prev.find((m) => m.id === msg.id)) return prev;
-              return [...prev, msg];
+              const tempIdx = prev.findIndex((m) => m.id < 0 && m.content === msg.content && m.senderUserId === msg.senderUserId);
+              if (tempIdx >= 0) {
+                const next = [...prev];
+                next[tempIdx] = displayMsg;
+                return next;
+              }
+              return [...prev, displayMsg];
             });
+            // 상대방 메시지면 읽음 처리 후 서버에서 정확한 카운트 가져옴
+            if (msg.senderUserId !== userId) {
+              groupChatAPI.getMessages(roomId, userId, true).then(msgs => {
+                setGroupMessages(msgs);
+                badge.recheckChatUnread();
+              }).catch(() => {});
+              notificationAPI.markAsReadByReference(userId, 'GROUP_CHAT', roomId).catch(() => {});
+            }
           }
         } catch (e) {
           console.warn('[ChatScreen] WS Group parse error', e);
@@ -394,25 +547,76 @@ export default function ChatScreen() {
     }
   }, [view, userId, stompConnected]);
 
-  // WebSocket 미연결 시 폴링 fallback (모바일 대응)
+  // 타이핑 keep-alive: 텍스트가 있으면 3초마다 typing=true 재전송
   useEffect(() => {
-    if (stompConnected) return; // WS 연결되면 폴링 불필요
+    if (view.kind !== 'dm-chat' && view.kind !== 'group-chat') return;
+    const interval = setInterval(() => {
+      if (messageTextRef.current.trim().length > 0) {
+        if (view.kind === 'dm-chat') {
+          chatAPI.sendTyping(view.room.id, userId, true).catch(() => {});
+        } else {
+          groupChatAPI.sendTyping(view.room.id, userId, true).catch(() => {});
+        }
+        lastTypingSentRef.current = Date.now();
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [view, userId]);
+
+  // 폴링 fallback: WS 연결 시 느린 주기, 끊겼을 때 빠른 주기
+  // 폴링은 읽음 처리 없이(markRead=false) 메시지만 가져옴
+  useEffect(() => {
+    const pollingInterval = stompConnected ? 8000 : 1500;
     if (view.kind === 'dm-chat') {
+      // 채팅방 진입 시 즉시 1회 fetch (읽음 처리 포함)
+      chatAPI.getMessages(view.room.id, userId, true).then(msgs => {
+        setDmMessages(msgs);
+      }).catch(() => {});
+
       const interval = setInterval(async () => {
         try {
-          const msgs = await chatAPI.getMessages(view.room.id, userId);
-          setDmMessages(msgs);
+          const msgs = await chatAPI.getMessages(view.room.id, userId, false);
+          setDmMessages(prev => {
+            // 임시 메시지(음수 ID)를 제외한 실제 메시지끼리만 비교
+            const realPrev = prev.filter(m => m.id > 0);
+            if (msgs.length === realPrev.length) {
+              const lastNew = msgs[msgs.length - 1];
+              const lastOld = realPrev[realPrev.length - 1];
+              if (lastNew?.id === lastOld?.id) return prev; // 변경 없음 → 리렌더 안 함
+            }
+            // 변경 있음 → 임시 메시지 유지하면서 병합
+            const tempMsgs = prev.filter(m => m.id < 0);
+            return [...msgs, ...tempMsgs];
+          });
+          // WS 안 될 때 타이핑 상태도 폴링
+          if (!stompConnected) {
+            const typingRes = await chatAPI.getTypingStatus(view.room.id, userId);
+            setOtherTyping(typingRes.typingUsers.length > 0);
+          }
         } catch {}
-      }, 3000);
+      }, pollingInterval);
       return () => clearInterval(interval);
     }
     if (view.kind === 'group-chat') {
+      groupChatAPI.getMessages(view.room.id, userId, true).then(msgs => {
+        setGroupMessages(msgs);
+      }).catch(() => {});
+
       const interval = setInterval(async () => {
         try {
-          const msgs = await groupChatAPI.getMessages(view.room.id, userId);
-          setGroupMessages(msgs);
+          const msgs = await groupChatAPI.getMessages(view.room.id, userId, false);
+          setGroupMessages(prev => {
+            const realPrev = prev.filter(m => m.id > 0);
+            if (msgs.length === realPrev.length) {
+              const lastNew = msgs[msgs.length - 1];
+              const lastOld = realPrev[realPrev.length - 1];
+              if (lastNew?.id === lastOld?.id) return prev;
+            }
+            const tempMsgs = prev.filter(m => m.id < 0);
+            return [...msgs, ...tempMsgs];
+          });
         } catch {}
-      }, 3000);
+      }, pollingInterval);
       return () => clearInterval(interval);
     }
   }, [view, userId, stompConnected]);
@@ -422,18 +626,37 @@ export default function ChatScreen() {
   // =========================================================================
 
   const handleSendDm = async (roomId: number) => {
-    const text = messageText.trim();
+    const text = messageTextRef.current.trim();
     if (!text || !userId) return;
+    messageTextRef.current = '';
+    setHasText(false);
+    if (inputRef.current) inputRef.current.clear();
+    AsyncStorage.removeItem(`chat_draft_dm-chat_${roomId}`).catch(() => {});
+    // 낙관적 UI: 즉시 화면에 표시
+    const tempId = -(Date.now());
+    const optimistic: ChatMessageResponse = {
+      id: tempId,
+      chatRoomId: roomId,
+      senderUserId: userId,
+      senderName: user?.name ?? '',
+      content: text,
+      messageType: 'TEXT',
+      isRead: true,  // 낙관적: 읽음으로 표시 (상대방이 안 읽으면 폴링에서 보정)
+      sentAt: new Date().toISOString(),
+    };
+    setDmMessages((prev) => [...prev, optimistic]);
     setSending(true);
-    setMessageText('');
     try {
       const msg = await chatAPI.sendMessage(roomId, userId, text);
-      // WS에서 이미 추가된 경우 중복 방지
-      setDmMessages((prev) => {
-        if (prev.find((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
-      });
+      // 임시 메시지를 실제 메시지로 교체 (isRead는 낙관적으로 true 유지)
+      const msgWithRead = { ...msg, isRead: true };
+      setDmMessages((prev) => prev.map((m) => m.id === tempId ? msgWithRead : m).filter((m, i, arr) => {
+        if (m.id === msgWithRead.id) return arr.findIndex((x) => x.id === msgWithRead.id) === i;
+        return true;
+      }));
     } catch (e) {
+      // 실패 시 임시 메시지 제거
+      setDmMessages((prev) => prev.filter((m) => m.id !== tempId));
       Alert.alert('전송 실패', '메시지를 보내지 못했습니다.');
     } finally {
       setSending(false);
@@ -441,18 +664,35 @@ export default function ChatScreen() {
   };
 
   const handleSendGroup = async (roomId: number) => {
-    const text = messageText.trim();
+    const text = messageTextRef.current.trim();
     if (!text || !userId) return;
+    messageTextRef.current = '';
+    setHasText(false);
+    if (inputRef.current) inputRef.current.clear();
+    AsyncStorage.removeItem(`chat_draft_group-chat_${roomId}`).catch(() => {});
+    // 낙관적 UI: 즉시 화면에 표시
+    const tempId = -(Date.now());
+    const optimistic: GroupChatMessageResponse = {
+      id: tempId,
+      roomId: roomId,
+      senderUserId: userId,
+      senderName: user?.name ?? '',
+      content: text,
+      messageType: 'TEXT',
+      unreadCount: 0,
+      sentAt: new Date().toISOString(),
+    };
+    setGroupMessages((prev) => [...prev, optimistic]);
     setSending(true);
-    setMessageText('');
     try {
       const msg = await groupChatAPI.sendMessage(roomId, userId, text);
-      // WS에서 이미 추가된 경우 중복 방지
-      setGroupMessages((prev) => {
-        if (prev.find((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
-      });
+      const msgFixed = { ...msg, unreadCount: 0 };
+      setGroupMessages((prev) => prev.map((m) => m.id === tempId ? msgFixed : m).filter((m, i, arr) => {
+        if (m.id === msgFixed.id) return arr.findIndex((x) => x.id === msgFixed.id) === i;
+        return true;
+      }));
     } catch (e) {
+      setGroupMessages((prev) => prev.filter((m) => m.id !== tempId));
       Alert.alert('전송 실패', '메시지를 보내지 못했습니다.');
     } finally {
       setSending(false);
@@ -617,21 +857,66 @@ export default function ChatScreen() {
   // Navigation helpers
   // =========================================================================
 
-  const openDmRoom = (room: ChatRoomResponse) => {
+  const openDmRoom = async (room: ChatRoomResponse) => {
     setView({ kind: 'dm-chat', room });
     fetchDmMessages(room.id);
+    if (userId) notificationAPI.markAsReadByReference(userId, 'CHAT', room.id).catch(() => {});
+    setTimeout(() => badge.recheckChatUnread(), 500);
+    // 드래프트 복원
+    try {
+      const draft = await AsyncStorage.getItem(`chat_draft_dm-chat_${room.id}`);
+      if (draft) {
+        messageTextRef.current = draft;
+        setHasText(true);
+        setTimeout(() => {
+          if (inputRef.current) inputRef.current.setNativeProps({ text: draft });
+        }, 300);
+        // 드래프트가 있으면 타이핑 알림도 보냄
+        chatAPI.sendTyping(room.id, userId, true).catch(() => {});
+      }
+    } catch {}
   };
 
-  const openGroupRoom = (room: GroupChatRoomResponse) => {
+  const openGroupRoom = async (room: GroupChatRoomResponse) => {
     setView({ kind: 'group-chat', room });
     fetchGroupMessages(room.id);
+    if (userId) notificationAPI.markAsReadByReference(userId, 'GROUP_CHAT', room.id).catch(() => {});
+    setTimeout(() => badge.recheckChatUnread(), 500);
+    // 드래프트 복원
+    try {
+      const draft = await AsyncStorage.getItem(`chat_draft_group-chat_${room.id}`);
+      if (draft) {
+        messageTextRef.current = draft;
+        setHasText(true);
+        setTimeout(() => {
+          if (inputRef.current) inputRef.current.setNativeProps({ text: draft });
+        }, 300);
+        groupChatAPI.sendTyping(room.id, userId, true).catch(() => {});
+      }
+    } catch {}
   };
 
   const goBack = () => {
+    // 입력 중인 텍스트 임시저장 (드래프트)
+    if (view.kind === 'dm-chat' || view.kind === 'group-chat') {
+      const roomId = view.room.id;
+      const draftKey = `chat_draft_${view.kind}_${roomId}`;
+      const text = messageTextRef.current.trim();
+      if (text) {
+        AsyncStorage.setItem(draftKey, text).catch(() => {});
+      } else {
+        AsyncStorage.removeItem(draftKey).catch(() => {});
+      }
+      // typing=false 안 보냄 → 서버 타임아웃(5초)까지 자연 만료
+    }
     setView({ kind: 'list' });
     setDmMessages([]);
     setGroupMessages([]);
-    setMessageText('');
+    setGroupTypingUsers([]);
+    setOtherTyping(false);
+    messageTextRef.current = '';
+    setHasText(false);
+    if (inputRef.current) inputRef.current.clear();
     // Refresh room lists
     if (tab === 'dm') fetchDmRooms();
     else fetchGroupRooms();
@@ -746,6 +1031,9 @@ export default function ChatScreen() {
   // Render: Tab bar
   // =========================================================================
 
+  const dmHasUnread = dmRooms.some(r => r.unreadCount > 0);
+  const groupHasUnread = groupRooms.some(r => r.unreadCount > 0);
+
   const renderTabs = () => (
     <View style={styles.tabBar}>
       <TouchableOpacity
@@ -753,14 +1041,20 @@ export default function ChatScreen() {
         onPress={() => { setTab('dm'); setView({ kind: 'list' }); }}
         activeOpacity={0.7}
       >
-        <Text style={[styles.tabText, tab === 'dm' && styles.tabTextActive]}>1:1 채팅</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Text style={[styles.tabText, tab === 'dm' && styles.tabTextActive]}>1:1 채팅</Text>
+          {dmHasUnread && <Badge count={'N'} size={16} />}
+        </View>
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.tab, tab === 'group' && styles.tabActive]}
         onPress={() => { setTab('group'); setView({ kind: 'list' }); }}
         activeOpacity={0.7}
       >
-        <Text style={[styles.tabText, tab === 'group' && styles.tabTextActive]}>그룹 채팅</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Text style={[styles.tabText, tab === 'group' && styles.tabTextActive]}>그룹 채팅</Text>
+          {groupHasUnread && <Badge count={'N'} size={16} />}
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -783,7 +1077,7 @@ export default function ChatScreen() {
       </View>
       <View style={styles.roomMeta}>
         <Text style={styles.roomTime}>{formatTime(item.lastMessageAt)}</Text>
-        {item.unreadCount > 0 && <Badge count={item.unreadCount} />}
+        {item.unreadCount > 0 && <Badge count={'N'} />}
       </View>
     </TouchableOpacity>
   );
@@ -834,7 +1128,10 @@ export default function ChatScreen() {
               <Text style={styles.memberBadgeText}>{item.memberCount}</Text>
             </View>
           </View>
-          <Text style={styles.roomTime}>{formatTime(item.lastMessageAt)}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.roomTime}>{formatTime(item.lastMessageAt)}</Text>
+            {item.unreadCount > 0 && <Badge count={'N'} />}
+          </View>
         </View>
         <Text style={styles.roomLastMsg} numberOfLines={1}>
           {item.lastMessage ?? ''}
@@ -993,6 +1290,16 @@ export default function ChatScreen() {
         />
       )}
 
+      {/* Typing indicator */}
+      {otherTyping && (
+        <View style={styles.typingRow}>
+          <Avatar uri={room.otherUser.profileImageUrl} name={room.otherUser.name} size={28} />
+          <View style={styles.typingBubble}>
+            <TypingDots />
+          </View>
+        </View>
+      )}
+
       {/* Attach Menu */}
       {showAttachMenu && (
         <View style={styles.attachMenu}>
@@ -1040,20 +1347,40 @@ export default function ChatScreen() {
           <Ionicons name={showEmoji ? 'close-circle' : 'happy-outline'} size={24} color={showEmoji ? Colors.gray400 : Colors.primary} />
         </TouchableOpacity>
         <TextInput
+          ref={inputRef}
           style={styles.input}
           placeholder="메시지를 입력하세요..."
           placeholderTextColor={Colors.gray400}
-          value={messageText}
-          onChangeText={setMessageText}
+          defaultValue=""
+          onChangeText={(t) => {
+            messageTextRef.current = t;
+            setHasText(t.trim().length > 0);
+            // 타이핑 인디케이터: 텍스트 있으면 true, 비우면 false
+            if (t.trim().length > 0) {
+              const now = Date.now();
+              if (now - lastTypingSentRef.current > 2000) {
+                lastTypingSentRef.current = now;
+                chatAPI.sendTyping(room.id, userId, true).catch(() => {});
+              }
+            } else {
+              chatAPI.sendTyping(room.id, userId, false).catch(() => {});
+              lastTypingSentRef.current = 0;
+            }
+          }}
           onFocus={() => { setShowEmoji(false); setShowAttachMenu(false); }}
           multiline
           maxLength={2000}
           editable={!sending}
         />
         <TouchableOpacity
-          style={[styles.sendBtn, (!messageText.trim() || sending) && styles.sendBtnDisabled]}
-          onPress={() => handleSendDm(room.id)}
-          disabled={!messageText.trim() || sending}
+          style={[styles.sendBtn, (!hasText || sending) && styles.sendBtnDisabled]}
+          onPress={() => {
+            handleSendDm(room.id);
+            // 전송 시 타이핑 중지 알림
+            chatAPI.sendTyping(room.id, userId, false).catch(() => {});
+            setOtherTyping(false);
+          }}
+          disabled={!hasText || sending}
           activeOpacity={0.7}
         >
           {sending ? (
@@ -1069,7 +1396,7 @@ export default function ChatScreen() {
         <View style={styles.emojiPanel}>
           <View style={styles.emojiPanelContent}>
             {EMOJI_LIST.map((em, i) => (
-              <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => setMessageText(prev => prev + em)}>
+              <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => { messageTextRef.current += em; setHasText(true); if (inputRef.current) inputRef.current.setNativeProps({ text: messageTextRef.current }); }}>
                 <Text style={styles.emojiText}>{em}</Text>
               </TouchableOpacity>
             ))}
@@ -1248,6 +1575,16 @@ export default function ChatScreen() {
         </View>
       )}
 
+      {/* Group Typing indicator */}
+      {groupTypingUsers.length > 0 && (
+        <View style={styles.typingRow}>
+          <View style={styles.typingBubble}>
+            <Text style={styles.typingName}>{groupTypingUsers.map(u => u.userName).join(', ')}</Text>
+            <TypingDots />
+          </View>
+        </View>
+      )}
+
       {/* Uploading indicator */}
       {uploading && (
         <View style={styles.uploadingBar}>
@@ -1269,20 +1606,37 @@ export default function ChatScreen() {
           <Ionicons name={showEmoji ? 'close-circle' : 'happy-outline'} size={24} color={showEmoji ? Colors.gray400 : Colors.primary} />
         </TouchableOpacity>
         <TextInput
+          ref={inputRef}
           style={styles.input}
           placeholder="메시지를 입력하세요..."
           placeholderTextColor={Colors.gray400}
-          value={messageText}
-          onChangeText={setMessageText}
+          defaultValue=""
+          onChangeText={(t) => {
+            messageTextRef.current = t;
+            setHasText(t.trim().length > 0);
+            if (t.trim().length > 0) {
+              const now = Date.now();
+              if (now - lastTypingSentRef.current > 2000) {
+                lastTypingSentRef.current = now;
+                groupChatAPI.sendTyping(room.id, userId, true).catch(() => {});
+              }
+            } else {
+              groupChatAPI.sendTyping(room.id, userId, false).catch(() => {});
+              lastTypingSentRef.current = 0;
+            }
+          }}
           onFocus={() => { setShowEmoji(false); setShowAttachMenu(false); }}
           multiline
           maxLength={2000}
           editable={!sending}
         />
         <TouchableOpacity
-          style={[styles.sendBtn, (!messageText.trim() || sending) && styles.sendBtnDisabled]}
-          onPress={() => handleSendGroup(room.id)}
-          disabled={!messageText.trim() || sending}
+          style={[styles.sendBtn, (!hasText || sending) && styles.sendBtnDisabled]}
+          onPress={() => {
+            handleSendGroup(room.id);
+            groupChatAPI.sendTyping(room.id, userId, false).catch(() => {});
+          }}
+          disabled={!hasText || sending}
           activeOpacity={0.7}
         >
           {sending ? (
@@ -1298,7 +1652,7 @@ export default function ChatScreen() {
         <View style={styles.emojiPanel}>
           <View style={styles.emojiPanelContent}>
             {EMOJI_LIST.map((em, i) => (
-              <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => setMessageText(prev => prev + em)}>
+              <TouchableOpacity key={i} style={styles.emojiItem} onPress={() => { messageTextRef.current += em; setHasText(true); if (inputRef.current) inputRef.current.setNativeProps({ text: messageTextRef.current }); }}>
                 <Text style={styles.emojiText}>{em}</Text>
               </TouchableOpacity>
             ))}
@@ -1475,6 +1829,32 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+  },
+  typingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    gap: 6,
+  },
+  typingBubble: {
+    backgroundColor: '#E8E0D0',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderTopLeftRadius: 4,
+  },
+  typingDots: {
+    fontSize: 20,
+    color: '#8B7355',
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  typingName: {
+    fontSize: 11,
+    color: '#8B7355',
+    marginBottom: 2,
+    fontWeight: '600',
   },
   safeArea: {
     flex: 1,

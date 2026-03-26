@@ -88,12 +88,57 @@ export default function NotificationsScreen() {
     }
   };
 
-  const handleMarkRead = async (notif: NotificationResponse) => {
-    if (!user || notif.read) return;
-    try {
-      await notificationAPI.markAsRead(notif.id, user.userId);
-      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
-    } catch {}
+  const handleNotifPress = async (notif: NotificationResponse) => {
+    if (!user) return;
+    // 읽음 처리
+    if (!notif.read) {
+      try {
+        await notificationAPI.markAsRead(notif.id, user.userId);
+        setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+      } catch {}
+    }
+    // 타입별 화면 이동
+    switch (notif.type) {
+      case 'CHAT':
+        if (notif.referenceId) {
+          navigation.navigate('ChatHome', { openRoomId: notif.referenceId });
+        }
+        break;
+      case 'GROUP_CHAT':
+        // 그룹 채팅 → 채팅 탭으로
+        navigation.navigate('ChatHome');
+        break;
+      case 'MESSAGE':
+        navigation.navigate('Messages');
+        break;
+      case 'FRIEND_REQUEST':
+      case 'FRIEND_ACCEPTED':
+        navigation.navigate('FriendsHome');
+        break;
+      case 'REUNION_INVITE':
+      case 'REUNION_JOIN_REQUEST':
+      case 'REUNION_JOIN_APPROVED':
+      case 'REUNION_JOIN_REJECTED':
+      case 'REUNION_POST':
+      case 'MEETING_CREATED':
+      case 'MEETING_CONFIRMED':
+      case 'MEETING_CANCELLED':
+      case 'FEE_CREATED':
+      case 'FEE_UPDATED':
+      case 'REUNION_TREASURER_ASSIGNED':
+        navigation.navigate('ReunionHome');
+        break;
+      case 'POST':
+      case 'COMMENT':
+      case 'LIKE':
+        navigation.navigate('MySchoolHome');
+        break;
+      case 'NEW_SHOP':
+        navigation.navigate('ShopHome');
+        break;
+      default:
+        break;
+    }
   };
 
   return (
@@ -121,7 +166,7 @@ export default function NotificationsScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity style={[styles.notifRow, !item.read && styles.notifUnread]} onPress={() => handleMarkRead(item)}>
+          <TouchableOpacity style={[styles.notifRow, !item.read && styles.notifUnread]} onPress={() => handleNotifPress(item)}>
             <View style={styles.notifIconWrap}>
               <Ionicons
                 name={(typeIconMap[item.type] || defaultIcon).name}

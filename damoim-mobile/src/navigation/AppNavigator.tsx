@@ -1,5 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet, Platform, AppState } from 'react-native';
+import { Client } from '@stomp/stompjs';
+import { WS_BASE_URL } from '../constants/config';
+
+// 뱃지 상태 Context — 하위 컴포넌트에서 직접 뱃지 제어 가능
+interface BadgeContextType {
+  setChatUnread: (v: boolean) => void;
+  setReunionUnread: (v: boolean) => void;
+  recheckChatUnread: () => void;
+  recheckReunionUnread: () => void;
+}
+const BadgeContext = createContext<BadgeContextType>({
+  setChatUnread: () => {},
+  setReunionUnread: () => {},
+  recheckChatUnread: () => {},
+  recheckReunionUnread: () => {},
+});
+export const useBadge = () => useContext(BadgeContext);
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -203,54 +220,121 @@ function MainTabs() {
   const initialTab = Platform.OS === 'web' && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('inviteCode')
     ? 'Reunion' : null;
 
+  // 채팅 N뱃지: WebSocket으로 즉시 감지 + 폴링 fallback (5초)
+  const stompRef = useRef<Client | null>(null);
+  const appStateRef = useRef(AppState.currentState);
+
+  const checkChatUnread = async () => {
+    if (!user?.userId) return;
+    try {
+      const [dmRooms, groupRooms] = await Promise.all([
+        chatAPI.getMyChatRooms(user.userId),
+        groupChatAPI.getMyRooms(user.userId),
+      ]);
+      const chatGroupRooms = groupRooms.filter(r => !r.name.startsWith('[찐모임]'));
+      const hasUnread = dmRooms.some(r => r.unreadCount > 0) || chatGroupRooms.some(r => r.unreadCount > 0);
+      setChatUnread(hasUnread);
+    } catch {}
+  };
+
   useEffect(() => {
     if (!user?.userId) return;
-    let prevChat = false;
-    let prevReunion = false;
-    const check = async () => {
-      try {
-        // 채팅 unread
-        const rooms = await chatAPI.getMyChatRooms(user.userId);
-        const hasUnread = rooms.some(r => r.unreadCount > 0);
-        if (prevChat !== hasUnread) { prevChat = hasUnread; setChatUnread(hasUnread); }
 
-        // 찐모임 unread (채팅 + 게시글 + 가입요청)
-        try {
-          const reunions = await reunionAPI.getMyReunions(user.userId);
-          const groupRooms = await groupChatAPI.getMyRooms(user.userId);
-          let hasReunionUnread = false;
-          for (const r of reunions) {
-            // 채팅 unread
-            if (r.chatRoomId) {
-              const room = groupRooms.find(gr => gr.id === r.chatRoomId);
-              if ((room?.unreadCount || 0) > 0) { hasReunionUnread = true; break; }
-            }
-            // 게시글 unread
+    // WebSocket 연결 — 새 메시지 알림 즉시 수신
+    const wsUrl = WS_BASE_URL.replace(/^http/, 'ws') + '/websocket';
+    const client = new Client({
+      brokerURL: wsUrl,
+      reconnectDelay: 3000,
+      heartbeatIncoming: 20000,
+      heartbeatOutgoing: 20000,
+      forceBinaryWSFrames: false,
+      appendMissingNULLonIncoming: true,
+      webSocketFactory: () => new WebSocket(wsUrl),
+      onConnect: () => {
+        // 유저별 채팅 알림 구독 — 즉시 실제 unread 체크 (채팅방 열고 있으면 이미 읽었으므로 N 안 뜸)
+        client.subscribe(`/topic/user/${user.userId}/chat-notify`, () => {
+          checkChatUnread();
+        });
+        // 유저별 찐모임 알림 구독
+        client.subscribe(`/topic/user/${user.userId}/reunion-notify`, () => {
+          checkReunionUnread();
+        });
+      },
+    });
+    client.activate();
+    stompRef.current = client;
+
+    // 초기 체크 + 폴링 fallback (5초)
+    checkChatUnread();
+    const interval = setInterval(checkChatUnread, 5000);
+
+    // AppState: 포그라운드 복귀 시 즉시 체크
+    const appSub = AppState.addEventListener('change', (next) => {
+      const prev = appStateRef.current;
+      appStateRef.current = next;
+      if (prev.match(/inactive|background/) && next === 'active') {
+        checkChatUnread();
+        if (!client.connected) client.activate();
+      }
+    });
+
+    return () => {
+      clearInterval(interval);
+      appSub.remove();
+      if (client.active) client.deactivate();
+    };
+  }, [user?.userId]);
+
+  // 찐모임 N뱃지 체크 함수
+  const checkReunionUnread = async () => {
+    if (!user?.userId) return;
+    try {
+        const reunions = await reunionAPI.getMyReunions(user.userId);
+        const groupRooms = await groupChatAPI.getMyRooms(user.userId);
+        let hasUnread = false;
+        for (const r of reunions) {
+          if (r.chatRoomId) {
+            const room = groupRooms.find(gr => gr.id === r.chatRoomId);
+            if ((room?.unreadCount || 0) > 0) { hasUnread = true; break; }
+          }
+          if (!hasUnread) {
             try {
-              const posts = await reunionAPI.getPosts(r.id, user.userId);
               const AsyncStorage = require('@react-native-async-storage/async-storage').default;
               const lastStr = await AsyncStorage.getItem(`reunion_feed_${r.id}`);
-              const last = lastStr ? parseInt(lastStr, 10) : 0;
-              if (posts.some((p: any) => new Date(p.createdAt).getTime() > last)) { hasReunionUnread = true; break; }
+              if (lastStr) {
+                const last = parseInt(lastStr, 10);
+                const posts = await reunionAPI.getPosts(r.id, user.userId);
+                if (posts.some((p: any) => new Date(p.createdAt).getTime() > last)) { hasUnread = true; break; }
+              }
             } catch {}
-            // 가입요청
-            if (r.myRole === 'LEADER' || r.myRole === 'ADMIN') {
-              try {
-                const reqs = await reunionAPI.getJoinRequests(r.id, user.userId);
-                if (reqs.some((req: any) => req.status === 'PENDING')) { hasReunionUnread = true; break; }
-              } catch {}
-            }
           }
-          if (prevReunion !== hasReunionUnread) { prevReunion = hasReunionUnread; setReunionUnread(hasReunionUnread); }
-        } catch {}
+          if (!hasUnread && (r.myRole === 'LEADER' || r.myRole === 'ADMIN')) {
+            try {
+              const reqs = await reunionAPI.getJoinRequests(r.id, user.userId);
+              if (reqs.some((req: any) => req.status === 'PENDING')) { hasUnread = true; break; }
+            } catch {}
+          }
+        }
+        setReunionUnread(hasUnread);
       } catch {}
-    };
-    check();
-    const interval = setInterval(check, 10000);
+  };
+
+  useEffect(() => {
+    if (!user?.userId) return;
+    checkReunionUnread();
+    const interval = setInterval(checkReunionUnread, 10000);
     return () => clearInterval(interval);
   }, [user?.userId]);
 
+  const badgeCtx: BadgeContextType = {
+    setChatUnread,
+    setReunionUnread,
+    recheckChatUnread: checkChatUnread,
+    recheckReunionUnread: checkReunionUnread,
+  };
+
   return (
+    <BadgeContext.Provider value={badgeCtx}>
     <Tab.Navigator
       initialRouteName={initialTab || 'MySchool'}
       tabBar={(props) => <CustomTabBar {...props} chatUnread={chatUnread} reunionUnread={reunionUnread} />}
@@ -262,6 +346,7 @@ function MainTabs() {
       <Tab.Screen name="Reunion" component={ReunionStack} />
       <Tab.Screen name="Shop" component={ShopStack} />
     </Tab.Navigator>
+    </BadgeContext.Provider>
   );
 }
 

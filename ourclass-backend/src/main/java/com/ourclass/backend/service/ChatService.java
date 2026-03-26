@@ -135,7 +135,7 @@ public class ChatService {
         return toMessageResponse(message, senderUserId);
     }
 
-    // 채팅방 메시지 목록
+    // 채팅방 메시지 목록 (읽음 처리 포함)
     @Transactional
     public List<ChatMessageResponse> getMessages(Long chatRoomId, String userId) {
         ChatRoom room = chatRoomRepository.findById(chatRoomId)
@@ -145,6 +145,19 @@ public class ChatService {
 
         // 읽음 처리
         chatMessageRepository.markAsRead(room, user);
+
+        return fetchMessages(chatRoomId, userId);
+    }
+
+    // 채팅방 메시지 목록 (읽음 처리 없이 - 폴링용)
+    @Transactional(readOnly = true)
+    public List<ChatMessageResponse> getMessagesWithoutMarkRead(Long chatRoomId, String userId) {
+        return fetchMessages(chatRoomId, userId);
+    }
+
+    private List<ChatMessageResponse> fetchMessages(Long chatRoomId, String userId) {
+        ChatRoom room = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new RuntimeException("채팅방을 찾을 수 없습니다"));
 
         List<ChatMessage> messages = chatMessageRepository.findByChatRoomOrderBySentAtAsc(room).stream()
                 .filter(msg -> !Boolean.TRUE.equals(msg.getCompletelyDeleted()))
@@ -202,6 +215,15 @@ public class ChatService {
         if (!myRooms.isEmpty()) {
             chatMessageRepository.markAllAsRead(myRooms, user);
         }
+    }
+
+    // 채팅방 상대방 userId 조회
+    public String getOtherUserId(Long roomId, String myUserId) {
+        ChatRoom room = chatRoomRepository.findById(roomId).orElse(null);
+        if (room == null) return null;
+        return room.getUser1().getUserId().equals(myUserId)
+                ? room.getUser2().getUserId()
+                : room.getUser1().getUserId();
     }
 
     // 채팅방 나가기 (1:1)

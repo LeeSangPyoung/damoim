@@ -49,8 +49,8 @@ export const chatAPI = {
     return response.data;
   },
 
-  getMessages: async (roomId: number, userId: string): Promise<ChatMessageResponse[]> => {
-    const response = await apiClient.get(`/chat/rooms/${roomId}/messages`, { params: { userId } });
+  getMessages: async (roomId: number, userId: string, markRead: boolean = true): Promise<ChatMessageResponse[]> => {
+    const response = await apiClient.get(`/chat/rooms/${roomId}/messages`, { params: { userId, markRead } });
     return response.data;
   },
 
@@ -117,6 +117,15 @@ export const chatAPI = {
     const response = await apiClient.post('/chat/reactions', null, {
       params: { userId, messageId, source, emoji },
     });
+    return response.data;
+  },
+
+  sendTyping: async (roomId: number, userId: string, typing: boolean = true): Promise<void> => {
+    await apiClient.post(`/chat/rooms/${roomId}/typing`, null, { params: { userId, typing } });
+  },
+
+  getTypingStatus: async (roomId: number, userId: string): Promise<{ typingUsers: string[] }> => {
+    const response = await apiClient.get(`/chat/rooms/${roomId}/typing`, { params: { userId } });
     return response.data;
   },
 };

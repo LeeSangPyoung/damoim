@@ -27,6 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
 import HeaderActions from '../components/HeaderActions';
+import { notificationAPI } from '../api/notification';
 
 type Tab = 'received' | 'sent';
 
@@ -148,6 +149,8 @@ export default function MessagesScreen() {
         setReceivedMessages((prev) =>
           prev.map((m) => (m.id === msg.id ? { ...m, read: true, readAt: new Date().toISOString() } : m)),
         );
+        // 관련 알림도 자동 읽음 처리
+        notificationAPI.markAsReadByReference(user.userId, 'MESSAGE', msg.id).catch(() => {});
       } catch {}
     }
   };

@@ -18,11 +18,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/chat")
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173"})
 public class ChatController {
+
+    // 타이핑 상태: roomId -> { userId -> timestamp }
+    private static final ConcurrentHashMap<Long, ConcurrentHashMap<String, Long>> typingStatus = new ConcurrentHashMap<>();
 
     @Autowired
     private ChatService chatService;
@@ -63,17 +67,22 @@ public class ChatController {
         }
     }
 
-    // 채팅방 메시지 조회 (REST)
+    // 채팅방 메시지 조회 (REST) - 읽음 처리 포함
     @GetMapping("/rooms/{roomId}/messages")
     public ResponseEntity<?> getMessages(
             @PathVariable Long roomId,
-            @RequestParam String userId) {
+            @RequestParam String userId,
+            @RequestParam(required = false, defaultValue = "true") boolean markRead) {
         try {
-            System.out.println("[DEBUG] getMessages 호출 - roomId: " + roomId + ", userId: " + userId);
-            List<ChatMessageResponse> messages = chatService.getMessages(roomId, userId);
-            // 읽음 처리 후 상대방에게 읽음 이벤트 브로드캐스트
-            messagingTemplate.convertAndSend("/topic/chat/" + roomId,
-                    Map.of("type", "READ", "userId", userId));
+            List<ChatMessageResponse> messages;
+            if (markRead) {
+                messages = chatService.getMessages(roomId, userId);
+                // 읽음 처리 후 상대방에게 읽음 이벤트 브로드캐스트
+                messagingTemplate.convertAndSend("/topic/chat/" + roomId,
+                        Map.of("type", "READ", "userId", userId));
+            } else {
+                messages = chatService.getMessagesWithoutMarkRead(roomId, userId);
+            }
             return ResponseEntity.ok(messages);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -93,6 +102,12 @@ public class ChatController {
                     request.getFileName(), request.getFileSize());
             // WebSocket으로도 브로드캐스트
             messagingTemplate.convertAndSend("/topic/chat/" + roomId, message);
+            // 상대방에게 새 메시지 알림 (하단 탭 N뱃지용)
+            String otherUserId = chatService.getOtherUserId(roomId, userId);
+            if (otherUserId != null) {
+                messagingTemplate.convertAndSend("/topic/user/" + otherUserId + "/chat-notify",
+                        Map.of("type", "NEW_MESSAGE", "roomId", roomId, "source", "DM"));
+            }
             return ResponseEntity.ok(message);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -226,5 +241,49 @@ public class ChatController {
                 request.getMessageType(), request.getAttachmentUrl(),
                 request.getFileName(), request.getFileSize());
         messagingTemplate.convertAndSend("/topic/chat/" + roomId, message);
+    }
+
+    // 타이핑 인디케이터 전송
+    @PostMapping("/rooms/{roomId}/typing")
+    public ResponseEntity<?> sendTypingIndicator(
+            @PathVariable Long roomId,
+            @RequestParam String userId,
+            @RequestParam(defaultValue = "true") boolean typing) {
+        try {
+            // 인메모리 저장
+            if (typing) {
+                typingStatus.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>())
+                        .put(userId, System.currentTimeMillis());
+            } else {
+                var roomTyping = typingStatus.get(roomId);
+                if (roomTyping != null) roomTyping.remove(userId);
+            }
+            // WebSocket 브로드캐스트
+            var user = userRepository.findByUserId(userId).orElse(null);
+            String name = user != null ? user.getName() : userId;
+            messagingTemplate.convertAndSend("/topic/chat/" + roomId,
+                    Map.of("type", "TYPING", "userId", userId, "userName", name, "typing", typing));
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // 타이핑 상태 조회 (폴링용)
+    @GetMapping("/rooms/{roomId}/typing")
+    public ResponseEntity<?> getTypingStatus(
+            @PathVariable Long roomId,
+            @RequestParam String userId) {
+        var roomTyping = typingStatus.get(roomId);
+        if (roomTyping == null || roomTyping.isEmpty()) {
+            return ResponseEntity.ok(Map.of("typingUsers", List.of()));
+        }
+        long now = System.currentTimeMillis();
+        // 5초 이상 지난 타이핑 상태 제거, 본인 제외
+        List<String> activeTypers = roomTyping.entrySet().stream()
+                .filter(e -> !e.getKey().equals(userId) && (now - e.getValue()) < 5000)
+                .map(Map.Entry::getKey)
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(Map.of("typingUsers", activeTypers));
     }
 }

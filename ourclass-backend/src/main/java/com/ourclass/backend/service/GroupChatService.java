@@ -166,6 +166,10 @@ public class GroupChatService {
     // 메시지 목록 조회 + 읽음 처리
     @Transactional
     public List<GroupChatMessageResponse> getMessages(Long roomId, String userId) {
+        return getMessages(roomId, userId, true);
+    }
+
+    public List<GroupChatMessageResponse> getMessages(Long roomId, String userId, boolean markRead) {
         GroupChatRoom room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("채팅방을 찾을 수 없습니다."));
         User user = userRepository.findByUserId(userId)
@@ -173,8 +177,8 @@ public class GroupChatService {
 
         List<GroupChatMessage> messages = messageRepository.findByRoomOrderBySentAtAsc(room);
 
-        // 마지막 메시지 ID로 읽음 처리
-        if (!messages.isEmpty()) {
+        // 마지막 메시지 ID로 읽음 처리 (markRead=true일 때만)
+        if (markRead && !messages.isEmpty()) {
             Long lastMsgId = messages.get(messages.size() - 1).getId();
             GroupChatMember member = memberRepository.findByRoomAndUser(room, user).orElse(null);
             if (member != null && (member.getLastReadMessageId() == null || member.getLastReadMessageId() < lastMsgId)) {
@@ -317,6 +321,19 @@ public class GroupChatService {
             message.getDeletedByUserIds().add(userId);
             messageRepository.save(message);
         }
+    }
+
+    public String getRoomName(Long roomId) {
+        GroupChatRoom room = roomRepository.findById(roomId).orElse(null);
+        return room != null ? room.getName() : null;
+    }
+
+    public List<String> getMemberUserIds(Long roomId) {
+        GroupChatRoom room = roomRepository.findById(roomId).orElse(null);
+        if (room == null) return java.util.Collections.emptyList();
+        return memberRepository.findByRoom(room).stream()
+                .map(m -> m.getUser().getUserId())
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private GroupChatRoomResponse toRoomResponse(GroupChatRoom room, String currentUserId) {

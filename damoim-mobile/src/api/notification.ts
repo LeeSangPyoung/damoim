@@ -39,6 +39,10 @@ export const notificationAPI = {
     await apiClient.put('/notifications/read-all', null, { params: { userId } });
   },
 
+  markAsReadByReference: async (userId: string, type: string, referenceId: number): Promise<void> => {
+    await apiClient.put('/notifications/read-by-reference', null, { params: { userId, type, referenceId } });
+  },
+
   deleteAll: async (userId: string): Promise<void> => {
     await apiClient.delete('/notifications/all', { params: { userId } });
   },

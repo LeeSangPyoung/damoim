@@ -48,8 +48,8 @@ export const groupChatAPI = {
     return response.data;
   },
 
-  getMessages: async (roomId: number, userId: string): Promise<GroupChatMessageResponse[]> => {
-    const response = await apiClient.get(`/group-chat/rooms/${roomId}/messages`, { params: { userId } });
+  getMessages: async (roomId: number, userId: string, markRead: boolean = true): Promise<GroupChatMessageResponse[]> => {
+    const response = await apiClient.get(`/group-chat/rooms/${roomId}/messages`, { params: { userId, markRead } });
     return response.data;
   },
 
@@ -84,5 +84,14 @@ export const groupChatAPI = {
 
   deleteMessage: async (messageId: number, userId: string): Promise<void> => {
     await apiClient.delete(`/group-chat/messages/${messageId}`, { params: { userId } });
+  },
+
+  sendTyping: async (roomId: number, userId: string, typing: boolean = true): Promise<void> => {
+    await apiClient.post(`/group-chat/rooms/${roomId}/typing`, null, { params: { userId, typing } });
+  },
+
+  getTypingStatus: async (roomId: number, userId: string): Promise<{ typingUsers: { userId: string; userName: string }[] }> => {
+    const response = await apiClient.get(`/group-chat/rooms/${roomId}/typing`, { params: { userId } });
+    return response.data;
   },
 };

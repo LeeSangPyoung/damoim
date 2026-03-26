@@ -16,14 +16,21 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/group-chat")
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173"})
 public class GroupChatController {
 
+    // 타이핑 상태: roomId -> { userId -> timestamp }
+    private static final ConcurrentHashMap<Long, ConcurrentHashMap<String, Long>> typingStatus = new ConcurrentHashMap<>();
+
     @Autowired
     private GroupChatService groupChatService;
+
+    @Autowired
+    private com.ourclass.backend.repository.UserRepository userRepository;
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
@@ -57,12 +64,14 @@ public class GroupChatController {
     @GetMapping("/rooms/{roomId}/messages")
     public ResponseEntity<?> getMessages(
             @PathVariable Long roomId,
-            @RequestParam String userId) {
+            @RequestParam String userId,
+            @RequestParam(required = false, defaultValue = "true") boolean markRead) {
         try {
-            List<GroupChatMessageResponse> messages = groupChatService.getMessages(roomId, userId);
-            // 읽음 처리 후 상대방에게 읽음 이벤트 브로드캐스트
-            messagingTemplate.convertAndSend("/topic/group-chat/" + roomId,
-                    Map.of("type", "READ", "userId", userId));
+            List<GroupChatMessageResponse> messages = groupChatService.getMessages(roomId, userId, markRead);
+            if (markRead) {
+                messagingTemplate.convertAndSend("/topic/group-chat/" + roomId,
+                        Map.of("type", "READ", "userId", userId));
+            }
             return ResponseEntity.ok(messages);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -81,6 +90,17 @@ public class GroupChatController {
                     request.getMessageType(), request.getAttachmentUrl(),
                     request.getFileName(), request.getFileSize());
             messagingTemplate.convertAndSend("/topic/group-chat/" + roomId, message);
+            // 다른 멤버들에게 새 메시지 알림 (하단 탭 N뱃지용)
+            String roomName = groupChatService.getRoomName(roomId);
+            boolean isReunion = roomName != null && roomName.startsWith("[찐모임]");
+            String notifyTopic = isReunion ? "/reunion-notify" : "/chat-notify";
+            List<String> memberIds = groupChatService.getMemberUserIds(roomId);
+            for (String memberId : memberIds) {
+                if (!memberId.equals(userId)) {
+                    messagingTemplate.convertAndSend("/topic/user/" + memberId + notifyTopic,
+                            Map.of("type", "NEW_MESSAGE", "roomId", roomId, "source", isReunion ? "REUNION" : "GROUP"));
+                }
+            }
             return ResponseEntity.ok(message);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -162,5 +182,49 @@ public class GroupChatController {
                 request.getMessageType(), request.getAttachmentUrl(),
                 request.getFileName(), request.getFileSize());
         messagingTemplate.convertAndSend("/topic/group-chat/" + roomId, message);
+    }
+
+    // 타이핑 인디케이터 전송
+    @PostMapping("/rooms/{roomId}/typing")
+    public ResponseEntity<?> sendTypingIndicator(
+            @PathVariable Long roomId,
+            @RequestParam String userId,
+            @RequestParam(defaultValue = "true") boolean typing) {
+        try {
+            if (typing) {
+                typingStatus.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>())
+                        .put(userId, System.currentTimeMillis());
+            } else {
+                var roomTyping = typingStatus.get(roomId);
+                if (roomTyping != null) roomTyping.remove(userId);
+            }
+            var user = userRepository.findByUserId(userId).orElse(null);
+            String name = user != null ? user.getName() : userId;
+            messagingTemplate.convertAndSend("/topic/group-chat/" + roomId,
+                    Map.of("type", "TYPING", "userId", userId, "userName", name, "typing", typing));
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // 타이핑 상태 조회 (폴링용)
+    @GetMapping("/rooms/{roomId}/typing")
+    public ResponseEntity<?> getTypingStatus(
+            @PathVariable Long roomId,
+            @RequestParam String userId) {
+        var roomTyping = typingStatus.get(roomId);
+        if (roomTyping == null || roomTyping.isEmpty()) {
+            return ResponseEntity.ok(Map.of("typingUsers", List.of()));
+        }
+        long now = System.currentTimeMillis();
+        List<Map<String, String>> activeTypers = roomTyping.entrySet().stream()
+                .filter(e -> !e.getKey().equals(userId) && (now - e.getValue()) < 5000)
+                .map(e -> {
+                    var u = userRepository.findByUserId(e.getKey()).orElse(null);
+                    return Map.of("userId", e.getKey(), "userName", u != null ? u.getName() : e.getKey());
+                })
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(Map.of("typingUsers", activeTypers));
     }
 }

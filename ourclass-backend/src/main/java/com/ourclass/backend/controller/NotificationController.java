@@ -64,6 +64,20 @@ public class NotificationController {
         }
     }
 
+    @PutMapping("/read-by-reference")
+    public ResponseEntity<?> markAsReadByReference(
+            @RequestParam String userId,
+            @RequestParam String type,
+            @RequestParam Long referenceId) {
+        try {
+            notificationService.markAsReadByReference(userId, type, referenceId);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            log.error("알림 읽음 처리 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @DeleteMapping("/all")
     public ResponseEntity<?> deleteAllNotifications(@RequestParam String userId) {
         try {

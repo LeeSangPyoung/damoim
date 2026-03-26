@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
   RefreshControl, Alert, Modal, ScrollView, Image, KeyboardAvoidingView, Platform,
-  ActivityIndicator,
+  ActivityIndicator, AppState, Animated,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,13 +19,16 @@ import { alumniShopAPI, ShopResponse, CATEGORY_ICONS, OwnerSchoolDetail } from '
 import { userAPI } from '../api/user';
 import { groupChatAPI, GroupChatRoomResponse, GroupChatMessageResponse } from '../api/groupChat';
 import { chatAPI } from '../api/chat';
-import { API_BASE_URL } from '../constants/config';
+import { API_BASE_URL, WS_BASE_URL } from '../constants/config';
+import { Client } from '@stomp/stompjs';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
 import LinkedText from '../components/LinkedText';
 import HeaderActions from '../components/HeaderActions';
 import NoticeBanner from '../components/NoticeBanner';
 import LoadingScreen from '../components/LoadingScreen';
+import { useBadge } from '../navigation/AppNavigator';
+import { notificationAPI } from '../api/notification';
 
 const EMOJI_LIST = [
   '😀','😂','🤣','😍','🥰','😘','😊','😎','🤔','😢',
@@ -48,9 +51,35 @@ function timeAgo(dateStr: string): string {
   return `${d}일 전`;
 }
 
+// Typing Dots Animation
+const ReunionTypingDots = React.memo(() => {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const animate = (dot: Animated.Value, delay: number) =>
+      Animated.loop(Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(dot, { toValue: -6, duration: 250, useNativeDriver: true }),
+        Animated.timing(dot, { toValue: 0, duration: 250, useNativeDriver: true }),
+        Animated.delay(450 - delay),
+      ]));
+    const a1 = animate(dot1, 0); const a2 = animate(dot2, 150); const a3 = animate(dot3, 300);
+    a1.start(); a2.start(); a3.start();
+    return () => { a1.stop(); a2.stop(); a3.stop(); };
+  }, []);
+  const ds = (a: Animated.Value) => ({ width: 8, height: 8, borderRadius: 4, backgroundColor: '#8B7355', marginHorizontal: 2, transform: [{ translateY: a }] });
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
+      <Animated.View style={ds(dot1)} /><Animated.View style={ds(dot2)} /><Animated.View style={ds(dot3)} />
+    </View>
+  );
+});
+
 export default function ReunionScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  const badge = useBadge();
   const [view, setView] = useState<ScreenView>('list');
   const [reunions, setReunions] = useState<ReunionResponse[]>([]);
   const [selected, setSelected] = useState<ReunionResponse | null>(null);
@@ -93,6 +122,14 @@ export default function ReunionScreen() {
   const [chatSending, setChatSending] = useState(false);
   const chatListRef = React.useRef<FlatList>(null);
   const [showChatEmoji, setShowChatEmoji] = useState(false);
+  // WebSocket
+  const stompClientRef = useRef<Client | null>(null);
+  const stompSubRef = useRef<{ unsubscribe: () => void } | null>(null);
+  const [stompConnected, setStompConnected] = useState(false);
+  const appStateRef = useRef(AppState.currentState);
+  // Typing indicator
+  const [reunionTypingUsers, setReunionTypingUsers] = useState<{ userId: string; userName: string }[]>([]);
+  const lastTypingSentRef = useRef<number>(0);
   const [copiedToast, setCopiedToast] = useState(false);
   const [reunionUnreadMap, setReunionUnreadMap] = useState<Record<number, boolean>>({});
   // 내부 탭별 새 글 수
@@ -154,18 +191,144 @@ export default function ReunionScreen() {
     }
   }, [user]);
 
-  // 채팅 탭 활성화 시 3초마다 자동 새로고침
+  // WebSocket 연결 (찐모임 채팅)
+  const connectReunionStomp = useCallback(() => {
+    if (!user || !chatRoomId) return;
+    if (stompClientRef.current?.active) {
+      try { stompClientRef.current.deactivate(); } catch {}
+    }
+    const wsUrl = WS_BASE_URL.replace(/^http/, 'ws') + '/websocket';
+    const client = new Client({
+      brokerURL: wsUrl,
+      connectHeaders: {},
+      reconnectDelay: 3000,
+      heartbeatIncoming: 15000,
+      heartbeatOutgoing: 15000,
+      forceBinaryWSFrames: false,
+      appendMissingNULLonIncoming: true,
+      webSocketFactory: () => new WebSocket(wsUrl),
+      onConnect: () => {
+        setStompConnected(true);
+        if (stompSubRef.current) { try { stompSubRef.current.unsubscribe(); } catch {} }
+        const sub = client.subscribe(`/topic/group-chat/${chatRoomId}`, (message) => {
+          try {
+            const data = JSON.parse(message.body);
+            if (data.type === 'TYPING') {
+              if (user && data.userId !== user.userId) {
+                if (data.typing) {
+                  setReunionTypingUsers(prev => {
+                    if (prev.find(u => u.userId === data.userId)) return prev;
+                    return [...prev, { userId: data.userId, userName: data.userName }];
+                  });
+                  setTimeout(() => {
+                    setReunionTypingUsers(prev => prev.filter(u => u.userId !== data.userId));
+                  }, 6000);
+                } else {
+                  setReunionTypingUsers(prev => prev.filter(u => u.userId !== data.userId));
+                }
+              }
+              return;
+            }
+            if (data.type === 'READ') {
+              // READ 이벤트 → 서버에서 정확한 카운트 가져옴
+              if (chatRoomId && user) {
+                groupChatAPI.getMessages(chatRoomId, user.userId, false).then(msgs => setChatMessages(msgs)).catch(() => {});
+              }
+            } else {
+              const msg: GroupChatMessageResponse = data;
+              // 채팅방에 있으므로 내가 읽은 만큼 -1
+              const displayMsg = { ...msg, unreadCount: Math.max(0, msg.unreadCount - 1) };
+              setChatMessages(prev => {
+                if (prev.find(m => m.id === msg.id)) return prev;
+                return [...prev, displayMsg];
+              });
+              // 상대방 메시지면 읽음 처리 후 서버에서 정확한 카운트 가져옴
+              if (user && msg.senderUserId !== user.userId && chatRoomId) {
+                groupChatAPI.getMessages(chatRoomId, user.userId, true).then(msgs => {
+                  setChatMessages(msgs);
+                  badge.recheckReunionUnread();
+                }).catch(() => {});
+              }
+            }
+          } catch {}
+        });
+        stompSubRef.current = sub;
+      },
+      onStompError: () => setStompConnected(false),
+      onDisconnect: () => setStompConnected(false),
+      onWebSocketClose: () => setStompConnected(false),
+      onWebSocketError: () => setStompConnected(false),
+    });
+    client.activate();
+    stompClientRef.current = client;
+  }, [user, chatRoomId]);
+
+  useEffect(() => {
+    if (tab === 'chat' && chatRoomId) connectReunionStomp();
+    return () => {
+      if (stompSubRef.current) { try { stompSubRef.current.unsubscribe(); } catch {} stompSubRef.current = null; }
+      if (stompClientRef.current?.active) { stompClientRef.current.deactivate(); }
+    };
+  }, [tab, chatRoomId, connectReunionStomp]);
+
+  // AppState: 포그라운드 복귀 시 재연결 + 새로고침
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      const prev = appStateRef.current;
+      appStateRef.current = nextState;
+      if (prev.match(/inactive|background/) && nextState === 'active') {
+        if (tab === 'chat' && chatRoomId && user) {
+          if (!stompClientRef.current?.connected) connectReunionStomp();
+          groupChatAPI.getMessages(chatRoomId, user.userId, false).then(msgs => setChatMessages(msgs)).catch(() => {});
+        }
+      }
+    });
+    return () => subscription.remove();
+  }, [tab, chatRoomId, user, connectReunionStomp]);
+
+  // 타이핑 keep-alive: 텍스트가 있으면 3초마다 재전송
+  useEffect(() => {
+    if (tab !== 'chat' || !chatRoomId || !user) return;
+    const interval = setInterval(() => {
+      if (chatText.trim().length > 0) {
+        groupChatAPI.sendTyping(chatRoomId, user.userId, true).catch(() => {});
+        lastTypingSentRef.current = Date.now();
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [tab, chatRoomId, user, chatText]);
+
+  // 채팅 탭 활성화 시 폴링 (WS 연결 시 느린 주기, 끊겼을 때 빠른 주기)
   useEffect(() => {
     if (tab !== 'chat' || !chatRoomId || !user) return;
     setTabUnread(prev => ({ ...prev, chat: 0 }));
+    const pollingInterval = stompConnected ? 8000 : 1500;
+    // 즉시 1회 fetch
+    groupChatAPI.getMessages(chatRoomId, user.userId, true).then(msgs => {
+      notificationAPI.markAsReadByReference(user.userId, 'GROUP_CHAT', chatRoomId).catch(() => {});
+      badge.recheckReunionUnread();
+      setChatMessages(prev => {
+        if (msgs.length !== prev.length) return msgs;
+        const lastNew = msgs[msgs.length - 1];
+        const lastOld = prev[prev.length - 1];
+        if (lastNew?.id !== lastOld?.id) return msgs;
+        return prev;
+      });
+    }).catch(() => {});
     const interval = setInterval(async () => {
       try {
-        const msgs = await groupChatAPI.getMessages(chatRoomId, user.userId);
-        setChatMessages(msgs);
+        const msgs = await groupChatAPI.getMessages(chatRoomId, user.userId, false);
+        setChatMessages(prev => {
+          if (msgs.length !== prev.length) return msgs;
+          const lastNew = msgs[msgs.length - 1];
+          const lastOld = prev[prev.length - 1];
+          if (lastNew?.id !== lastOld?.id) return msgs;
+          return prev;
+        });
       } catch {}
-    }, 3000);
+    }, pollingInterval);
     return () => clearInterval(interval);
-  }, [tab, chatRoomId, user]);
+  }, [tab, chatRoomId, user, stompConnected]);
 
   // 채팅 탭이 아닐 때 unread 체크 (읽음 처리 없이)
   useEffect(() => {
@@ -197,13 +360,15 @@ export default function ReunionScreen() {
           const room = rooms.find(gr => gr.id === r.chatRoomId);
           if ((room?.unreadCount || 0) > 0) hasUnread = true;
         }
-        // 게시글 unread
+        // 게시글 unread (한 번이라도 피드를 본 적 있는 경우만 체크)
         if (!hasUnread) {
           try {
-            const posts = await reunionAPI.getPosts(r.id, user.userId);
             const lastSeenStr = await AsyncStorage.getItem(`reunion_feed_${r.id}`);
-            const lastSeen = lastSeenStr ? parseInt(lastSeenStr, 10) : 0;
-            if (posts.some(p => new Date(p.createdAt).getTime() > lastSeen)) hasUnread = true;
+            if (lastSeenStr) {
+              const lastSeen = parseInt(lastSeenStr, 10);
+              const posts = await reunionAPI.getPosts(r.id, user.userId);
+              if (posts.some(p => new Date(p.createdAt).getTime() > lastSeen)) hasUnread = true;
+            }
           } catch {}
         }
         // 가입요청 (리더/관리자만)
@@ -306,7 +471,7 @@ export default function ReunionScreen() {
           } catch {} // 이미 멤버인 경우 무시
         }
         setChatRoomId(reunion.chatRoomId);
-        const msgs = await groupChatAPI.getMessages(reunion.chatRoomId, user.userId);
+        const msgs = await groupChatAPI.getMessages(reunion.chatRoomId, user.userId, false);
         setChatMessages(msgs);
       } else {
         // 채팅방 없음 → 새로 생성하고 reunion에 저장
@@ -318,7 +483,7 @@ export default function ReunionScreen() {
         try {
           await reunionAPI.updateReunion(reunion.id, user.userId, { chatRoomId: created.id });
         } catch {}
-        const msgs = await groupChatAPI.getMessages(created.id, user.userId);
+        const msgs = await groupChatAPI.getMessages(created.id, user.userId, false);
         setChatMessages(msgs);
       }
     } catch (e) {
@@ -330,8 +495,13 @@ export default function ReunionScreen() {
     if (!chatRoomId || !user) return;
     setChatMsgLoading(true);
     try {
-      const msgs = await groupChatAPI.getMessages(chatRoomId, user.userId);
+      // 채팅 탭 직접 열었을 때만 읽음 처리
+      const msgs = await groupChatAPI.getMessages(chatRoomId, user.userId, true);
       setChatMessages(msgs);
+      // 관련 알림도 읽음 처리
+      notificationAPI.markAsReadByReference(user.userId, 'GROUP_CHAT', chatRoomId).catch(() => {});
+      // 즉시 하단 찐모임 N뱃지 재확인
+      badge.recheckReunionUnread();
     } catch {} finally {
       setChatMsgLoading(false);
     }
@@ -340,15 +510,29 @@ export default function ReunionScreen() {
   const handleSendChat = async () => {
     const text = chatText.trim();
     if (!text || !chatRoomId || !user) return;
-    setChatSending(true);
     setChatText('');
+    // 낙관적 UI: 즉시 화면에 표시
+    const tempId = -(Date.now());
+    const optimistic: GroupChatMessageResponse = {
+      id: tempId,
+      roomId: chatRoomId,
+      senderUserId: user.userId,
+      senderName: user.name ?? '',
+      content: text,
+      messageType: 'TEXT',
+      unreadCount: 0,
+      sentAt: new Date().toISOString(),
+    };
+    setChatMessages(prev => [...prev, optimistic]);
+    setChatSending(true);
     try {
       const msg = await groupChatAPI.sendMessage(chatRoomId, user.userId, text);
-      setChatMessages(prev => {
-        if (prev.find(m => m.id === msg.id)) return prev;
-        return [...prev, msg];
-      });
+      setChatMessages(prev => prev.map(m => m.id === tempId ? msg : m).filter((m, i, arr) => {
+        if (m.id === msg.id) return arr.findIndex(x => x.id === msg.id) === i;
+        return true;
+      }));
     } catch {
+      setChatMessages(prev => prev.filter(m => m.id !== tempId));
       if (Platform.OS === 'web') window.alert('전송 실패');
       else Alert.alert('전송 실패');
     } finally {
@@ -1073,6 +1257,15 @@ export default function ReunionScreen() {
                 </View>
               </View>
             )}
+            {/* Typing indicator */}
+            {reunionTypingUsers.length > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 4, gap: 6 }}>
+                <View style={{ backgroundColor: '#E8E0D0', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 6, borderTopLeftRadius: 4 }}>
+                  <Text style={{ fontSize: 11, color: '#8B7355', marginBottom: 2, fontWeight: '600' }}>{reunionTypingUsers.map(u => u.userName).join(', ')}</Text>
+                  <ReunionTypingDots />
+                </View>
+              </View>
+            )}
             {/* Chat Input */}
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#F0E0B0', gap: 8 }}>
               <TouchableOpacity onPress={() => { setShowChatAttach(v => !v); setShowChatEmoji(false); }} style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
@@ -1086,14 +1279,31 @@ export default function ReunionScreen() {
                 placeholder="메시지를 입력하세요..."
                 placeholderTextColor={Colors.gray400}
                 value={chatText}
-                onChangeText={setChatText}
+                onChangeText={(t) => {
+                  setChatText(t);
+                  if (chatRoomId && user) {
+                    if (t.trim().length > 0) {
+                      const now = Date.now();
+                      if (now - lastTypingSentRef.current > 2000) {
+                        lastTypingSentRef.current = now;
+                        groupChatAPI.sendTyping(chatRoomId, user.userId, true).catch(() => {});
+                      }
+                    } else {
+                      groupChatAPI.sendTyping(chatRoomId, user.userId, false).catch(() => {});
+                      lastTypingSentRef.current = 0;
+                    }
+                  }
+                }}
                 multiline
                 maxLength={2000}
                 editable={!chatSending}
               />
               <TouchableOpacity
                 style={{ backgroundColor: chatText.trim() && !chatSending ? '#2D5016' : Colors.gray300, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 }}
-                onPress={handleSendChat}
+                onPress={() => {
+                  handleSendChat();
+                  if (chatRoomId && user) groupChatAPI.sendTyping(chatRoomId, user.userId, false).catch(() => {});
+                }}
                 disabled={!chatText.trim() || chatSending}
               >
                 {chatSending ? (
